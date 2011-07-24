@@ -1,0 +1,73 @@
+Monomodular beta99c notes:
+
+This is very unfinished, but should work properly for testing purposes.
+
+Install the three control surface scripts in Live's bundle.
+
+Insert instance of Monomodular as a control surface.  It's MIDI inputs and outputs should be assigned 'None'.
+
+Insert instance(s) of the controllers you are planning on using.  Currently, there are only three supported.  Ohm64 monochrome and RGB are both handled by the same script.  Code is supported by 'Codec'.
+
+That is all the setup that is necessary for running Monomodular client patches.  Just load the patch into a track, and it should automatically connect and communicate with any Monomodular compliant controller scripts.
+
+
+Ohm64:
+
+Press Livid button to change between Monomod and standard modes.
+
+Menu buttons:  1) ALT (reserved for future pattrstorage integration)
+	       2) LOCK 
+	       3) NAVUP
+	       4) NAVLEFT
+	       5) NAVRIGHT
+	       6) NAVDOWN
+
+
+Press either shift button to enter shift mode. In shift mode, the grid button functions are as follows:
+
+Top Row selects the active client.
+2nd Row selects the channel for that client (for nomeout/midiout routing)
+Last Row is the Key control.  Its function varies depending upon the patch.
+
+Key control may be toggled on/off by itself by pressing the Lock menu key.
+
+Code:
+
+Press Livid button to change between Monomod and standard modes.
+
+The button above it (4th Row button) is the Shift button.
+
+The fourth row of dials allows client selection when shift is pressed.  
+
+There is currently only one Monomod client which supports the Code (binary).
+
+
+Current implementation is far from complete.  However, none of the commands  (either sent or received) should be changed in future revisions, with the exception of the Code specific commands.  In the final version, the Code data will be merged with standard grid data, and the total size of the Code grid will be variable, and navigable.
+
+Lots left to fix (mostly instantiation/destruction issues on project load, etc.).  Don't worry about reporting major malfunctions for the time being.  Individual patch bugs are more important at the moment (hehe....did I just say that?).
+
+Additions scheduled before 1.0:
+
+Variable grid size(no limit).
+Unification of Dial/Monomod grid.
+Addition of text storage variable space for each grid square.
+Set Max clients to 16.
+Addition of ASCII library to Monomod class (for displaying alphanumeric values on grid).
+Addition of further Modes for led rings.
+Color Map capabilities loadable from the client patch itself.
+OSC transmit/receive direct to Monome patches from Python.
+
+Since this work contains a lot of references to the OhmRGB, I'd keep it to yourselves.
+
+Planned support for:
+
+Block
+iPad
+Launchpad
+APC40
+BCR2000
+
+
+Further notes:  its unclear to me whether Freezing a patch includes a Java class file or note.  Plinko and Boinngg both require a Java external, so make sure you put them in your search path.
+
+-amounra 061411

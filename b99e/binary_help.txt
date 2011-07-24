@@ -1,0 +1,41 @@
+Some rudimentary information about Binary:
+
+Binary is a 24 track sequencer built to unify some of the functions of polygome, boinngg, touchcafe, etc.  
+
+The green buttons on the left are called row[1] - row[4];
+on the bottom, they are called column[1] - column[8].
+
+The basic idea:
+
+The top 3 rows of dials represent the sequences.  You can select a sequence by pressing its dial, the led below it will light when its selected.
+
+The bottom row of dials are parameters for the selected sequence. They reflect either the note# for the sequence step, or one of the 8 parameters in the plugin's window.
+
+You can program a sequence by pressing the column buttons to turn on/off steps. 
+
+You can change the speed of the sequence by turning its corresponding dial.
+
+You can move the position of the sequence by pushing and turning the sequence.
+
+You can synchronize the speed of one sequence to another by pressing and holding its dial, then pressing the dial of the sequence to synchronize it to.
+
+The green led in the ledring represents the 'active' status of a sequence. If the green led isn't lit, it is not playing.  To activate a sequence, select it and press the row[2] button. 
+
+The row[1] button is a shift button.  It will pause the display of the selected sequence so that it can be edited.  Also, if you press a dial while holding shift, it will toggle quantization for that sequence.
+
+If you hold shift and press row[2], it will start flashing.  This means you are in 'play mode'.  In this mode, pressing a sequence dial activates it, releasing it deactivates it.
+
+
+Obviously, this is incomplete.  Just trying to encapsulate the basic ideas....
+
+
+The best way to get going:
+
+Install plugin, place a sampler or something right after to play its output.
+
+Press dial 1/1.
+Press row[2]  (the green led should turn on for dial 1/1)
+Press some column buttons (they should light up and start moving)
+
+If the sequence doesn't start moving right away, push-and-turn the dial. It should start after that (a bug).
+
