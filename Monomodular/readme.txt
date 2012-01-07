@@ -1,4 +1,17 @@
-103111
+010612
+
+b992r8ish:
+
+Added more things than I can keep track of.  Mainly updating the readme file for version control with the new installer which has now been released in its initial version.  For more help on all this stuff, the new wiki is the best resource, and will soon be linked in each individual patch.
+
+http://www.aumhaa.com/wiki
+
+or 
+
+http://www.aumhaa.com/wp
+
+a
+
 
 b992r5:
 
