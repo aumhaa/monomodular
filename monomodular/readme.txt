@@ -1,3 +1,7 @@
+011712
+
+Added some preliminary b995 Python scripts and patch files.  Changelog to come when I have time to add the rest of the stuff...
+
 110912
 
 Fixed another bug in Hex's init pattr, now it should recall state of selected sequence correctly.
