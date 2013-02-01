@@ -1,3 +1,8 @@
+013113
+
+Added some more mods to b995 format, haven't tested at all though.  Shifting gears to start rewriting Python….
+
+
 011712
 
 Added some preliminary b995 Python scripts and patch files.  Changelog to come when I have time to add the rest of the stuff...
