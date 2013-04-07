@@ -1,12 +1,12 @@
-# http://www.aumhaa.com 2013
+# by amounra 0413 : http://www.aumhaa.com
 
 from __future__ import with_statement
 import Live
 import time
 import math
 import sys
-import posix
-import gc
+#import posix
+#import gc
 from LiveUtils import *
 
 
@@ -68,7 +68,7 @@ class Monomodular(ControlSurface):
 	
 
 	"""script initialization methods"""
-	def _log_version_data(self):
+	"""def _log_version_data(self):
 		self.log_message('modules' + str(sys.builtin_module_names))
 		self.log_message('version' + str(sys.version))
 		self.log_message('sys.path: ' + str(sys.path))
@@ -76,15 +76,15 @@ class Monomodular(ControlSurface):
 			self.log_message(str(item))
 		looks_at = gc.get_referrers(self)
 		for item in looks_at:
-			self.log_message(str(item))
+			self.log_message(str(item))"""
 	
 
-	def _hijack_mxdcore(self):
+	"""def _hijack_mxdcore(self):
 		if sys.modules['_MxDCore.MxDCore']:
 			self.log_message('got it!')
 			#OldModule = sys.modules['_MxDCore.MxDCore']
 			#sys.modules['_MxDCore.MxDCore'] = module
-			#reload(sys.modules['_MxDCore.MxDCore'])
+			#reload(sys.modules['_MxDCore.MxDCore'])"""
 	
 
 
@@ -167,13 +167,13 @@ class Monomodular(ControlSurface):
 		self._send_midi(tuple([Type, num, val]));
 	
 
-	def _setup_midi_input(self):
+	"""def _setup_midi_input(self):
 		for channel in range(16):
 			for message_id in range(127):
 				Live.MidiMap.forward_midi_note(self._c_instance.handle(), self._midi_map_handle, channel, message_id)
 				Live.MidiMap.forward_midi_cc(self._c_instance.handle(), self._midi_map_handle, channel, message_id)
 			#Live.MidiMap.forward_midi_pitchbend(self._midi_map_handle, channel)
-		self.log_message('setup midi input')
+		self.log_message('setup midi input')"""
 	
 
 
