@@ -72,13 +72,16 @@ class MonoButtonElement(ButtonElement):
 		self._is_enabled = enabled
 		self._request_rebuild()
 
-	def turn_on(self):
+	def turn_on(self, force = False):
+		self.force_next_send()
 		self.send_value(self._on_value)
 
-	def turn_off(self):
+	def turn_off(self, force = False):
+		self.force_next_send()
 		self.send_value(self._off_value)
 
-	def reset(self):
+	def reset(self, force = False):
+		self.force_next_send()
 		self.send_value(0)
 		
 	def receive_value(self, value):
