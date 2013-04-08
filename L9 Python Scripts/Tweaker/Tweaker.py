@@ -31,8 +31,8 @@ from _Framework.TrackFilterComponent import TrackFilterComponent # Class represe
 from _Framework.TransportComponent import TransportComponent # Class encapsulating all functions in Live's transport section
 
 """Custom files, overrides, and files from other scripts"""
-from _Mono_Framework.MonoButtonElement import MonoButtonElement as FlashingButtonElement
-from _Mono_Framework.Live8DeviceComponent import Live8DeviceComponent as DeviceComponent
+from MonoButtonElement import MonoButtonElement as FlashingButtonElement
+from Live8DeviceComponent import Live8DeviceComponent as DeviceComponent
 from DetailViewControllerComponent import DetailViewControllerComponent
 from PadOffsetComponent import PadOffsetComponent
 
