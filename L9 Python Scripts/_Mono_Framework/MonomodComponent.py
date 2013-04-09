@@ -8,6 +8,9 @@ from _Mono_Framework.MonoButtonElement import MonoButtonElement
 from _Mono_Framework.EncoderMatrixElement import EncoderMatrixElement
 #from MonoDeviceComponent import MonoDeviceComponent
 
+DEBUG = True
+
+
 MODES = ['SerialOSC', 'MonomeSerial']
 INITIAL_SCROLLING_DELAY = 5
 INTERVAL_SCROLLING_DELAY = 1
@@ -21,7 +24,7 @@ FILTER =	[[0, 0, 0, 0, 0, 0, 0, 0],
 			[0, 1, 1, 1, 1, 1, 1, 1],
 			[0, 0, 0, 0, 0, 0, 0, 0]]
 
-KEYPAD = 	[[1, 2, 3, -1, -1, 11, 12, 13], 
+KEYPAD =	[[1, 2, 3, -1, -1, 11, 12, 13], 
 			[4, 5, 6, -1, -1, 14, 15, 16],
 			[7, 8, 9, -1, -1, 17, 18, 19],
 			[-1, 0, -1, -1, -1, -1, 10, -1],
@@ -37,8 +40,8 @@ class MonomodComponent(CompoundComponent):
 	__doc__ = ' Component that encompasses and controls 8 Monomod clients '
 
 
-	def __init__(self, script):
-		ControlSurfaceComponent.__init__(self)
+	def __init__(self, script, *a, **k):
+		super(MonomodComponent, self).__init__(*a, **k)
 		self._sub_components = []
 		self.set_allow_update(False) ###added 
 		self._script = script
@@ -53,7 +56,7 @@ class MonomodComponent(CompoundComponent):
 		self._lock_button = None
 		self._nav_buttons = None
 		self._menu = None
-		self._client = None  ###added
+		self._client = None	 ###added
 		self._active_client = None
 		self._shift_pressed = 0
 		self._alt_pressed = 0
@@ -74,6 +77,8 @@ class MonomodComponent(CompoundComponent):
 		self._is_enabled = False
 		self._is_connected = False
 		self._autoselect = True
+		self._navbox_selected = 4
+		self._navbox_unselected = 1
 		
 		"""MonoLink specific variables"""
 		self._port_entry = [[], []]
@@ -265,6 +270,7 @@ class MonomodComponent(CompoundComponent):
 
 
 	def _set_shift_button(self, shift):
+		self._print('setting shift button to ' + str(shift))
 		if self._shift_button != None:
 			self._shift_button.remove_value_listener(self._shift_value)
 		self._shift_button = shift
@@ -360,7 +366,7 @@ class MonomodComponent(CompoundComponent):
 		if self.is_enabled():
 			if (self._shift_pressed > 0) or (self._locked > 0):
 				self._grid.get_button(index, 7).send_value(int(self._colors[value]))
-			if  self._keys != None and len(self._keys) > index:
+			if	self._keys != None and len(self._keys) > index:
 				self._keys[index].send_value(int(self._colors[value]))
 	
 
@@ -510,11 +516,10 @@ class MonomodComponent(CompoundComponent):
 			for column in range(4):
 				for row in range(4):
 					if (column * 4 in range(self._x, self._x + 8)) and (row * 4 in range(self._y, self._y + 8)):
-						self._grid.get_button(column +2, row+2).send_value(4)
+						self._grid.get_button(column +2, row+2).send_value(self._navbox_selected)
 					else:
-						self._grid.get_button(column +2, row+2).send_value(1)
+						self._grid.get_button(column +2, row+2).send_value(self._navbox_unselected)
 	
-
 
 	def on_enabled_changed(self):
 		self._scroll_up_ticks_delay = -1
@@ -750,5 +755,10 @@ class MonomodComponent(CompoundComponent):
 		#self._script.log_message('send lcd ' + str(column) + ' ' + str(row) + ' ' + str(wheel['pn']))
 		if self.is_enabled() and not self._active_client._device_component.is_enabled():
 			self._script.notification_to_bridge(str(wheel['pn']), str(wheel['pv']), self._dial_matrix.get_dial(column, row))
+	
+
+	def _print(self, message, *a, **k):
+		if DEBUG:
+			self._script.log_message(str(message))
 	
 

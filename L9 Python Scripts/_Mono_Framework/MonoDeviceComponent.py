@@ -13,8 +13,8 @@ from ModDevices import *
 class MonoDeviceComponent(DeviceComponent):
 	
 	__doc__ = ' Class representing a device linked to a Monomodular client, to be redirected by it from Max '
-	def __init__(self, parent, host, cs):
-		DeviceComponent.__init__(self)
+	def __init__(self, parent, host, cs, *a, **k):
+		super(MonoDeviceComponent, self).__init__(*a, **k)
 		self._type = None
 		self._device_parent = None
 		self._host = host

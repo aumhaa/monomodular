@@ -13,8 +13,8 @@ class DeviceSelectorComponent(ModeSelectorComponent):
 	__doc__ = ' Class for switching between modes, handle several functions with few controls '
 
 
-	def __init__(self, script):
-		ModeSelectorComponent.__init__(self)
+	def __init__(self, script, *a, **k):
+		super(DeviceSelectorComponent, self).__init__(*a, **k)
 		self._script = script
 		self._mode_index = 0
 		self._number_of_modes = 0

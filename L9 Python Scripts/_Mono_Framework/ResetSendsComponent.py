@@ -8,8 +8,8 @@ class ResetSendsComponent(ControlSurfaceComponent):
 	' Special Component to reset all track sends to zero for the first four returns '
 	__module__ = __name__
 
-	def __init__(self, script):
-		ControlSurfaceComponent.__init__(self)
+	def __init__(self, script, *a, **k):
+		super(ResetSendsComponent, self).__init__(*a, **k)
 		self._script = script
 		self._buttons = [None, None, None, None]
 

@@ -29,8 +29,8 @@ class CodecEncoderElement(EncoderElement):
 	__doc__ = ' Class representing an encoder on the Livid Code controller '
 
 
-	def __init__(self, msg_type, channel, identifier, map_mode, name, num, script):
-		EncoderElement.__init__(self, msg_type, channel, identifier, map_mode)
+	def __init__(self, msg_type, channel, identifier, map_mode, name, num, script, *a, **k):
+		super(CodecEncoderElement, self).__init__(msg_type, channel, identifier, map_mode, *a, **k)
 		self._script = script
 		self.name = name
 		self.num = num

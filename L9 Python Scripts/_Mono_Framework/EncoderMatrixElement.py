@@ -46,8 +46,8 @@ class EncoderMatrixElement(NotifyingControlElement):
 	' Class representing a 2-dimensional set of buttons '
 
 
-	def __init__(self, script):
-		NotifyingControlElement.__init__(self)
+	def __init__(self, script, *a, **k):
+		super(EncoderMatrixElement, self).__init__(*a, **k)
 		self._script = script
 		self._dials = []
 		self._dial_coordinates = {}

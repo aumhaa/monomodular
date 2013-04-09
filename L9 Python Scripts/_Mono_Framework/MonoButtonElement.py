@@ -20,8 +20,8 @@ class MonoButtonElement(ButtonElement):
 	__module__ = __name__
 	__doc__ = ' Special button class that can be configured with custom on- and off-values, some of which flash at specified intervals called by _Update_Display'
 
-	def __init__(self, is_momentary, msg_type, channel, identifier, name, cs):
-		ButtonElement.__init__(self, is_momentary, msg_type, channel, identifier)
+	def __init__(self, is_momentary, msg_type, channel, identifier, name, cs, *a, **k):
+		super(MonoButtonElement, self).__init__(is_momentary, msg_type, channel, identifier, *a, **k)
 		self.name = name
 		self._script = cs
 		self._color_map = [2, 64, 4, 8, 16, 127, 32]
@@ -39,9 +39,10 @@ class MonoButtonElement(ButtonElement):
 		self._report_input = True
 
 	def set_color_map(self, color_map):
-		assert isinstance(colormap, tuple)
+		assert isinstance(color_map, tuple)
+		assert len(color_map) > 0
 		self._num_colors = len(color_map)
-		self._num_flash_states = round(127/self._num_flash_states)
+		self._num_flash_states = int(127/len(color_map))
 		self._color_map = color_map
 	
 
@@ -72,16 +73,13 @@ class MonoButtonElement(ButtonElement):
 		self._is_enabled = enabled
 		self._request_rebuild()
 
-	def turn_on(self, force = False):
-		self.force_next_send()
+	def turn_on(self):
 		self.send_value(self._on_value)
 
-	def turn_off(self, force = False):
-		self.force_next_send()
+	def turn_off(self):
 		self.send_value(self._off_value)
 
-	def reset(self, force = False):
-		self.force_next_send()
+	def reset(self):
 		self.send_value(0)
 		
 	def receive_value(self, value):
@@ -142,8 +140,5 @@ class MonoButtonElement(ButtonElement):
 			 data_byte1,
 			 data_byte2))
 			
-
-
 	
-# local variables:
-# tab-width: 4
+

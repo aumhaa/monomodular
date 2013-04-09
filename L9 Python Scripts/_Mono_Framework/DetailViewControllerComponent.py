@@ -8,8 +8,8 @@ class DetailViewControllerComponent(ControlSurfaceComponent):
     __module__ = __name__
     __doc__ = ' Component that can toggle the device chain- and clip view of the selected track '
 
-    def __init__(self):
-        ControlSurfaceComponent.__init__(self)
+    def __init__(self, *a, **k):
+        super(DetailViewControllerComponent, self).__init__(*a, **k)
         self._device_clip_toggle_button = None
         self._detail_toggle_button = None
         self._left_button = None

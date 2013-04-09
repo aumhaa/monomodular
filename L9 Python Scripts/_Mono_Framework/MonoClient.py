@@ -51,7 +51,7 @@ class MonoClient(NotifyingControlElement):
 
 
 	def __init__(self, script, number, *a, **k):
-		super(MonoClient, self).__init__(script, number, *a, **k)
+		super(MonoClient, self).__init__(*a, **k)
 		self._host = script
 		self._active_host = []
 		self._number  = number

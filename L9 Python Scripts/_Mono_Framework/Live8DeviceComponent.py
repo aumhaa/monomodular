@@ -8,8 +8,8 @@ from _Framework.DisplayDataSource import DisplayDataSource
 class Live8DeviceComponent(ControlSurfaceComponent):
 	
 	__doc__ = ' Class representing a device in Live '
-	def __init__(self):
-		ControlSurfaceComponent.__init__(self)
+	def __init__(self, *a, **k):
+		super(Live8DeviceComponent, self).__init__(*a, **k)
 		self._device_banks = DEVICE_DICT
 		self._device_best_banks = DEVICE_BOB_DICT
 		self._device_bank_names = BANK_NAME_DICT

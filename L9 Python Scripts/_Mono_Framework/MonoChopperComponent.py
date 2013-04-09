@@ -20,8 +20,8 @@ class MonoChopperComponent(ControlSurfaceComponent):
 	__doc__ = " Class that holds chopper variables and methods"
 
 
-	def __init__(self, cs, mixer):
-		ControlSurfaceComponent.__init__(self)
+	def __init__(self, cs, mixer, *a, **k):
+		super(MonoChopperComponent, self).__init__(*a, **k)
 		self._cs = cs
 		self._mixer = mixer
 		self._clip_focus = None
