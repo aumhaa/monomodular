@@ -1,17 +1,13 @@
+
+import Live
 from _Framework.CompoundComponent import CompoundComponent
 from _Framework.ControlSurfaceComponent import ControlSurfaceComponent
 from _Framework.ButtonElement import ButtonElement
 from _Framework.ButtonMatrixElement import ButtonMatrixElement
-from _Framework.EncoderElement import EncoderElement
 
-from _Mono_Framework.MonoButtonElement import MonoButtonElement
+from _Mono_Framework.MonoButtonElement import MonoButtonElement as FlashingButtonElement
 from _Mono_Framework.EncoderMatrixElement import EncoderMatrixElement
-#from MonoDeviceComponent import MonoDeviceComponent
 
-DEBUG = True
-
-
-MODES = ['SerialOSC', 'MonomeSerial']
 INITIAL_SCROLLING_DELAY = 5
 INTERVAL_SCROLLING_DELAY = 1
 
@@ -21,17 +17,8 @@ FILTER =	[[0, 0, 0, 0, 0, 0, 0, 0],
 			[1, 1, 0, 0, 0, 0, 1, 1],
 			[1, 1, 0, 0, 0, 0, 1, 1],
 			[1, 1, 0, 0, 0, 0, 1, 1],
-			[0, 1, 1, 1, 1, 1, 1, 1],
+			[1, 1, 1, 1, 1, 1, 1, 1],
 			[0, 0, 0, 0, 0, 0, 0, 0]]
-
-KEYPAD =	[[1, 2, 3, -1, -1, 11, 12, 13], 
-			[4, 5, 6, -1, -1, 14, 15, 16],
-			[7, 8, 9, -1, -1, 17, 18, 19],
-			[-1, 0, -1, -1, -1, -1, 10, -1],
-			[-1, -1, -1, -1, -1, -1, -1, -1],
-			[-1, -1, -1, -1, -1, -1, -1, -1],
-			[-1, -1, -1, -1, -1, -1, -1, -1],
-			[20, 21, -1, -1, -1, -1, -1, -1]]
 
 RELATIVE = [-1, 1]			
 
@@ -45,7 +32,7 @@ class MonomodComponent(CompoundComponent):
 		self._sub_components = []
 		self.set_allow_update(False) ###added 
 		self._script = script
-		self._host_name = 'Generic Monomodular Controller'
+		self._host_name = 'Code'
 		self._dial_matrix = None
 		self._dial_button_matrix = None
 		self._grid = None
@@ -57,7 +44,7 @@ class MonomodComponent(CompoundComponent):
 		self._lock_button = None
 		self._nav_buttons = None
 		self._menu = None
-		self._client = None	 ###added
+		self._client = None  ###added
 		self._active_client = None
 		self._shift_pressed = 0
 		self._alt_pressed = 0
@@ -70,33 +57,24 @@ class MonomodComponent(CompoundComponent):
 		self._y = 0
 		self._client_buttons = []
 		self._channel_buttons = []
-		self._color_maps = [range(128) for index in range(17)]
+		self._color_maps = [range(128) for index in range(16)]
 		self._colors = self._color_maps[0]
-		self._offsets = [[0, 0] for index in range(17)]
+		self._offsets = [[0, 0] for index in range(16)]
 		self._scroll_up_ticks_delay = -1
 		self._scroll_down_ticks_delay = -1
 		self._scroll_right_ticks_delay = -1
 		self._scroll_left_ticks_delay = -1
 		self._is_enabled = False
 		self._is_connected = False
-		self._autoselect = True
-		self._navbox_selected = 4
-		self._navbox_unselected = 1
-		
-		"""MonoLink specific variables"""
-		self._port_entry = [[], []]
-		
-		"""CNTRLR specific variables"""
-		self._bank_buttons = []
-		
 		self.set_allow_update(True)
-
-		self._alt_device_banks = {}
 		self._register_timer_callback(self._on_timer)
+		
+		self._alt_device_banks = {}
 		return None
 	
 
 	def disconnect(self):
+		#self._script.log_message('monomod disconnect')
 		self.set_allow_update(False)  ###added
 		self._active_client = None
 		self._set_shift_button(None)
@@ -126,10 +104,11 @@ class MonomodComponent(CompoundComponent):
 		self._active_client._active_host.append(self)
 		self._x = self._offsets[number][0]
 		self._y = self._offsets[number][1]
-		if (self._active_client._autoselect_enabled > 0) or (self._autoselect  is True):
-			self.select_active_client()
+		self._script.set_local_ring_control(self._active_client._local_ring_control)
+		self._script.set_absolute_mode(self._active_client._absolute_mode)
+		self._active_client._device_component.update()
+		#self._active_client.set_channel()
 		self.update()
-		self._active_client._banner()
 	
 
 
@@ -152,10 +131,6 @@ class MonomodComponent(CompoundComponent):
 		if (self.is_enabled()):
 			if self._shift_pressed == 1:
 				if value > 0:
-					if y == 6 and x == 0:
-						if len(self._client)>16:
-							self._select_client(16)
-							self._display_bank()
 					if y == 0:
 						self._select_client(x + (self._bank_add * 8))
 						self._display_bank()
@@ -177,33 +152,18 @@ class MonomodComponent(CompoundComponent):
 					elif (x in range(4, 6)) and (y in range(4, 6)):
 						self._change_offset(8, 8)
 					elif (y == 7):
-						if self._alt_pressed > 0 and value > 0:
+						if self._alt_pressed > 0:
 							if (x == 7):
 								self.select_active_client()
-							elif x == 6:
-								self.toggle_state_active_client()
-							elif x == 5:
-								self.toggle_mute_active_client()
-							elif x == 4:
-								self.display_active_client()
 						else:
 							self._active_client._send_key(x, value)		
 			elif self._shift_pressed == 0:	
-				if self._active_client._is_monolink and self._alt_pressed > 0:
-					if value > 0:
-						self._port_address(KEYPAD[y][x])
-				elif self._locked == 1:
+				if self._locked == 1:
 					if y == 7:
-						if self._alt_pressed > 0 and value > 0:
+						if self._alt_pressed > 0:
 							#added from here
 							if x == 7:
 								self.select_active_client()
-							elif x == 6:
-								self.toggle_state_active_client()
-							elif x == 5:
-								self.toggle_mute_active_client()
-							elif x == 4:
-								self.display_active_client()
 							else:
 								self._active_client._send_key(x, value)
 							#to here
@@ -243,7 +203,7 @@ class MonomodComponent(CompoundComponent):
 			self._alt_button.remove_value_listener(self._alt_value)
 		self._alt_button = alt
 		if alt != None:
-			assert isinstance(alt, MonoButtonElement)
+			assert isinstance(alt, FlashingButtonElement)
 			self._alt_button.set_on_off_values(8, 0)
 			self._alt_button.add_value_listener(self._alt_value)
 	
@@ -251,18 +211,8 @@ class MonomodComponent(CompoundComponent):
 	def _alt_value(self, value):
 		if self._shift_pressed == 0:
 			self._alt_pressed = value != 0
-			if self._active_client._is_monolink:
-				if self._alt_pressed > 0:
-					self._display_keypads()
-					self._port_entry = [[], []]
-					self._display_port()
-				else:
-					if len(self._port_entry[0])>0 or len(self._port_entry[1])>0:
-						self._active_client._change_ports(self._port_entry)
-					self.update()
-			else:
-				self._active_client._send('alt', int(self._alt_pressed))
-				self.update()
+			self._active_client._send('alt', int(self._alt_pressed))
+			self.update()
 	
 
 	def _update_alt_button(self):
@@ -275,12 +225,11 @@ class MonomodComponent(CompoundComponent):
 
 
 	def _set_shift_button(self, shift):
-		self._print('setting shift button to ' + str(shift))
 		if self._shift_button != None:
 			self._shift_button.remove_value_listener(self._shift_value)
 		self._shift_button = shift
 		if shift != None:
-			assert isinstance(shift, MonoButtonElement)
+			assert isinstance(shift, FlashingButtonElement)
 			self._shift_button.set_on_off_values(7, 0)
 			self._shift_button.add_value_listener(self._shift_value)
 	
@@ -291,7 +240,7 @@ class MonomodComponent(CompoundComponent):
 	
 
 	def _update_shift_button(self):
-		if self._shift_button!=None:
+		if self._shift_button != None:
 			if self._shift_pressed != 0:
 				self._shift_button.turn_on()
 			else:
@@ -304,7 +253,7 @@ class MonomodComponent(CompoundComponent):
 			self._lock_button.remove_value_listener(self._lock_value)
 		self._lock_button = lock
 		if lock != None:
-			assert isinstance(lock, MonoButtonElement)
+			assert isinstance(lock, FlashingButtonElement)
 			self._lock_button.set_on_off_values(11, 0)
 			self._lock_button.add_value_listener(self._lock_value)
 	
@@ -316,7 +265,7 @@ class MonomodComponent(CompoundComponent):
 	
 
 	def _update_lock_button(self):
-		if self._lock_button!=None:
+		if self._lock_button != None:
 			if self._locked != 0:
 				self._lock_button.turn_on()
 			else:
@@ -327,38 +276,25 @@ class MonomodComponent(CompoundComponent):
 	def _set_key_buttons(self, buttons):
 		assert (buttons == None) or (isinstance(buttons, tuple))
 		for key in self._keys:
-			if key.value_has_listener(self._key_value):
-				key.remove_value_listener(self._key_value)
+			key.remove_value_listener(self._key_value)
 		self._keys = []
 		if buttons != None:
 			assert len(buttons) == 8
 			for button in buttons:
-				#assert isinstance(button, MonoButtonElement)
+				assert isinstance(button, FlashingButtonElement)
 				self._keys.append(button)
 				button.add_value_listener(self._key_value, True)
 	
 
 	def _key_value(self, value, sender):
 		if self.is_enabled():
-			if self._alt_pressed > 0 and value > 0:
-				if self._keys.index(sender) == 7:
-					self.select_active_client()
-				elif self._keys.index(sender) == 6:
-					self.toggle_state_active_client()
-				elif self._keys.index(sender) == 5:
-					self.toggle_mute_active_client()
-				elif self._keys.index(sender) == 4:
-					self.display_active_client()
-			else:
-				self._active_client._send_key(self._keys.index(sender), int(value!=0))
 			self._active_client._send_key(self._keys.index(sender), int(value!=0))
 	
 
 	def _update_keys(self):
 		if self._alt_pressed > 0:
-			for index in range(4):
-				self._send_key(index, self._active_client._key[index])
-				self._send_key(index+4, 0)
+			for index in range(8):
+				self._send_key(index, 0)
 			if self._active_client.device != None:
 				self._send_key(6, self._active_client.device.parameters[0].value>0)
 			self._send_key(5, self._active_client._mute==0)
@@ -370,12 +306,24 @@ class MonomodComponent(CompoundComponent):
 	def _send_key(self, index, value):				#to be sent to controller from client
 		if self.is_enabled():
 			if (self._shift_pressed > 0) or (self._locked > 0):
-				self._grid.get_button(index, 7).send_value(int(self._colors[value]))
-			if	self._keys != None and len(self._keys) > index:
+				if self._grid != None:
+					self._grid.get_button(index, 7).send_value(int(self._colors[value]))
+				if self._dial_button_matrix != None:
+					for index in range(8):
+						self._dial_button_matrix.get_button(index, 4).send_value(int(self._colors[self._active_client._key[index]]))
+			if  self._keys != None and len(self._keys) > index:
 				self._keys[index].send_value(int(self._colors[value]))
 	
+	
+	def _set_knobs(self, knobs):
+		pass
+	
 
+	def _knob_value(self, value, sender):
+		pass
+	
 
+	"""grid navigation"""
 	def _set_nav_buttons(self, buttons):
 		if self._nav_buttons != None:
 			self._nav_buttons[0].remove_value_listener(self._nav_up_value)
@@ -386,7 +334,7 @@ class MonomodComponent(CompoundComponent):
 		if buttons != None:
 			assert len(buttons) == 4
 			for button in buttons:
-				assert isinstance(button, MonoButtonElement)
+				assert isinstance(button, FlashingButtonElement)
 			self._nav_buttons[0].set_on_off_values(8, 2)	
 			self._nav_buttons[0].add_value_listener(self._nav_up_value)
 			self._nav_buttons[1].set_on_off_values(8, 2)	
@@ -514,23 +462,32 @@ class MonomodComponent(CompoundComponent):
 			self.update()
 	
 
-
-	"""this has to be preserved for each script so that the buttons are the correct colors...they can't be affected by the color map.  Best to set a variable at instantiation for future versions"""
 	def _send_nav_box(self):
-		if self._shift_pressed == 1:
+		if self._grid != None and self._shift_pressed == 1:
 			for column in range(4):
 				for row in range(4):
 					if (column * 4 in range(self._x, self._x + 8)) and (row * 4 in range(self._y, self._y + 8)):
-						self._grid.get_button(column +2, row+2).send_value(self._navbox_selected)
+						self._grid.get_button(column +2, row+2).send_value(int(self._colors[4]))
 					else:
-						self._grid.get_button(column +2, row+2).send_value(self._navbox_unselected)
+						self._grid.get_button(column +2, row+2).send_value(int(self._colors[1]))
 	
+
 
 	def on_enabled_changed(self):
 		self._scroll_up_ticks_delay = -1
 		self._scroll_down_ticks_delay = -1
 		self._scroll_right_ticks_delay = -1
 		self._scroll_left_ticks_delay = -1
+		if self._active_client != None:
+			if self.is_enabled():
+				self._active_client._device_component.update()
+				self._script.set_absolute_mode(self._active_client._absolute_mode)
+				self._script.set_local_ring_control(self._active_client._local_ring_control)
+			else:
+				for control in self._parameter_controls:
+					control.release_parameter()
+				self._script.set_absolute_mode(1)
+				self._script.set_local_ring_control(1)
 		self.update()
 	
 
@@ -552,27 +509,6 @@ class MonomodComponent(CompoundComponent):
 		else:
 			self._update_requests +=1
 	
-
-	"""
-	def _display_bank(self):
-		self._grid.get_button(0, 2).send_value(self._bank_add * 8)
-		for index in range(8):
-			self._grid.get_button(index, 0).send_value(int(self._bank_add!=0)*127)
-		if(self._active_client._number in range((self._bank_add * 8), (self._bank_add * 8) + 8)):
-			self._grid.get_button(self._active_client._number - (self._bank_add * 8), 0).send_value(int(self._bank_add==0)*127)
-		self._grid.get_button(0, 6).send_value(int(self._active_client._number is 16)*8)		
-		self._update_grid()
-		self._active_client._autoselect()
-	
-
-	def _display_channel(self):
-		self._grid.get_button(7, 2).send_value(self._chan_add * 8)
-		for index in range(8):
-			self._grid.get_button(index, 1).send_value(int(self._chan_add!=0)*127)
-		if(self._active_client._channel in range((self._chan_add * 8), (self._chan_add * 8) + 8)):
-			self._grid.get_button(self._active_client._channel - (self._chan_add * 8), 1).send_value(int(self._chan_add==0)*127)
-	
-	"""
 
 	def _display_bank(self):
 		if self._grid != None:
@@ -614,7 +550,6 @@ class MonomodComponent(CompoundComponent):
 		self.update()
 	
 
-
 	def set_appointed_device(self, device):
 		if device != None:
 			self._script.song().view.select_device(device)
@@ -628,8 +563,16 @@ class MonomodComponent(CompoundComponent):
 
 	def select_active_client(self):
 		self.set_appointed_device(self._active_client.linked_device())
+	
+
+	def set_color_map(self, number, map):
+		self._color_maps[number] = map
+	
+
+	def select_active_client(self):
+		self.set_appointed_device(self._active_client.linked_device())
 		for client in self._client:
-			client._send('pop', client.is_active())
+			client._send('pop', client.is_active())	
 	
 
 	def display_active_client(self):
@@ -641,6 +584,9 @@ class MonomodComponent(CompoundComponent):
 			if ((not self.application().view.is_view_visible('Detail')) or (not self.application().view.is_view_visible('Detail/DeviceChain'))):
 				self.application().view.show_view('Detail')
 				self.application().view.show_view('Detail/DeviceChain')
+			#for client in self._client:
+			#	client._send('pop', client.is_active())
+				#self.application().view.zoom_view('Arranger')
 	
 
 	def find_track(self, obj):
@@ -662,13 +608,8 @@ class MonomodComponent(CompoundComponent):
 		self._update_keys()
 	
 
-	def set_color_map(self, number, map):
-		self._color_maps[number] = map
-	
-
-
 	"""Codec specific methods"""
-	def _set_dial_matrix(self, dial_matrix = None, button_matrix = None, *a, **k):
+	def _set_dial_matrix(self, dial_matrix, button_matrix):
 		assert isinstance(dial_matrix, (EncoderMatrixElement, type(None)))
 		if dial_matrix != self._dial_matrix:
 			if self._dial_matrix != None:
@@ -687,100 +628,96 @@ class MonomodComponent(CompoundComponent):
 		return None
 	
 
-	def _dial_matrix_value(self, *a):
-		pass
+	def _dial_matrix_value(self, value, x, y):
+		if self.is_enabled() and self._active_client != None:
+			if self._script._absolute_mode == 0:
+				value = RELATIVE[int(value == 1)]
+			self._active_client._send_dial(x, y, value)
 	
 
-	def _dial_button_matrix_value(self, *a):
-		pass
+	def _reset_encoder(self, coord):
+		self._dial_matrix.get_dial(coord[0], coord[1])._reset_to_center()
 	
+		
 
-	def _send_wheel(self, *a):
-		pass
-	
-
-	def _update_wheel(self, *a):
-		pass
-	
-
-
-	"""MonoLink specific methods"""
-	def _display_port(self):
-		inPrt = self._active_client._inPrt
-		outPrt = self._active_client._outPrt
-		if len(self._port_entry[0]) > 0:
-			inPrt = ''.join(str(x) for x in self._port_entry[0])
-		if len(self._port_entry[1]) > 0:
-			outPrt = ''.join(str(x) for x in self._port_entry[1])
-		self._active_client._display_info(inPrt, outPrt)
-	
-
-	def _port_address(self, value):
-		if(value > -1):
-			if(value < 10):
-				self._port_entry[0].append(`value`)
-			elif(value <20):
-				self._port_entry[1].append(`(value - 10)`)
+	def _dial_button_matrix_value(self, value, x, y, force):
+		if (self.is_enabled()) and (self._shift_pressed is False) and (self._active_client != None):
+			if self._locked == 1 and y == 4:
+				self._active_client._send_key(x, value)
+				self._update_keys()
 			else:
-				self._active_client._change_modes(value-20)
-				self._display_keypads()
-		self._display_port()
+				self._active_client._send_dial_button(x, y, value)
+		elif(self.is_enabled()) and (self._shift_pressed is True):
+			if (y == 0) and (value > 0):
+				if (x < 8):
+					self._select_client(x + (self._bank_add * 8))
+					self._display_bank()
+				else:
+					self._locked = abs(self._locked - 1)
+					self.update()
+			elif (y == 1):
+				if (y < 8) and (value > 0):
+					self._active_client._set_channel(x + (self._chan_add * 8))
+					self._display_channel()
+				else:
+					self._alt_pressed = int(value != 0)
+					self._active_client._send('alt', int(self._alt_pressed))
+					self.update()
+			elif (y == 2):
+				if (x == 0) and (value > 0):
+					self._bank_add = abs(self._bank_add - 1)
+					self._display_bank()
+				elif (x == 7) and (value > 0):
+					self._chan_add = abs(self._chan_add - 1)
+					self._display_channel()
+			elif (y == 4):
+				if (self._alt_pressed > 0) and (x == 7) and (val > 0):
+						self.select_active_client()
+				else:
+					self._active_client._send_key(x, value)	
+					self._update_keys()
 	
 
-	def _display_keypads(self):
-		for x in range(8):
-			for y in range(7):
-				self._grid.get_button(x, y).send_value(not int(KEYPAD[y][x] is -1))
-		for x in range(8):
-			self._grid.get_button(x, 7).send_value(x==int(self._active_client._format))
+	def _send_wheel(self, column, row, wheel, parameter=None):		#to be sent to controller from client
+		if self.is_enabled() and wheel != None:
+			if column < 8 and row < 4:
+				dial = self._dial_matrix.get_dial(column, row)
+				if(parameter=='value'):
+					dial._ring_value = int(wheel['value'])
+				dial._ring_mode = int(wheel['mode'])
+				dial._ring_green = int(wheel['green']!=0)
+				if(parameter=='custom'):
+					dial._ring_custom = dial._calculate_custom(str(wheel['custom']))
+			if self._shift_pressed == True:
+				if row in range(2, 3) and column in range(0, 7):
+					self._dial_button_matrix.send_value(column, row, wheel['white'])
+			elif self._locked == True:
+				if row in range(0, 3):
+					self._dial_button_matrix.send_value(column, row, wheel['white'])
+			else:
+				self._dial_button_matrix.send_value(column, row, wheel['white'])
+				
 	
 
-
-	"""CNTRLR specific methods"""
-	def _set_bank_buttons(self, buttons):
-		assert (buttons == None) or (isinstance(buttons, tuple))
-		for button in self._bank_buttons:
-			button.remove_value_listener(self._bank_button_value)
-		self._bank_buttons = []
-		if buttons != None:
-			assert len(buttons) == 16
-			for button in buttons:
-				#assert isinstance(button, MonoButtonElement)
-				self._bank_buttons.append(button)
-				button.add_value_listener(self._bank_button_value, True)
-		self._update_bank_buttons()
+	def _update_wheel(self):
+		if self._dial_button_matrix != None:
+			if self._shift_pressed is False:
+				for column in range(9):
+					for row in range(5):
+							self._send_wheel(column, row, self._active_client._wheel[column][row])
 	
 
-	def _bank_button_value(self, value, sender):
-		#if self.is_enabled():
-		self._select_client(self._bank_buttons.index(sender))
-		self._update_bank_buttons()
+	def set_local_ring_control(self, val = 1):
+		#self._script.log_message('set local ring control' + str(val))
+		self._local_ring_control = (val!=0)
+		self._script.set_local_ring_control(self._local_ring_control)
 	
 
-	def _update_bank_buttons(self):
-		for button in self._bank_buttons:
-			if button != None and self._client != None:
-				button.send_value(self._bank_buttons.index(button) == self._client.index(self._active_client))
+	def set_absolute_mode(self, val=1):
+		self._absolute_mode = (val!=0)
+		self._script.set_absolute_mode(self._absolute_mode)
 	
 
-	def _send_c_grid(self, *a):		#to be sent to controller from client
-		pass
-	
-
-	def _send_c_key(self, *a):
-		pass
-	
-
-	def _send_c_wheel(self, *a):		#to be sent to controller from client
-		pass
-	
-
-	def _update_c_wheel(self, *a):
-		pass
-	
-
-
-	"""MonoDevice Integration"""
 	def _set_parameter_controls(self, controls = None):
 		if controls is None:
 			controls = [] 
@@ -797,8 +734,39 @@ class MonomodComponent(CompoundComponent):
 			self._script.notification_to_bridge(str(wheel['pn']), str(wheel['pv']), self._dial_matrix.get_dial(column, row))
 	
 
-	def _print(self, message, *a, **k):
-		if DEBUG:
-			self._script.log_message(str(message))
+	"""CNTRLR specific methods"""
+	def _send_c_grid(self, column, row, value):		#to be sent to controller from client
+		pass
 	
 
+	def _send_c_key(self, index, value):
+		pass
+	
+
+	def _send_c_wheel(self, *a):		#to be sent to controller from client
+		pass
+	
+
+	def _update_c_wheel(self, *a):
+		pass
+	
+
+	def set_c_local_ring_control(self, val = 1):
+		pass
+	
+
+	def set_c_absolute_mode(self, val=1):
+		pass
+	
+
+	def _release_mod_dials(self):
+		pass
+	
+
+	def _assign_mod_dials(self):
+		pass
+	
+
+	def _display_mod_colors(self):
+		pass
+	

@@ -63,38 +63,38 @@ class MonOhm(ControlSurface):
 
 	def __init__(self, c_instance):
 		"""everything except the '_on_selected_track_changed' override and 'disconnect' runs from here"""
-		ControlSurface.__init__(self, c_instance)
+		super(ControlSurface, self).__init__(self, c_instance)
+		self._monomod_version = 'b995'
+		self._codec_version = 'b995'
+		self._cntrlr_version = 'b995'
+		self._cntrlr = None
+		self._host_name = 'MonOhm'
+		self._color_type = 'OhmRGB'
+		self._update_linked_device_selection = None
+		self._link_mixer = LINK_MIXER
+		self.hosts = []
+		self._bright = True
+		self._rgb = 0
+		self._timer = 0
+		self.flash_status = 1
+		self._is_split = True
+		self._clutch_device_selection = False
+		self._touched = 0
+		self._backlight = 127
+		self._backlight_type = 'static'
+		self._ohm = 127
+		self._ohm_type = 'static'
+		self._pad_translations = PAD_TRANSLATION
+		self._update_linked_device_selection = None
+		self._use_pedal = USE_PEDAL
+		self._disable_master = DISABLE_MASTER_VOLUME
+		self._mem = [4, 8, 12]
+		self._mixers = []
+		self._sessions = []
+		self._zooms = []
+		self._function_modes = []
 		with self.component_guard():
-			self._monomod_version = 'b995'
-			self._codec_version = 'b995'
-			self._cntrlr_version = 'b995'
-			self._cntrlr = None
-			self._host_name = 'MonOhm'
-			self._color_type = 'OhmRGB'
-			self._update_linked_device_selection = None
-			self._link_mixer = LINK_MIXER
 			self.log_message("<<<<<<<<<<<<<<<<<<<<= MonOhm " + str(self._monomod_version) + " log opened =>>>>>>>>>>>>>>>>>>>") 
-			self.hosts = []
-			self._bright = True
-			self._rgb = 0
-			self._timer = 0
-			self.flash_status = 1
-			self._is_split = True
-			self._clutch_device_selection = False
-			self._touched = 0
-			self._backlight = 127
-			self._backlight_type = 'static'
-			self._ohm = 127
-			self._ohm_type = 'static'
-			self._pad_translations = PAD_TRANSLATION
-			self._update_linked_device_selection = None
-			self._use_pedal = USE_PEDAL
-			self._disable_master = DISABLE_MASTER_VOLUME
-			self._mem = [4, 8, 12]
-			self._mixers = []
-			self._sessions = []
-			self._zooms = []
-			self._function_modes = []
 			self._setup_monobridge()
 			self._setup_controls()
 			self._setup_transport_control() 
@@ -105,14 +105,15 @@ class MonOhm(ControlSurface):
 			self._setup_device_selector()
 			self._setup_monomod()
 			self._setup_modes() 
-		self.song().view.add_selected_track_listener(self._update_selected_device)
+			self.song().view.add_selected_track_listener(self._update_selected_device)
+			if FORCE_TYPE is True:
+				self._rgb = FORCE_COLOR_TYPE
+			else:
+				self.schedule_message(10, self.query_ohm, None)
 		self.show_message('MonOhm Control Surface Loaded')
 		self._send_midi(tuple(switchxfader))
 		#self._send_midi(tuple(assigncolors))
-		if FORCE_TYPE is True:
-			self._rgb = FORCE_COLOR_TYPE
-		else:
-			self.schedule_message(10, self.query_ohm, None)
+
 	
 
 	"""script initialization methods"""
@@ -360,6 +361,7 @@ class MonOhm(ControlSurface):
 	def _setup_monomod(self):
 		self._host = MonomodComponent(self)
 		self._host.name = 'Monomod_Host'
+		self._host._host_name = 'MonOhm'
 		self.hosts = [self._host]
 	
 
