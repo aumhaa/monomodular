@@ -1,4 +1,4 @@
-# emacs-mode: -*- python-*-
+
 import Live
 from _Framework.EncoderElement import EncoderElement
 from _Framework.InputControlElement import InputControlElement

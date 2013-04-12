@@ -261,6 +261,7 @@ function shell()
 		args = arrayfromargs(arguments);
 		if(DEBUG){post('from shell:\n', args, '\n');}
 		terminal.message('set', args.join(''));
+		terminal.message("presentation_rect", 646, 49, 215, 40);
 	}
 }
 
@@ -269,6 +270,7 @@ function to_term()
 	var args = arrayfromargs(arguments);
 	if(DEBUG){post('term', args, '\n');}
 	terminal.message('set', args.join(' '));
+	terminal.message("presentation_rect", 646, 49, 215, 40);
 }				
 
 function select_path()
