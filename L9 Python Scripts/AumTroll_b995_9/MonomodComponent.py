@@ -1,4 +1,4 @@
-# Partial --== Decompile ==-- with fixes
+
 import Live
 import math
 from _Framework.CompoundComponent import CompoundComponent
@@ -6,9 +6,11 @@ from _Framework.ControlSurfaceComponent import ControlSurfaceComponent
 from _Framework.ButtonElement import ButtonElement
 from _Framework.ButtonMatrixElement import ButtonMatrixElement
 from _Framework.EncoderElement import EncoderElement
-from _Mono_Framework.MonoButtonElement import MonoButtonElement as FlashingButtonElement
+from _Mono_Framework.MonoButtonElement import MonoButtonElement
 from _Mono_Framework.EncoderMatrixElement import EncoderMatrixElement
-from MonoDeviceComponent import MonoDeviceComponent
+from _Mono_Framework.MonoDeviceComponent import MonoDeviceComponent
+from ModDevices import *
+
 
 
 ENDCODER_BANK_CONTROL = [['ModDevice_knob0', 'ModDevice_knob1', 'ModDevice_knob2', 'ModDevice_knob3'], ['ModDevice_knob4', 'ModDevice_knob5', 'ModDevice_knob6', 'ModDevice_knob7']]
@@ -29,6 +31,14 @@ FILTER =	[[0, 0, 0, 0, 0, 0, 0, 0],
 			[0, 0, 0, 0, 0, 0, 0, 0]]
 
 RELATIVE = [-1, 1]			
+
+class AumTrollMonoDevice(MonoDeviceComponent):
+
+
+	def __init__(self, *a, **k):
+		super(AumTrollMonoDevice, self).__init__(*a, **k)
+	
+
 
 class MonomodComponent(CompoundComponent):
 	__module__ = __name__
@@ -162,7 +172,7 @@ class MonomodComponent(CompoundComponent):
 			self._alt_button.remove_value_listener(self._alt_value)
 		self._alt_button = alt
 		if alt != None:
-			assert isinstance(alt, FlashingButtonElement)
+			assert isinstance(alt, MonoButtonElement)
 			self._alt_button.set_on_off_values(8, 0)
 			self._alt_button.add_value_listener(self._alt_value)
 	
@@ -188,7 +198,7 @@ class MonomodComponent(CompoundComponent):
 			self._shift_button.remove_value_listener(self._shift_value)
 		self._shift_button = shift
 		if shift != None:
-			assert isinstance(shift, FlashingButtonElement)
+			assert isinstance(shift, MonoButtonElement)
 			self._shift_button.set_on_off_values(7, 0)
 			self._shift_button.add_value_listener(self._shift_value)
 	
@@ -212,7 +222,7 @@ class MonomodComponent(CompoundComponent):
 			self._lock_button.remove_value_listener(self._lock_value)
 		self._lock_button = lock
 		if lock != None:
-			assert isinstance(lock, FlashingButtonElement)
+			assert isinstance(lock, MonoButtonElement)
 			self._lock_button.set_on_off_values(11, 0)
 			self._lock_button.add_value_listener(self._lock_value)
 	
@@ -240,7 +250,7 @@ class MonomodComponent(CompoundComponent):
 		if buttons != None:
 			assert len(buttons) == 32
 			for button in buttons:
-				assert isinstance(button, FlashingButtonElement)
+				assert isinstance(button, MonoButtonElement)
 				self._keys.append(button)
 				button.add_value_listener(self._key_value, True)
 	
@@ -290,7 +300,7 @@ class MonomodComponent(CompoundComponent):
 		if buttons != None:
 			assert len(buttons) == 4
 			for button in buttons:
-				assert isinstance(button, FlashingButtonElement)
+				assert isinstance(button, MonoButtonElement)
 			self._nav_buttons[0].set_on_off_values(8, 2)	
 			self._nav_buttons[0].add_value_listener(self._nav_up_value)
 			self._nav_buttons[1].set_on_off_values(8, 2)	

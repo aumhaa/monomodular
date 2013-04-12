@@ -68,7 +68,7 @@ class ShiftModeComponent(ModeSelectorComponent):
 	__doc__ = ' Special Class that selects mode 0 if a mode button thats active is pressed'
 
 
-	def __init__(self, script, callback):
+	def __init__(self, script, callback, *a, **k):
 		super(ShiftModeComponent, self).__init__(*a, **k)
 		self._script = script
 		self.update = callback
@@ -115,7 +115,7 @@ class ShiftModeComponent(ModeSelectorComponent):
 	
 
 
-class AumTrollDetailViewController(DetailViewController):
+class AumTrollDetailViewController(DetailViewControllerComponent):
 
 
 	def __init__(self, script, *a, **k):
@@ -348,7 +348,7 @@ class AumTroll(ControlSurface):
 		self._device.update = self._device_update(self._device)
 		self._device.set_parameter_controls(tuple([self._encoder[index+4] for index in range(8)]))		#set its controls to the bottom 8 encoders;  we use [index+4] to offset past the first 4 encoders
 		self.set_device_component(self._device)		#assign our component to the control_surface main script;  this allows special updating, like being able to lock the devicecomponent to the currently selected device
-		self._device_navigator = DetailViewControllerComponent(self)		#this is a special component taken out of the APC scripts; its used to move from one device to another with the controller
+		self._device_navigator = AumTrollDetailViewController(self)		#this is a special component taken out of the APC scripts; its used to move from one device to another with the controller
 		self._device_navigator.name = 'Device_Navigator'					#name it so that we can access it in m4l
 		self._device_selection_follows_track_selection = FOLLOW				#_device_selection_follows_track_selection is a property of the main ControlSurface script, and does what it says it does.  The FOLLOW variable is taken from CNTRLR_Map.py
 	
@@ -715,6 +715,7 @@ class AumTroll(ControlSurface):
 
 	"""assign alternate mappings to the controls when a modSlot is selected that doesn't contain a mod"""
 	def assign_alternate_mappings(self, chan):
+		chan = min(16, max(chan, 0))
 		for index in range(8):
 			self._encoder_button[index + 4].set_channel(chan)		#set the contols channel to the methods second argument
 			self._encoder_button[index + 4].set_enabled(chan is 0)	#if the channel is not 0, we need to disable the control so that it 
