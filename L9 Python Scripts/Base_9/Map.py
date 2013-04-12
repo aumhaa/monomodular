@@ -148,7 +148,7 @@ DEFAULT_VERTOFFSET = 4
 DEFAULT_OFFSET = 48
 
 """This is the default NoteOffset, aka RootNote, used for the DrumPad scale;  it is a multiple of 4, so an offset of 4 is actually a RootNote of 16"""
-DEFAULT_DRUMOFFSET = 12
+DEFAULT_DRUMOFFSET = 9
 
 """This is the default Scale used for all MIDI Channels"""
 DEFAULT_SCALE = 'Auto'

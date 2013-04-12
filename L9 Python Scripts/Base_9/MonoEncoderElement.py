@@ -32,7 +32,7 @@ class MonoEncoderElement(EncoderElement):
 		self._paramter_lcd_name = ' '
 		self._parameter_last_value = None
 		self._mapped_to_midi_velocity = False
-		self.set_report_values(True, False)
+		#self.set_report_values(True, False)
 	
 
 	def _report_value(self, value, is_input):
@@ -79,6 +79,13 @@ class MonoEncoderElement(EncoderElement):
 			EncoderElement.install_connections(self)
 		elif ((self._msg_channel != self._original_channel) or (self._msg_identifier != self._original_identifier)):
 			self._install_translation(self._msg_type, self._original_identifier, self._original_channel, self._msg_identifier, self._msg_channel)"""
+
+	def script_wants_forwarding(self):
+		if not self._is_enabled:
+			return False
+		else:
+			return InputControlElement.script_wants_forwarding(self)
+	
 
 	def forward_parameter_value(self):
 		if(not (type(self._parameter) is type(None))):

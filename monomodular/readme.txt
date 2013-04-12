@@ -1,3 +1,7 @@
+041213
+
+Updated installer to work with Live 9.  Many Live 9 Python scripts have already been added, and most patches are already b995 compatible in Live 8.
+
 013113
 
 Added some more mods to b995 format, haven't tested at all though.  Shifting gears to start rewriting Python….

@@ -37,7 +37,6 @@ class MonoButtonElement(ButtonElement):
 		self._force_next_value = False
 		self._parameter = None
 		self._report_input = True
-		self.optimized_send_midi = False
 
 	def set_color_map(self, color_map):
 		assert isinstance(colormap, tuple)
@@ -67,7 +66,6 @@ class MonoButtonElement(ButtonElement):
 	
 
 	def set_force_next_value(self):
-		self._last_sent_message = None
 		self._force_next_value = True
 
 	def set_enabled(self, enabled):
@@ -96,7 +94,7 @@ class MonoButtonElement(ButtonElement):
 			assert (value != None)
 			assert isinstance(value, int)
 			assert (value in range(128))
-			if (force_send or self._force_next_value or ((value != self._last_sent_value) and self._is_being_forwarded)):
+			if (force_send or ((value != self._last_sent_value) and self._is_being_forwarded)):
 				data_byte1 = self._original_identifier
 				if value in range(1, 127):
 					data_byte2 = self._color_map[(value - 1) % (self._num_colors-1)]
@@ -120,7 +118,6 @@ class MonoButtonElement(ButtonElement):
 					is_input = True
 					self._report_value(value, (not is_input))
 				self._flash_state = round((value -1)/self._num_colors)
-				self._force_next_value = False
 
 
 	def script_wants_forwarding(self):
