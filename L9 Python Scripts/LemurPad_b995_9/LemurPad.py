@@ -45,8 +45,8 @@ from _Mono_Framework.LiveUtils import *
 
 """Custom files, overrides, and files from other scripts"""
 from SpecialMonomodComponent import SpecialMonomodComponent
-from MonOhm_b995_9_dev.MonOhm import MonOhm
-from MonOhm_b995_9_dev.Map import *
+from MonOhm_b995_9.MonOhm import MonOhm
+from MonOhm_b995_9.Map import *
 from Map import *
 
 
