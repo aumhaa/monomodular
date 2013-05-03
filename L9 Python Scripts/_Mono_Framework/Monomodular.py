@@ -1,4 +1,4 @@
-# by amounra 0413 : http://www.aumhaa.com
+# by amounra 0513 : http://www.aumhaa.com
 
 from __future__ import with_statement
 import Live
@@ -7,7 +7,7 @@ import math
 import sys
 #import posix
 #import gc
-from LiveUtils import *
+
 
 
 
@@ -38,13 +38,16 @@ from _Framework.ModeSelectorComponent import ModeSelectorComponent # Class for s
 from _Framework.NotifyingControlElement import NotifyingControlElement # Class representing control elements that can send values
 from _Framework.TransportComponent import TransportComponent # Class encapsulating all functions in Live's transport section
 
-"""Custom files, overrides, and files from other scripts"""
+"""Imports from the Monomodular Framework"""
 from SwitchboardElement import SwitchboardElement
 from MonoClient import MonoClient
+from LiveUtils import *
+
+"""Custom files, overrides, and files from other scripts"""
 from MonoLinkClient import MonoLinkClient
 from MonoLink_Map import MONOLINK_ENABLE
 
-from _Generic.Devices import *
+#from _Generic.Devices import *
 
 	
 class Monomodular(ControlSurface):
@@ -53,8 +56,8 @@ class Monomodular(ControlSurface):
 
 
 
-	def __init__(self, c_instance):
-		ControlSurface.__init__(self, c_instance)
+	def __init__(self, *a, **k):
+		super(Monomodular, self).__init__(*a, **k)
 		with self.component_guard():
 			self._version_check = 'b995'
 			self.log_message("<<<<<<<<<<<<<<<<<<<<<<<<< Monomodular " + str(self._version_check) + " log opened >>>>>>>>>>>>>>>>>>>>>>>>>") 
@@ -127,7 +130,7 @@ class Monomodular(ControlSurface):
 		#self._switchboard.disconnect()
 		#for client in self._client:
 		#	client.disconnect()
-		ControlSurface.disconnect(self)
+		super(Monomodular, self).disconnect()
 		self._hosts = []
 		return None
 	
