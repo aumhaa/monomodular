@@ -1,3 +1,5 @@
+# by amounra 0413 : http://www.aumhaa.com
+
 from _Framework.CompoundComponent import CompoundComponent
 from _Framework.ControlSurfaceComponent import ControlSurfaceComponent
 from _Framework.ButtonElement import ButtonElement
@@ -189,7 +191,7 @@ class MonomodComponent(CompoundComponent):
 						else:
 							self._active_client._send_key(x, value)		
 			elif self._shift_pressed == 0:	
-				if self._active_client._is_monolink and self._alt_pressed > 0:
+				if (self._active_client._is_monolink) and (self._alt_pressed > 0):
 					if value > 0:
 						self._port_address(KEYPAD[y][x])
 				elif self._locked == 1:
@@ -217,8 +219,8 @@ class MonomodComponent(CompoundComponent):
 
 	def _update_grid(self):
 		if self.is_enabled() and self._grid != None:
-			for column in range(16):
-				for row in range(16):
+			for column in range(self._grid.width()):
+				for row in range(self._grid.height()):
 					self._send_grid(column, row, self._active_client._grid[column][row])
 	
 
@@ -363,7 +365,7 @@ class MonomodComponent(CompoundComponent):
 				self._send_key(6, self._active_client.device.parameters[0].value>0)
 			self._send_key(5, self._active_client._mute==0)
 		else:
-			for index in range(8):
+			for index in range(len(self._keys)):
 				self._send_key(index, self._active_client._key[index])
 	
 

@@ -6,15 +6,16 @@ from _Tools.re import *
 from _Framework.ControlSurfaceComponent import ControlSurfaceComponent
 from Live8DeviceComponent import Live8DeviceComponent as DeviceComponent
 from _Generic.Devices import *
-from ModDevices import *
-
 
 
 class MonoDeviceComponent(DeviceComponent):
 	
 	__doc__ = ' Class representing a device linked to a Monomodular client, to be redirected by it from Max '
-	def __init__(self, parent, host, cs, *a, **k):
+	def __init__(self, parent, host, cs, bank_dict={}, mod_types={}, cntrl_offsets={}, *a, **k):
 		super(MonoDeviceComponent, self).__init__(*a, **k)
+		self._MOD_BANK_DICT = bank_dict
+		self._MOD_TYPES = mod_types
+		self._MOD_CNTRL_OFFSETS = cntrl_offsets
 		self._type = None
 		self._device_parent = None
 		self._host = host
@@ -25,7 +26,6 @@ class MonoDeviceComponent(DeviceComponent):
 		self._params = []
 		self._cntrl_offset = 0
 		self._nodevice = NoDevice()
-		
 	
 
 
@@ -41,7 +41,7 @@ class MonoDeviceComponent(DeviceComponent):
 		self._type = None
 		self._device_parent = None
 		self._device_chain = None
-		DeviceComponent.disconnect(self)
+		super(MonoDeviceComponent, self).disconnect()
 	
 
 	def disconnect_client(self):
@@ -53,14 +53,15 @@ class MonoDeviceComponent(DeviceComponent):
 	
 
 	def _set_type(self, mod_device_type):
-		if mod_device_type in MOD_TYPES.keys():
+		#self._cs.log_message('mods: ' + str(self._mod_types))
+		if mod_device_type in self._MOD_TYPES.keys():
 			self.set_enabled(True)
 			#self._cs.log_message('set_type ' + str(mod_device_type) + ' ' + str(self.is_enabled()))
 			self._type = mod_device_type
-			self._cntrl_offset = MOD_CNTRL_OFFSETS[self._type]
-			self._device_banks = MOD_TYPES[self._type]
-			self._device_best_banks = MOD_TYPES[self._type]
-			self._device_bank_names = MOD_BANK_DICT[self._type]
+			self._cntrl_offset = self._MOD_CNTRL_OFFSETS[self._type]
+			self._device_banks = self._MOD_TYPES[self._type]
+			self._device_best_banks = self._MOD_TYPES[self._type]
+			self._device_bank_names = self._MOD_BANK_DICT[self._type]
 			self._set_device_parent(self._device_parent)
 		elif mod_device_type == None:
 			self._cntrl_offset = 0
@@ -136,6 +137,7 @@ class MonoDeviceComponent(DeviceComponent):
 
 	def get_parameter_by_name(self, device, name):
 		""" Find the given device's parameter that belongs to the given name """
+		#self._cs.log_message('len param controls ' + str(len(self._parameter_controls)))
 		#self._cs.log_message('get paramameter: device-' + str(device) + ' name-' + str(name))
 		result = None
 		for i in device.parameters:
@@ -151,6 +153,7 @@ class MonoDeviceComponent(DeviceComponent):
 					result = device.canonical_parent.mixer_device.volume
 			elif(match('ModDevice_', name) and self._parent.device != None):
 				name = name.replace('ModDevice_', '')
+				#self._cs.log_message('modDevice with name: ' + str(name))
 				for i in self._parent.device.parameters:
 					if (i.name == name):
 						result = i
@@ -197,12 +200,13 @@ class MonoDeviceComponent(DeviceComponent):
 
 
 	def set_parameter_controls(self, controls):
+		#self._cs.log_message('setting param controls, len = ' + str(len(controls)))
 		self._params = [ParamHolder(self, controls[index]) for index in range(len(controls))]
-		DeviceComponent.set_parameter_controls(self, controls)
+		super(MonoDeviceComponent, self).set_parameter_controls(controls)
 	
 
 	def _assign_parameters(self):
-		#self._cs.log_message('assign_parameters')
+		#self._cs.log_message('assign_parameters ' + str(len(self._parameter_controls)))
 		assert self.is_enabled()
 		assert (self._device != None)
 		assert (self._parameter_controls != None)
@@ -405,14 +409,14 @@ class MonoDeviceComponent(DeviceComponent):
 
 	def update(self):
 		#self._cs.log_message('update, enabled: ' + str(self.is_enabled()))
-		DeviceComponent.update(self)
+		super(MonoDeviceComponent, self).update()
 		if (self._parameter_controls != None):
 			self._assign_params()
 		if self.is_enabled():
 			self._cs.request_rebuild_midi_map()
 	
 
-	def set_mod_device_type(self, mod_device_type, args2=None, args3=None):
+	def set_mod_device_type(self, mod_device_type, *a):
 		#self._cs.log_message('set type ' + str(mod_device_type))
 		for host in self._parent._active_host:
 			host.on_enabled_changed()
@@ -420,28 +424,28 @@ class MonoDeviceComponent(DeviceComponent):
 		self._set_type(mod_device_type)
 	
 
-	def set_mod_device(self, mod_device, args2=None, args3=None):
+	def set_mod_device(self, mod_device, *a):
 		#self._cs.log_message('set device ' + str(mod_device))
 		self.set_device(mod_device, True)
 		for host in self._parent._active_host:
 			host.update()
 	
 
-	def set_mod_device_parent(self, mod_device_parent, single=None, args3=None):
+	def set_mod_device_parent(self, mod_device_parent=None, single=None, *a):
 		#self._cs.log_message('set parent ' + str(mod_device_parent))
 		self._set_device_parent(mod_device_parent, single)
 		for host in self._parent._active_host:
 			host.update()
 	
 
-	def set_mod_device_chain(self, chain, args2=None, args3=None):
+	def set_mod_device_chain(self, chain, *a):
 		#self._cs.log_message('set_chain ' + str(chain))
 		self._select_parent_chain(chain, True)
 		for host in self._parent._active_host:
 			host.update()
 	
 
-	def set_parameter_value(self, num, val, args3 = None):
+	def set_parameter_value(self, num, val, *a):
 		#self._cs.log_message('set_pval ' + str(num) + ' ' + str(val))
 		#if self._device_component.is_enabled():
 		#	self._device_component._parameter_controls[num].set_value(val)
@@ -450,7 +454,7 @@ class MonoDeviceComponent(DeviceComponent):
 				self._params[num]._change_value(val)
 	
 
-	def set_device_bank(self, bank_index, args2=None, args3=None):
+	def set_device_bank(self, bank_index, *a):
 		#self._cs.log_message('set bank ' + str(bank_index))
 		if self.is_enabled():
 			if (self._device != None):

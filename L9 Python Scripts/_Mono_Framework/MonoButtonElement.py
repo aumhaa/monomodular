@@ -1,4 +1,5 @@
-# emacs-mode: -*- python-*-
+# by amounra 0413 : http://www.aumhaa.com
+
 import Live
 from _Framework.ButtonElement import ButtonElement
 from _Framework.InputControlElement import InputControlElement
@@ -92,7 +93,7 @@ class MonoButtonElement(ButtonElement):
 			assert (value != None)
 			assert isinstance(value, int)
 			assert (value in range(128))
-			if (force_send or ((value != self._last_sent_value) and self._is_being_forwarded)):
+			if (force_send or self._force_next_send or ((value != self._last_sent_message) and self._is_being_forwarded)):
 				data_byte1 = self._original_identifier
 				if value in range(1, 127):
 					data_byte2 = self._color_map[(value - 1) % (self._num_colors-1)]

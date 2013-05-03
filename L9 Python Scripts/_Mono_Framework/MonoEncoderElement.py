@@ -1,3 +1,4 @@
+# by amounra 0413 : http://www.aumhaa.com
 
 import Live
 from _Framework.EncoderElement import EncoderElement
