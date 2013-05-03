@@ -228,7 +228,6 @@ class MonOhm(ControlSurface):
 		self._function_modes = []
 		self._color_defs = RGB_COLOR_DEFS
 		with self.component_guard():
-			self.log_message("<<<<<<<<<<<<<<<<<<<<= MonOhm " + str(self._monomod_version) + " log opened =>>>>>>>>>>>>>>>>>>>") 
 			self._setup_monobridge()
 			self._setup_controls()
 			self._setup_transport_control() 
@@ -247,12 +246,17 @@ class MonOhm(ControlSurface):
 				else:
 					self._color_defs = MONOCHROME_COLOR_DEFS
 			else:
-				self.schedule_message(10, self.query_ohm, None)
-		self.show_message('MonOhm Control Surface Loaded')
+				self.schedule_message(10, self.query_ohm)
+		self.schedule_message(1, self._open_log)
 		self._send_midi(tuple(switchxfader))
 	
 
 	"""script initialization methods"""
+	def _open_log(self):
+		self.log_message("<<<<<<<<<<<<<<<<<<<<= " + str(self._host_name) + " " + str(self._monomod_version) + " log opened =>>>>>>>>>>>>>>>>>>>") 
+		self.show_message(str(self._host_name) + ' Control Surface Loaded')
+	
+
 	def query_ohm(self):
 		#self.log_message('querying ohm64')
 		self._send_midi(tuple(check_model))
@@ -1321,7 +1325,7 @@ class MonOhm(ControlSurface):
 
 	"""called on timer"""
 	def update_display(self):
-		ControlSurface.update_display(self)
+		super(MonOhm, self).update_display()
 		self._timer = (self._timer + 1) % 256
 		self.flash()
 		self.strobe()
@@ -1520,7 +1524,7 @@ class MonOhm(ControlSurface):
 		if self._session2.offset_has_listener(self._on_session_offset_changes):
 			self._session2.remove_offset_listener(self._on_session_offset_changes)
 		#self._disconnect_notifier.set_mode(0)
-		self.log_message("--------------= MonOhm " + str(self._monomod_version) + " log closed =--------------") #Create entry in log file
+		self.log_message("--------------=  " + str(self._host_name) + " " + str(self._monomod_version) + " log closed =--------------") #Create entry in log file
 		ControlSurface.disconnect(self)
 		return None
 		

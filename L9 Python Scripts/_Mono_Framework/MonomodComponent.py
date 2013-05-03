@@ -10,7 +10,7 @@ from _Mono_Framework.MonoButtonElement import MonoButtonElement
 from _Mono_Framework.EncoderMatrixElement import EncoderMatrixElement
 #from MonoDeviceComponent import MonoDeviceComponent
 
-DEBUG = True
+DEBUG = False
 
 
 MODES = ['SerialOSC', 'MonomeSerial']
@@ -39,7 +39,7 @@ RELATIVE = [-1, 1]
 
 class MonomodComponent(CompoundComponent):
 	__module__ = __name__
-	__doc__ = ' Component that encompasses and controls 8 Monomod clients '
+	__doc__ = ' Component that encompasses and controls 16 Monomod clients '
 
 
 	def __init__(self, script, *a, **k):
@@ -95,7 +95,6 @@ class MonomodComponent(CompoundComponent):
 
 		self._alt_device_banks = {}
 		self._register_timer_callback(self._on_timer)
-		return None
 	
 
 	def disconnect(self):
@@ -105,11 +104,10 @@ class MonomodComponent(CompoundComponent):
 		self._set_lock_button(None)
 		self._set_nav_buttons(None)
 		self._set_key_buttons(None)
-#		self._set_dial_matrix(None, None)
 		self._set_button_matrix(None)
 		self._client = []
 		self._script = []
-		return None 
+		super(MonomodComponent, self).disconnect(*a, **k)
 	
 
 	def connect_to_clients(self, monomod):
