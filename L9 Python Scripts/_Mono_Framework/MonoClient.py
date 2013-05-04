@@ -104,7 +104,6 @@ class MonoClient(NotifyingControlElement):
 	_input_signal_listener_count = 0
 
 	def __init__(self, script, number, *a, **k):
-		#NotifyingControlElement.__init__(self)
 		super(MonoClient, self).__init__(script, number, *a, **k)
 		self._host = script
 		self._is_monolink = False
@@ -138,7 +137,7 @@ class MonoClient(NotifyingControlElement):
 		self._mod_dial = None
 		self._mod_vol = 127
 		self._mod_color = 0
-		#self._device_component = MonoDeviceComponent(self)
+		self._device_component = MonoDeviceComponent(self)
 		self._banner_state = 0
 		self._monomodular = 0
 	
@@ -149,14 +148,6 @@ class MonoClient(NotifyingControlElement):
 
 	def set_enabled(self, val):
 		self._enabled = val!=0
-	
-
-	"""probably not necessary for monomodular"""
-	"""def set_channel(self):
-		if self.is_connected:
-			self._host.assign_alternate_mappings(0)
-		else:
-			self._host.assign_alternate_mappings(self._number+1)"""
 	
 
 	def _banner(self):
@@ -177,18 +168,18 @@ class MonoClient(NotifyingControlElement):
 	
 
 	def disconnect(self):
-		#self._host.log_message('client_disconnect')
 		#self._device_component.disconnect()
 		self._active_host = []
 		if self._device_parent != None:
 			if self._device_parent.devices_has_listener(self._device_listener):
 				self._device_parent.remove_devices_listener(self._device_listener)
-		#NotifyingControlElement.disconnect(self)  #this would normally call part of the new reset in NCE, then reset in CE, both of which are handled by the new reset below this
+		super(MonoClient, self).disconnect()
 		self._enabled = True
 		self._c_local_ring_control = 1
 		self._local_ring_control = 1
 		self._c_absolute_mode = 1
 		self._absolute_mode = 1
+
 	
 
 	def reset(self):

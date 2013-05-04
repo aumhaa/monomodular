@@ -1,5 +1,5 @@
-#http://www.aumhaa.com
-#by amounra 0313
+#by amounra 0513 : http://www.aumhaa.com
+
 
 import Live
 from _Tools.re import *
@@ -8,23 +8,23 @@ from Live8DeviceComponent import Live8DeviceComponent as DeviceComponent
 from _Generic.Devices import *
 
 
+
 class MonoDeviceComponent(DeviceComponent):
-	
 	__doc__ = ' Class representing a device linked to a Monomodular client, to be redirected by it from Max '
-	def __init__(self, parent, host, cs, bank_dict={}, mod_types={}, cntrl_offsets={}, *a, **k):
+
+
+	def __init__(self, parent, bank_dict={}, mod_types={}, *a, **k):
 		super(MonoDeviceComponent, self).__init__(*a, **k)
 		self._MOD_BANK_DICT = bank_dict
 		self._MOD_TYPES = mod_types
-		self._MOD_CNTRL_OFFSETS = cntrl_offsets
 		self._type = None
 		self._device_parent = None
-		self._host = host
 		self._parent = parent
 		self._chain = 0
-		self._cs = cs
 		self._device_chain = 0
+		self._number_params = 0
 		self._params = []
-		self._cntrl_offset = 0
+		self._custom_parameter = []
 		self._nodevice = NoDevice()
 	
 
@@ -32,12 +32,14 @@ class MonoDeviceComponent(DeviceComponent):
 	def disconnect(self):
 		if self._device_parent != None:
 			if self._device_parent != None:
-				if self._device_parent.canonical_parent.devices_has_listener(self._parent_device_changed):
-					self._device_parent.canonical_parent.remove_devices_listener(self._parent_device_changed)
+				if self._device_parent.canonical_parent != None:
+					if self._device_parent.canonical_parent.devices_has_listener(self._parent_device_changed):
+						self._device_parent.canonical_parent.remove_devices_listener(self._parent_device_changed)
 		if self._device != None:
 			if self._device.canonical_parent != None:
-				if self._device.canonical_parent.devices_has_listener(self._device_changed):
-					self._device.canonical_parent.remove_devices_listener(self._device_changed)
+				if self._device.canonical_parent != None:
+					if self._device.canonical_parent.devices_has_listener(self._device_changed):
+						self._device.canonical_parent.remove_devices_listener(self._device_changed)
 		self._type = None
 		self._device_parent = None
 		self._device_chain = None
@@ -46,6 +48,7 @@ class MonoDeviceComponent(DeviceComponent):
 
 	def disconnect_client(self):
 		self.set_device(None)
+		self._custom_parameter = []
 		self._device_parent = None
 		self._device_chain = 0
 		self._set_type(None)
@@ -53,27 +56,26 @@ class MonoDeviceComponent(DeviceComponent):
 	
 
 	def _set_type(self, mod_device_type):
-		#self._cs.log_message('mods: ' + str(self._mod_types))
-		if mod_device_type in self._MOD_TYPES.keys():
-			self.set_enabled(True)
-			#self._cs.log_message('set_type ' + str(mod_device_type) + ' ' + str(self.is_enabled()))
-			self._type = mod_device_type
-			self._cntrl_offset = self._MOD_CNTRL_OFFSETS[self._type]
-			self._device_banks = self._MOD_TYPES[self._type]
-			self._device_best_banks = self._MOD_TYPES[self._type]
-			self._device_bank_names = self._MOD_BANK_DICT[self._type]
-			self._set_device_parent(self._device_parent)
-		elif mod_device_type == None:
-			self._cntrl_offset = 0
+		#self._parent._host.log_message('mods: ' + str(self._mod_types))
+		if mod_device_type == None:
 			self._device_banks = DEVICE_DICT
 			self._device_best_banks = DEVICE_BOB_DICT
 			self._device_bank_names = BANK_NAME_DICT
 			self.set_device(None)
 			self.set_enabled(False)
+		elif mod_device_type in self._MOD_TYPES.keys():
+			self.set_enabled(True)
+			#self._parent._host.log_message('set_type ' + str(mod_device_type) + ' ' + str(self.is_enabled()))
+			self._type = mod_device_type
+			self._device_banks = self._MOD_TYPES[self._type]
+			self._device_best_banks = self._MOD_TYPES[self._type]
+			self._device_bank_names = self._MOD_BANK_DICT[self._type]
+			self._set_device_parent(self._device_parent)
+
 	
 
 	def _set_device_parent(self, mod_device_parent, single = None):
-		#self._cs.log_message('_set_device_parent ' + str(mod_device_parent) + ' ' + str(single))
+		#self._parent._host.log_message('_set_device_parent ' + str(mod_device_parent) + ' ' + str(single))
 		if self._device_parent != None:
 			if self._device_parent.canonical_parent != None:
 				if self._device_parent.canonical_parent.devices_has_listener(self._parent_device_changed):
@@ -89,19 +91,19 @@ class MonoDeviceComponent(DeviceComponent):
 				self._device_parent = mod_device_parent
 				self.set_device(self._device_parent, True)
 		elif 'NoDevice' in self._device_banks.keys():
-			#self._cs.log_message('setting NoDevice')
+			#self._parent._host.log_message('setting NoDevice')
 			self._device_parent = self._nodevice
 			self._device_chain = 0
 			self.set_device(self._device_parent, True)
 		else:
-			#self._cs.log_message('setting None')
+			#self._parent._host.log_message('setting None')
 			self._device_parent = None
 			self._device_chain = 0
 			self.set_device(self._device_parent, True)
 	
 
 	def _select_parent_chain(self, chain, force = False):
-		#self._cs.log_message('_select_parent_chain ' + str(chain) + ' ' + str(self.is_enabled()))
+		#self._parent._host.log_message('_select_parent_chain ' + str(chain) + ' ' + str(self.is_enabled()))
 		self._chain = chain
 		if self._device_parent != None:
 			if isinstance(self._device_parent, Live.Device.Device):
@@ -109,24 +111,25 @@ class MonoDeviceComponent(DeviceComponent):
 					if len(self._device_parent.chains) > chain:
 						if len(self._device_parent.chains[chain].devices) > 0:
 							self.set_device(self._device_parent.chains[chain].devices[0], force)
-							#self._cs.log_message('_select_parent_chain successful' + str(self._device_parent.chains[chain].devices[0].name))
+							#self._parent._host.log_message('_select_parent_chain successful' + str(self._device_parent.chains[chain].devices[0].name))
 					elif 'NoDevice' in self._device_banks.keys():
 						self.set_device(self._nodevice, True)
 					else:
 						self.set_device(None)
 						if self.is_enabled():
-							for control in self._parameter_controls:
-								control.reset()
+							for host in self._parent._active_host:
+								for control in host._parameter_controls:
+									control.reset()
 	
 
 	def _parent_device_changed(self):
-		#self._cs.log_message('parent_device_changed')
+		#self._parent._host.log_message('parent_device_changed')
 		self._set_device_parent(None)
 		self._parent._send('lcd', 'parent', 'check')
 	
 
 	def _device_changed(self):
-		#self._cs.log_message('device_changed')
+		#self._parent._host.log_message('device_changed')
 		self.set_device(None)
 		self._parent._send('lcd', 'device', 'check')
 	
@@ -137,8 +140,7 @@ class MonoDeviceComponent(DeviceComponent):
 
 	def get_parameter_by_name(self, device, name):
 		""" Find the given device's parameter that belongs to the given name """
-		#self._cs.log_message('len param controls ' + str(len(self._parameter_controls)))
-		#self._cs.log_message('get paramameter: device-' + str(device) + ' name-' + str(name))
+		#self._parent._host.log_message('get paramameter: device-' + str(device) + ' name-' + str(name))
 		result = None
 		for i in device.parameters:
 			if (i.original_name == name):
@@ -153,21 +155,18 @@ class MonoDeviceComponent(DeviceComponent):
 					result = device.canonical_parent.mixer_device.volume
 			elif(match('ModDevice_', name) and self._parent.device != None):
 				name = name.replace('ModDevice_', '')
-				#self._cs.log_message('modDevice with name: ' + str(name))
+				#self._parent._host.log_message('modDevice with name: ' + str(name))
 				for i in self._parent.device.parameters:
 					if (i.name == name):
 						result = i
 						break	
-			elif name == 'Filter Freq':
-				for i in device.parameters:
-					if i.original_name == 'F On':
-						if i.value < 1:
-							#self._cs.schedule_message(1, self._turn_on_filter, i)
-							i.value = 1
-							i.value = 0
-							self._cs.schedule_message(1, self._recheck_FF, device)
-							break	
-		#self._cs.log_message('found: ' + str(result))	
+			elif match('CustomParameter_', name):
+				index = int(name.replace('CustomParameter_', ''))
+				#self._parent._host.log_message('index='+str(index)+' type:'+str(type(index))+' len:'+str(len(self._custom_device)))
+				if len(self._custom_parameter)>index:
+					 if isinstance(self._custom_parameter[index], Live.DeviceParameter.DeviceParameter):
+						result = self._custom_parameter[index]
+		#self._parent._host.log_message('found: ' + str(result))	
 		return result
 	
 
@@ -182,64 +181,42 @@ class MonoDeviceComponent(DeviceComponent):
 			self.update()
 	
 
-	def number_of_parameter_banks(self, device):
-		""" Determine the amount of parameter banks the given device has """
-		result = 0
-		if (device != None):
-			result = 1
-			if (device.class_name in self._device_banks.keys()):
-				device_bank = self._device_banks[device.class_name]
-				result = len(device_bank)
-			else:
-				param_count = len(list(device.parameters))
-				result = (param_count / len(self._parameter_controls))
-				if (not ((param_count % len(self._parameter_controls)) == 0)):
-					result += 1
-		return result	
-	
-
-
-	def set_parameter_controls(self, controls):
-		#self._cs.log_message('setting param controls, len = ' + str(len(controls)))
-		self._params = [ParamHolder(self, controls[index]) for index in range(len(controls))]
-		super(MonoDeviceComponent, self).set_parameter_controls(controls)
-	
-
-	def _assign_parameters(self):
-		#self._cs.log_message('assign_parameters ' + str(len(self._parameter_controls)))
+	def _assign_parameters(self, host):
+		#self._parent._host.log_message('assign_parameters '+str(host))
 		assert self.is_enabled()
 		assert (self._device != None)
-		assert (self._parameter_controls != None)
-		if(self._host.is_enabled()):
-			for control in self._parameter_controls:
+		assert (host._parameter_controls != None)
+		if(host.is_enabled()):
+			for control in host._parameter_controls:
 				control.clear_send_cache()
 			self._bank_name = ('Bank ' + str(self._bank_index + 1)) #added
 			if (self._device.class_name in self._device_banks.keys()): #modified
 				assert (self._device.class_name in self._device_best_banks.keys())
 				banks = self._device_banks[self._device.class_name]
+				if '_alt_device_banks' in dir(host):
+					if self._type in host._alt_device_banks.keys():
+						if (self._device.class_name in host._alt_device_banks[self._type].keys()):
+							banks = host._alt_device_banks[self._type][self._device.class_name]
 				bank = None
-				#if (not self._is_banking_enabled()):
-				#	 banks = self._device_best_banks[self._device.class_name]
-				#	 self._bank_name = 'Best of Parameters' #added
 				if (len(banks) > self._bank_index):
 					bank = banks[self._bank_index]
 					if self._is_banking_enabled(): #added
 						if self._device.class_name in self._device_bank_names.keys(): #added
 							self._bank_name[self._bank_index] = self._device_bank_names[self._device.class_name] #added *recheck
 				#assert (bank == None)	# or (len(bank) >= len(self._parameter_controls)))
-				for index in range(len(self._parameter_controls)):
+				for index in range(len(host._parameter_controls)):
 					parameter = None
 					if (bank != None) and (index in range(len(bank))):
 						parameter = self.get_parameter_by_name(self._device, bank[index])
 					if (parameter != None):
-						self._parameter_controls[index].connect_to(parameter)
+						host._parameter_controls[index].connect_to(parameter)
 					else:
-						self._parameter_controls[index].release_parameter()
+						host._parameter_controls[index].release_parameter()
 			else:
-				parameters = self._device_parameters_to_map()
-				num_controls = len(self._parameter_controls)
+				parameters = self._device_parameters_to_map(host)
+				num_controls = len(host._parameter_controls)
 				index = (self._bank_index * num_controls)
-				for control in self._parameter_controls:
+				for control in host._parameter_controls:
 					if (index < len(parameters)):
 						control.connect_to(parameters[index])
 					else:
@@ -247,9 +224,9 @@ class MonoDeviceComponent(DeviceComponent):
 					index += 1
 	
 
-	def _assign_params(self):
-		assert (self._parameter_controls != None)
-		if self._device != None:
+	def _assign_params(self, *a):
+		#self._parent._host.log_message('assign params!')
+		if self._device != None and not len(self._params) is 0:
 			self._bank_name = ('Bank ' + str(self._bank_index + 1)) #added
 			if (self._device.class_name in self._device_banks.keys()): #modified
 				assert (self._device.class_name in self._device_best_banks.keys())
@@ -260,7 +237,7 @@ class MonoDeviceComponent(DeviceComponent):
 					if self._is_banking_enabled(): #added
 						if self._device.class_name in self._device_bank_names.keys(): #added
 							self._bank_name[self._bank_index] = self._device_bank_names[self._device.class_name] #added *recheck
-				for index in range(len(self._parameter_controls)):
+				for index in range(len(self._params)):
 					parameter = None
 					if (bank != None) and (index in range(len(bank))):
 						parameter = self.get_parameter_by_name(self._device, bank[index])
@@ -269,10 +246,10 @@ class MonoDeviceComponent(DeviceComponent):
 					else:
 						self._params[index]._parameter=self._connect_param(self._params[index], None)
 			else:
-				parameters = self._device_parameters_to_map()
-				num_controls = len(self._parameter_controls)
+				parameters = self._device.parameters[1:]
+				num_controls = len(self._params)
 				index = (self._bank_index * num_controls)
-				for control in self._parameter_controls:
+				for param in self._params:
 					if (index < len(parameters)):
 						self._params[index]._parameter=self._connect_param(self._params[index], parameters[index])
 					else:
@@ -280,20 +257,20 @@ class MonoDeviceComponent(DeviceComponent):
 					index += 1
 		else:
 			index = 0
-			for control in self._parameter_controls:
+			for param in self._params:
 				self._params[index]._parameter = self._connect_param(self._params[index], None)
 				index += 1
 		for param in self._params:
-			self._params_value_change(param._parameter, param._control)
+			param._value_change()
 	
 
 	def _connect_param(self, holder, parameter):
-		#self._cs.log_message('connecting ') # + str(holder._parameter) + ' ' + str(parameter))
+		#self._parent._host.log_message('connecting ') # + str(holder._parameter) + ' ' + str(parameter))
 		self._mapped_to_midi_velocity = False
 		if (holder._parameter!= None):
 			if holder._parameter.value_has_listener(holder._value_change):
 				holder._parameter.remove_value_listener(holder._value_change)
-				#self._cs.log_message('removing ' + str(holder._parameter.name))
+				#self._parent._host.log_message('removing ' + str(holder._parameter.name))
 		if parameter != None:
 			assignment = parameter
 			if(str(parameter.name) == str('Track Volume')):		#checks to see if parameter is track volume
@@ -303,7 +280,7 @@ class MonoDeviceComponent(DeviceComponent):
 							assignment = parameter.canonical_parent.canonical_parent.devices[0].parameters[6]				#if found, assigns fader to its 'outhi' parameter
 							self._mapped_to_midi_velocity = True
 			assignment.add_value_listener(holder._value_change)
-			#self._cs.log_message('adding ' + str(assignment.name))
+			#self._parent._host.log_message('adding ' + str(assignment.name))
 			return assignment
 		else:
 			
@@ -317,8 +294,8 @@ class MonoDeviceComponent(DeviceComponent):
 			self._parent._send('lcd', 'device_name', 'lcd_name', ' ')
 	
 
-	def _params_value_change(self, sender, control, feedback = True):
-		#self._cs.log_message('params change ' + str(sender))
+	def _params_value_change(self, sender, control_name, feedback = True):
+		#self._parent._host.log_message('params change ' + str(sender) + str(control_name))
 		pn = ' '
 		pv = ' '
 		val = 0
@@ -333,10 +310,10 @@ class MonoDeviceComponent(DeviceComponent):
 			else:
 				pv = '-bound-'
 			val = ((sender.value - sender.min) / (sender.max - sender.min))  * 127
-		self._parent._send('lcd', control.name, 'lcd_name', pn)
-		self._parent._send('lcd', control.name, 'lcd_value', pv)
+		self._parent._send('lcd', control_name, 'lcd_name', pn)
+		self._parent._send('lcd', control_name, 'lcd_value', pv)
 		if feedback == True:
-			self._parent._send('lcd', control.name, 'encoder_value', val)
+			self._parent._send('lcd', control_name, 'encoder_value', val)
 	
 
 	def generate_strip_string(self, display_string):
@@ -383,9 +360,10 @@ class MonoDeviceComponent(DeviceComponent):
 				parameter = self._on_off_parameter()
 				if (parameter != None):
 					parameter.remove_value_listener(self._on_on_off_changed)
-				if (self._parameter_controls != None):
-					for control in self._parameter_controls:
-						control.release_parameter()
+				for host in self._parent._active_host:
+					if (host._parameter_controls != None):
+						for control in host._parameter_controls:
+							control.release_parameter()
 			self._device = device
 			if (self._device != None):
 				if self._device.canonical_parent != None:
@@ -408,54 +386,128 @@ class MonoDeviceComponent(DeviceComponent):
 	
 
 	def update(self):
-		#self._cs.log_message('update, enabled: ' + str(self.is_enabled()))
-		super(MonoDeviceComponent, self).update()
-		if (self._parameter_controls != None):
-			self._assign_params()
+		#self._parent._host.log_message('update!')
 		if self.is_enabled():
-			self._cs.request_rebuild_midi_map()
+			if self._device != None:
+				self._device_bank_registry[self._device] = self._bank_index
+				for host in self._parent._active_host:
+					if host.is_enabled() and host._parameter_controls != None:
+						old_bank_name = self._bank_name
+						self._assign_parameters(host)
+						if self._bank_name != old_bank_name:
+							self._show_msg_callback(self._device.name + ' Bank: ' + self._bank_name)
+			else:
+				for host in self._parent._active_host:
+					if host._parameter_controls != None:
+						for control in host._parameter_controls:
+							control.release_parameter()
+		self._assign_params(self._update_params())
+		if self.is_enabled():
+			for host in self._parent._active_host:
+				if host.is_enabled() and host._parameter_controls != None:
+					host._script.request_rebuild_midi_map()
 	
 
-	def set_mod_device_type(self, mod_device_type, *a):
-		#self._cs.log_message('set type ' + str(mod_device_type))
+	def _update_params(self):
+		#self._parent._host.log_message('update params!')
+		count = 0
+		used_host = None
+		if self._number_params > 0:
+			count = self._number_params
+		else:
+			for host in self._parent._host._hosts:
+				if len(host._parameter_controls) > count:
+					count = len(host._parameter_controls)
+					used_host = host
+		if count != len(self._params):
+			if self._number_params > 0:
+				self._params = [ParamHolder(self, None, index) for index in range(self._number_params)]
+			elif used_host != None:
+				self._params = [ParamHolder(self, None, index) for index in range(len(used_host._parameter_controls))]
+			else:
+				for param in self._params:
+					self._connect_param(param, None)
+				self._params = []
+	
+
+	"""def set_parameter_controls(self, controls):
+		self._params = [ParamHolder(self, controls[index]) for index in range(len(controls))]
+		#DeviceComponent.set_parameter_controls(self, controls)"""
+	
+
+	def _device_parameters_to_map(self):
+		raise self.is_enabled() or AssertionError
+		raise self._device != None or AssertionError
+		raise host._parameter_controls != None or AssertionError
+		return self._device.parameters[1:]
+	
+
+	def set_number_params(self, number, args2=None, args3=None, args4=None):
+		#self._parent._host.log_message('set number params' + str(number))
+		self._number_params = number
+		#self._parent._host.schedule_message(1, self.update)
+		self.update()
+	
+
+	def set_number_custom(self, number, args2=None, args3=None, args4=None):
+		self._custom_parameter = [None for index in range(number)]
+	
+
+	def set_custom_parameter(self, number, parameter, args3=None, args4=None):
+		if number < len(self._custom_parameter):
+			#self._parent._host.log_message('custom='+str(parameter))
+			if isinstance(parameter, Live.DeviceParameter.DeviceParameter) or parameter is None:
+				#self._parent._host.log_message('custom is device:'+str(parameter))
+				self._custom_parameter[number] = parameter
+				self.update()
+	
+
+	def set_mod_device_type(self, mod_device_type, args2=None, args3=None, args4=None):
+		#self._parent._host.log_message('set type ' + str(mod_device_type))
 		for host in self._parent._active_host:
 			host.on_enabled_changed()
-		#self._cs.schedule_message(5, self._set_type, mod_device_type)
+		#self._parent._host.schedule_message(5, self._set_type, mod_device_type)
 		self._set_type(mod_device_type)
 	
 
-	def set_mod_device(self, mod_device, *a):
-		#self._cs.log_message('set device ' + str(mod_device))
+	def set_mod_device(self, mod_device, args2=None, args3=None, args4=None):
+		#self._parent._host.log_message('set device ' + str(mod_device))
 		self.set_device(mod_device, True)
 		for host in self._parent._active_host:
 			host.update()
 	
 
-	def set_mod_device_parent(self, mod_device_parent=None, single=None, *a):
-		#self._cs.log_message('set parent ' + str(mod_device_parent))
+	def set_mod_device_parent(self, mod_device_parent, single=None, args3=None, args4=None):
+		#self._parent._host.log_message('set parent ' + str(mod_device_parent))
 		self._set_device_parent(mod_device_parent, single)
 		for host in self._parent._active_host:
 			host.update()
 	
 
-	def set_mod_device_chain(self, chain, *a):
-		#self._cs.log_message('set_chain ' + str(chain))
+	def set_mod_device_chain(self, chain, args2=None, args3=None, args4=None):
+		#self._parent._host.log_message('set_chain ' + str(chain))
 		self._select_parent_chain(chain, True)
 		for host in self._parent._active_host:
 			host.update()
 	
 
-	def set_parameter_value(self, num, val, *a):
-		#self._cs.log_message('set_pval ' + str(num) + ' ' + str(val))
-		#if self._device_component.is_enabled():
-		#	self._device_component._parameter_controls[num].set_value(val)
+	def set_parameter_value(self, num, val, args2=None, args3=None, args4=None):
+		#self._parent._host.log_message('set_pval ' + str(num) + ' ' + str(val))
 		if self._device != None:
 			if num < len(self._params):
 				self._params[num]._change_value(val)
 	
 
-	def set_device_bank(self, bank_index, *a):
-		#self._cs.log_message('set bank ' + str(bank_index))
+	def set_custom_parameter_value(self, num, value, args2=None, args3=None, args4=None):
+		if num < len(self._custom_parameter):
+			parameter = self._custom_parameter[num]
+			if parameter != None:
+				newval = float(float(float(value)/127) * float(parameter.max - parameter.min)) + parameter.min
+				parameter.value = newval
+	
+
+	def set_device_bank(self, bank_index, args2=None, args3=None, args4=None):
+		#self._parent._host.log_message('set bank ' + str(bank_index))
 		if self.is_enabled():
 			if (self._device != None):
 				if (self._number_of_parameter_banks() > bank_index):
@@ -464,7 +516,24 @@ class MonoDeviceComponent(DeviceComponent):
 					self.update()
 	
  
+	def number_of_parameter_banks(self, device):
+		""" Determine the amount of parameter banks the given device has """
+		result = 0
+		if (device != None):
+			result = 1
+			if (device.class_name in self._device_banks.keys()):
+				device_bank = self._device_banks[device.class_name]
+				result = len(device_bank)
+			elif len(self._params > 0):
+				param_count = len(list(device.parameters))
+				result = (param_count / len(self._params))
+				if (not ((param_count % len(self._params)) == 0)):
+					result += 1
+		return result	
+	
+		
 	def on_enabled_changed(self):
+		#self._parent._host.log_message('on_enabled_changed '+str(self._parent)+' '+str(self.is_enabled()))
 		self.update()
 	
 
@@ -473,15 +542,21 @@ class MonoDeviceComponent(DeviceComponent):
 class ParamHolder(object):
 	
 	__doc__ = ' Simple class to hold the owner of a Device.parameter and forward its value when receiving updates from Live, or update its value from a mod '
-	def __init__(self, parent, control):
+
+
+	def __init__(self, parent, control, index):
 		self._control = control
+		self._control_name = 'Encoder_'+str(index)
 		self._parent = parent
 		self._parameter = None	
 		self._feedback = True
 
 
 	def _value_change(self):
-		self._parent._params_value_change(self._parameter, self._control, self._feedback)
+		control_name = self._control_name
+		#if not self._control is None:
+		#	control_name = self._control.name
+		self._parent._params_value_change(self._parameter, control_name, self._feedback)
 		self._feedback = True
 	
 
@@ -490,15 +565,16 @@ class ParamHolder(object):
 			if(self._parameter.is_enabled):
 				self._feedback = False
 				newval = float(float(float(value)/127) * float(self._parameter.max - self._parameter.min)) + self._parameter.min
-				#self._parent._cs.log_message('newval ' + str(newval))
+				#self._parent._parent._host.log_message('newval ' + str(newval))
 				self._parameter.value = newval
 	
 	
 
 
 class NoDevice(object):
+	__doc__ = 'Dummy Device with no parameters and custom class_name that is used when no device is selected, but parameter assignment is still necessary'	
+
 	
-	__doc__ = 'Dummy Device with no parameters and custom class_name that is used when no device is selected, but parameter assignment is still necessary'
 	def __init__(self):
 		self.class_name = 'NoDevice'
 		self.parameters = []
@@ -513,6 +589,7 @@ class NoDevice(object):
 
 	def remove_name_listener(self, callback=None):
 		pass
+
 
 	def name_has_listener(self, callback=None):
 		return False
@@ -536,4 +613,4 @@ class NoDevice(object):
 
 	
 	
-		
+				

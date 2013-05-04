@@ -1,5 +1,5 @@
-#!/usr/bin/env python
-# encoding: utf-8
+# by amounra 0513 : http://www.aumhaa.com
+
 """
 Cntrlr_Map.py
 

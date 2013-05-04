@@ -97,7 +97,7 @@ class MonomodComponent(CompoundComponent):
 		self._register_timer_callback(self._on_timer)
 	
 
-	def disconnect(self):
+	def disconnect(self, *a, **k):
 		self.set_allow_update(False)  ###added
 		self._active_client = None
 		self._set_shift_button(None)

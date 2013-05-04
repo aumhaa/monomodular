@@ -1,3 +1,6 @@
+# by amounra 0513 : http://www.aumhaa.com
+
+
 STEPPR_BANKS = {'InstrumentGroupDevice':[['Macro 1', 'Macro 2', 'Macro 3', 'Macro 4', 'Macro 5', 'Macro 6', 'Mod_Chain_Pan', 'Mod_Chain_Vol', 'ModDevice_Repeat', 'ModDevice_Groove', 'ModDevice_Random', 'ModDevice_RotSize']],
 			'DrumGroupDevice':[['Macro 1', 'Macro 2', 'Macro 3', 'Macro 4', 'Macro 5', 'Macro 6', 'Mod_Chain_Pan', 'Mod_Chain_Vol', 'ModDevice_Repeat', 'ModDevice_Groove', 'ModDevice_Random', 'ModDevice_RotSize']],
 			'Operator':[['Osc-A Level', 'Osc-B Level', 'Osc-C Level', 'Osc-D Level', 'Transpose', 'Filter Freq', 'Mod_Chain_Pan', 'Mod_Chain_Vol', 'ModDevice_Repeat', 'ModDevice_Groove', 'ModDevice_Random', 'ModDevice_RotSize']],

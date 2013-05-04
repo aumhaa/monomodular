@@ -1,4 +1,4 @@
-# by amounra 0413 : http://www.aumhaa.com
+# by amounra 0513 : http://www.aumhaa.com
 
 from __future__ import with_statement
 import Live
@@ -68,58 +68,6 @@ SLOWENCODER = (240, 0, 1, 97, 8, 30, 69, 00, 247)
 NORMALENCODER = (240, 0, 1, 97, 8, 30, 00, 00, 247)
 FASTENCODER = (240, 0, 1, 97, 8, 30, 04, 00, 247)
 
-"""
-class ShiftModeComponent(ModeSelectorComponent):
-	__module__ = __name__
-	__doc__ = ' Special Class that selects mode 0 if a mode button thats active is pressed'
-
-
-	def __init__(self, script, callback, *a, **k):
-		super(ShiftModeComponent, self).__init__(*a, **k)
-		self._script = script
-		self.update = callback
-		self._modes_buttons = []
-		self._set_protected_mode_index(0)
-		self._last_mode = 0
-	
-
-	def set_mode_buttons(self, buttons):
-		for button in self._modes_buttons:
-			button.remove_value_listener(self._mode_value)
-		self._modes_buttons = []
-		if (buttons != None):
-			for button in buttons:
-				assert isinstance(button, ButtonElement or FlashingButtonElement)
-				identify_sender = True
-				button.add_value_listener(self._mode_value, identify_sender)
-				self._modes_buttons.append(button)
-	
-
-	def number_of_modes(self):
-		return 5
-	
-
-	def set_mode(self, mode):
-		assert isinstance(mode, int)
-		mode += 1
-		assert (mode in range(self.number_of_modes()))
-		if (self._mode_index != mode):
-			self._mode_index = mode
-			self.update()
-		elif (self._mode_index != 0):
-			self._mode_index = 0
-			self.update()
-	
-
-	def _mode_value(self, value, sender):
-		assert (len(self._modes_buttons) > 0)
-		assert isinstance(value, int)
-		assert isinstance(sender, ButtonElement)
-		assert (self._modes_buttons.count(sender) == 1)
-		if ((value is not 0) or (not sender.is_momentary())):
-			self.set_mode(self._modes_buttons.index(sender))
-	
-"""
 
 class ShiftModeComponent(ModeSelectorComponent):
 
@@ -685,13 +633,9 @@ class CntrlrMonomodComponent(MonomodComponent):
 
 
 
-
-
-
-
 class Cntrlr(ControlSurface):
 	__module__ = __name__
-	__doc__ = " MonOhmod companion controller script "
+	__doc__ = " Monomodular controller script for Livid CNTRLR "
 
 
 	def __init__(self, *a, **k):
@@ -726,12 +670,17 @@ class Cntrlr(ControlSurface):
 			self._setup_switchboard()
 			self._setup_chopper()
 			self._setup_modes() 
-		self.log_message('<<<<<<<<<<<<<<<<<<<<<<<<< CNTRLR ' + str(self._version_check) + ' log opened >>>>>>>>>>>>>>>>>>>>>>>>>') 		
+		self.schedule_message(1, self._open_log)
 		self.song().view.add_selected_track_listener(self._update_selected_device)		#Add a listener so that when the track content changes our device selection will aslo be updated
 	
 
 	"""script initialization methods"""
+
+	def _open_log(self):
+		self.log_message("<<<<<<<<<<<<<<<<<<<<= " + str(self._host_name) + " " + str(self._version_check) + " log opened =>>>>>>>>>>>>>>>>>>>") 
+		self.show_message(str(self._host_name) + ' Control Surface Loaded')
 	
+
 	"""monobridge is used to send parameter names and values to the m4l LCD patch"""
 	def _setup_monobridge(self):
 		self._monobridge = MonoBridgeElement(self)
@@ -908,15 +857,15 @@ class Cntrlr(ControlSurface):
 	"""this section sets up the host environment that allows the controller to access different mods from the modButtons"""
 	def _setup_mod(self):
 		self._host = CntrlrMonomodComponent(self)						#the MonomodComponent is the bridge between the CNTRLR's controls and the client patches that connect to m4l
-		self._host.name = 'Monomod_Host'						#name it so we can access it
+		self._host.name = 'Cntrlr_Host'						#name it so we can access it
 		self.hosts = [self._host]								#since some CNTRLR's can have more than one grid to access its clients, we create an array to hold all of the hosts that are included in this script.  The CNTRLR only holds one.
 		self._hosts = [self._host]								#this is redundant, and needs to be fixed
+		self._host._set_parameter_controls(self._encoder)
 		for index in range(4):									#now we create our clients that will be connected to the actual m4l mods
 			self._client[index] = CntrlrMonoClient(self, index)		#create an instance, and pass it its index
 			self._client[index].name = 'Client_' + str(index)	#name it so we can access it
 			self._client[index]._mod_dial = (self._encoder[index])		#assign it a modDial so that we can control its modVolume from the unshifted CNTRLR
-			self._client[index]._device_component = MonoDeviceComponent(self._client[index], self._host, self, MOD_BANK_DICT, MOD_TYPES, MOD_CNTRL_OFFSETS)
-			self._client[index]._device_component.set_parameter_controls(tuple(self._encoder))		#assign the encoders to the clients so that we can control device parameters through our client
+			self._client[index]._device_component = MonoDeviceComponent(self._client[index], MOD_BANK_DICT, MOD_TYPES)
 			self._client[index]._control_defs = {'dials':self._dial_matrix, 'buttons':self._dial_button_matrix, 'grid':self._matrix, 'keys':self._button, 'knobs':self._knobs}  #assign controls that raw data will be addressed at
 		self._active_client = self._client[0]					#select the first client as our active client
 		self._active_client._is_active = True					#initialize its active state, used by MonomodComponent to determine its status when sending it messages
@@ -954,6 +903,17 @@ class Cntrlr(ControlSurface):
 		#for index in range(4):
 		#	if self._encoder[index].value_has_listener(self._client[index]._mod_dial_value):
 		#		self._encoder[index].remove_value_listener(self._client[index]._mod_dial_value)
+
+
+		"""THIS SECTION IS MISSING FROM THE ORIGINAL SCRIPT AND NEEDS TO BE FIXED...THE ASSIGNMENTS WERE MADE AT __init__"""
+		for index in range(4):								
+			self._mixer.channel_strip(index).set_volume_control(None)		#Since we gave our mixer 4 tracks above, we'll now assign our fader controls to it						
+		for index in range(2):
+			self._mixer.return_strip(index).set_volume_control(None)	#assign the right faders to control the volume of our return strips
+		self._mixer.master_strip().set_volume_control(None)					#assign the far right fader to control our master channel strip
+		self._mixer.set_prehear_volume_control(None)							#assign the remaining fader to control our prehear volume of the the master channel strip
+
+
 		for index in range(4):											#for the left side of the mixer
 			self._mixer.channel_strip(index).set_solo_button(None)		#remove the solo button assignments
 			self._mixer.channel_strip(index).set_arm_button(None)		#remove the arm button assignments
@@ -999,6 +959,7 @@ class Cntrlr(ControlSurface):
 			self._encoder_button[index+4].send_value(0, True)				#turn off all the encoder LEDs.  We send it the second argument, True, so that it is forced to update regardless of its last_sent property
 			self._encoder_button[index+4].clear_send_cache()				#set the last_sent value of the encoder LEDs to -1, so that the next value it receives will always be transmitted to the CNTRLR
 		self._session_zoom.set_zoom_button(None)							#remove the assignment of the shift button from the ZoomingComponent
+		self._host._release_mod_dials()
 		self.request_rebuild_midi_map()										#now that we've finished deassigning all of our controls, we tell the main script to rebuild its MIDI map and update the values in Live
 	
 
@@ -1020,16 +981,8 @@ class Cntrlr(ControlSurface):
 			self._encoder[index].clear_send_cache()
 
 		"""here we assign the top encoders to the mod_dial, if it exists, in any connected mods"""
-		for client in self._client:					#recursion to contain all available clients
-			param = client._mod_dial_parameter()	#param is a local variable, and we assign its value to the mod_dial_parameter (this is handled by each individual client module)
-			#self.log_message('mod dial param ' + str(param))
-			if not client._mod_dial == None:		#if the client has been assigned a mod dial (which it should have been in setup_mod() )
-				if not param == None:				#if the param variable was properly assigned in the client module
-					client._mod_dial.connect_to(param)			#connect the physical control to the parameter (this should be the moddial parameter in the m4l patch)
-				else:
-					client._mod_dial.release_parameter()		#if the param was None, release the physical control from any assignments
-			
-			
+		self.schedule_message(4, self._assign_mod_dials)
+
 		"""here we assign the left side of our mixer's buttons on the lower 32 keys"""
 		for index in range(4):															#we set up a recursive loop to assign all four of our track channel strips' controls
 			self._button[index].set_on_value(SOLO[self._rgb])							#set the solo color from the Map.py
@@ -1116,14 +1069,7 @@ class Cntrlr(ControlSurface):
 			self._encoder[index].clear_send_cache()
 
 		"""here we assign the top encoders to the mod_dial, if it exists, in any connected mods"""
-		for client in self._client:					#recursion to contain all available clients
-			param = client._mod_dial_parameter()	#param is a local variable, and we assign its value to the mod_dial_parameter (this is handled by each individual client module)
-			#self.log_message('mod dial param ' + str(param))
-			if not client._mod_dial == None:		#if the client has been assigned a mod dial (which it should have been in setup_mod() )
-				if not param == None:				#if the param variable was properly assigned in the client module
-					client._mod_dial.connect_to(param)			#connect the physical control to the parameter (this should be the moddial parameter in the m4l patch)
-				else:
-					client._mod_dial.release_parameter()		#if the param was None, release the physical control from any assignments
+		self.schedule_message(4, self._assign_mod_dials)
 
 		"""the following lines differ from the assignments in self.assign_live_controls()"""
 		"""the assignments merely moving certain elements from their original positions"""
@@ -1203,14 +1149,7 @@ class Cntrlr(ControlSurface):
 			for index in range(4):						#set up a recursion of 4
 				if self._shift_mode._mode_index == (index + 1):			#for each recursion, if the recursion number is the same as the shift_mode_index +1
 					self._shift_mode._modes_buttons[index].send_value(1)		#turn on the LED below the modButton
-			for client in self._client:					#for each of our clients
-				param = client._mod_dial_parameter()	#we declare param as our local variable, and assign to it the client's mod_dial_parameter
-				if not client._mod_dial == None:		#if our client has a mod_dial assigned to it
-					if not param == None:				#and if our param variable was not assigned the value of None
-						client._mod_dial.connect_to(param)		#then connect our client's mod_dial to the parameter held in param
-						self.log_message('mod dial connected to ' + str(param.name))
-					else:
-						client._mod_dial.release_parameter()	#if our param was assigned to None, then release any control that the mod_dial previously was assigned to
+			self.schedule_message(4, self._assign_mod_dials)			
 			self._host._set_dial_matrix(None, None)		#deassign the Monomod Components dial matrix 
 			self._host._set_button_matrix(None)			#deassign the Monomod Component's button matrix
 			self._host._set_key_buttons(None)			#deassign the Monomod Component's key matrix
@@ -1280,11 +1219,7 @@ class Cntrlr(ControlSurface):
 
 	"""called on timer"""
 	def update_display(self):
-		""" Live -> Script
-		Aka on_timer. Called every 100 ms and should be used to update display relevant
-		parts of the controller
-		"""
-		ControlSurface.update_display(self)		#since we are overriding this from the inherited method, we need to call the original routine as well
+		super(Cntrlr, self).update_display()		#since we are overriding this from the inherited method, we need to call the original routine as well
 		self._timer = (self._timer + 1) % 256	#each 100/60ms, increase the self._timer property by one.  Start over at 0 when we hit 256
 		if(self._local_ring_control is False):	#if local rings are turned off, then we need to send the new values if they've changed
 			self.send_ring_leds()			
@@ -1423,19 +1358,36 @@ class Cntrlr(ControlSurface):
 			self._send_midi(tuple(leds))
 	
 
+	def _release_mod_dials(self):
+		if not self._client is None:
+			for client in self._client:										#for each of our 4 clients:
+				if not client._mod_dial == None:								#if the client has a modDial assigned to it
+					client._mod_dial.release_parameter()						#remove the modDial's parameter assignment
+	
+
+	def _assign_mod_dials(self):
+		if not self._client is None:
+			for client in self._client:					#recursion to contain all available clients
+				param = client._mod_dial_parameter()	#param is a local variable, and we assign its value to the mod_dial_parameter (this is handled by each individual client module)
+				if not client._mod_dial == None:					#if the client has been assigned a mod dial (which it should have been in setup_mod() )
+					if not param == None:										#if the param variable was properly assigned in the client module
+						client._mod_dial.connect_to(param)			#connect the physical control to the parameter (this should be the moddial parameter in the m4l patch)
+					else:
+						client._mod_dial.release_parameter()		#if the param was None, release the physical control from any assignments
+			self.request_rebuild_midi_map()
+	
+
 
 	"""general functionality"""
 	
 	"""this method is called by Live when it needs to disconnect.  It's very important that any observers that were set up in the script are removed here"""
 	def disconnect(self):
 		"""clean things up on disconnect"""
-		#self.deassign_live_controls()
 		if self.song().view.selected_track_has_listener(self._update_selected_device):
 			self.song().view.remove_selected_track_listener(self._update_selected_device)
 		self._hosts = []
-		self.log_message("<<<<<<<<<<<<<<<<<<<<<<<<< CNTRLR log closed >>>>>>>>>>>>>>>>>>>>>>>>>") #Create entry in log file
-		ControlSurface.disconnect(self)
-		return None
+		self.log_message("<<<<<<<<<<<<<<<<<<<<<<<<< " + str(self._host_name) + " log closed >>>>>>>>>>>>>>>>>>>>>>>>>") #Create entry in log file
+		super(Cntrlr, self).disconnect()
 	
 
 	"""this provides a hook that can be called from m4l to change the DeviceComponent's behavior"""
@@ -1474,9 +1426,9 @@ class Cntrlr(ControlSurface):
 	"""things don't work as expected anymore."""
 	def _device_update(self, device):
 		def _update():
-			for client in self._client:
-				if (device._device != None) and (client.device == device._device):
-					device._bank_index = max(client._device_component._cntrl_offset, device._bank_index)
+			#for client in self._client:
+			#	if (device._device != None) and (client.device == device._device):
+			#		device._bank_index = max(client._device_component._cntrl_offset, device._bank_index)
 			DeviceComponent.update(device)
 			self.request_rebuild_midi_map()
 		return _update
