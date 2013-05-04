@@ -26,6 +26,7 @@ class MonoEncoderElement(EncoderElement):
 		self._parameter = None
 		self._script = script
 		self._is_enabled = True
+		self._mapping_feedback_delay = -1
 		#self._report_input = True
 		#self._report_output = True
 		#self._last_sent_val = -1

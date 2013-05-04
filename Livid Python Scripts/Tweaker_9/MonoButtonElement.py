@@ -1,4 +1,5 @@
-# emacs-mode: -*- python-*-
+# by amounra 0413 : http://www.aumhaa.com
+
 import Live
 from _Framework.ButtonElement import ButtonElement
 from _Framework.InputControlElement import InputControlElement
@@ -145,5 +146,4 @@ class MonoButtonElement(ButtonElement):
 
 
 	
-# local variables:
-# tab-width: 4
+

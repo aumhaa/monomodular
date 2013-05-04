@@ -31,10 +31,8 @@ from _Framework.TrackFilterComponent import TrackFilterComponent # Class represe
 from _Framework.TransportComponent import TransportComponent # Class encapsulating all functions in Live's transport section
 
 """Custom files, overrides, and files from other scripts"""
-from MonoButtonElement import MonoButtonElement as FlashingButtonElement
-from Live8DeviceComponent import Live8DeviceComponent as DeviceComponent
+from MonoButtonElement import MonoButtonElement
 from DetailViewControllerComponent import DetailViewControllerComponent
-from PadOffsetComponent import PadOffsetComponent
 
 import LiveUtils
 from _Generic.Devices import *
@@ -149,22 +147,485 @@ DEVICE_BOB_DICT = {'AudioEffectGroupDevice': RCK_BOBS,
  'PingPongDelay': PPG_BOBS}
 
 
+class DeviceComponent(ControlSurfaceComponent):
+	__doc__ = ' Class representing a device in Live '
+
+
+	def __init__(self):
+		super(DeviceComponent, self).__init__()
+		self._device_banks = DEVICE_DICT
+		self._device_best_banks = DEVICE_BOB_DICT
+		self._device_bank_names = BANK_NAME_DICT
+		self._device = None
+		self._parameter_controls = None
+		self._bank_up_button = None
+		self._bank_down_button = None
+		self._bank_buttons = None
+		self._on_off_button = None
+		self._lock_button = None
+		self._lock_callback = None
+		self._device_name_data_source = None
+		self._device_bank_registry = {}
+		self._bank_index = 0
+		self._bank_name = '<No Bank>'
+		self._locked_to_device = False
+		return None
+	
+
+	def disconnect(self):
+		self._lock_callback = None
+		self._device_bank_registry = None
+		if self._parameter_controls != None:
+			for control in self._parameter_controls:
+				control.release_parameter()
+			self._parameter_controls = None
+		if self._bank_up_button != None:
+			self._bank_up_button.remove_value_listener(self._bank_up_value)
+			self._bank_up_button = None
+		if self._bank_down_button != None:
+			self._bank_down_button.remove_value_listener(self._bank_down_value)
+			self._bank_down_button = None
+		if self._bank_buttons != None:
+			for button in self._bank_buttons:
+				button.remove_value_listener(self._bank_value)
+		self._bank_buttons = None
+		if self._on_off_button != None:
+			self._on_off_button.remove_value_listener(self._on_off_value)
+			self._on_off_button = None
+		if self._lock_button != None:
+			self._lock_button.remove_value_listener(self._lock_value)
+			self._lock_button = None
+		if self._device != None:
+			parameter = self._on_off_parameter()
+			if parameter != None:
+				parameter.remove_value_listener(self._on_on_off_changed)
+			self._device.remove_name_listener(self._on_device_name_changed)
+			self._device.remove_parameters_listener(self._on_parameters_changed)
+			self._device = None
+		return None
+	
+
+	def on_enabled_changed(self):
+		self.update()
+	
+
+	def set_device(self, device):
+		assert ((device == None) or isinstance(device, Live.Device.Device))
+		if ((not self._locked_to_device) and (device != self._device)):
+			if (self._device != None):
+				self._device.remove_name_listener(self._on_device_name_changed)
+				self._device.remove_parameters_listener(self._on_parameters_changed)
+				parameter = self._on_off_parameter()
+				if (parameter != None):
+					parameter.remove_value_listener(self._on_on_off_changed)
+				if (self._parameter_controls != None):
+					for control in self._parameter_controls:
+						control.release_parameter()
+			self._device = device
+			if (self._device != None):
+				self._bank_index = 0
+				self._device.add_name_listener(self._on_device_name_changed)
+				self._device.add_parameters_listener(self._on_parameters_changed)
+				parameter = self._on_off_parameter()
+				if (parameter != None):
+					parameter.add_value_listener(self._on_on_off_changed)
+			for key in self._device_bank_registry.keys():
+				if (key == self._device):
+					self._bank_index = self._device_bank_registry.get(key, 0)
+					del self._device_bank_registry[key]
+					break
+			self._bank_name = '<No Bank>' #added
+			self._on_device_name_changed()
+			self.update()		 
+	
+
+	def set_bank_nav_buttons(self, down_button, up_button):
+		assert ((down_button != None) or (up_button == None))
+		assert ((up_button == None) or isinstance(up_button, ButtonElement))
+		assert ((down_button == None) or isinstance(down_button, ButtonElement))
+		do_update = False
+		if up_button != self._bank_up_button:
+			do_update = True
+			if self._bank_up_button != None:
+				self._bank_up_button.remove_value_listener(self._bank_up_value)
+			self._bank_up_button = up_button
+			if self._bank_up_button != None:
+				self._bank_up_button.add_value_listener(self._bank_up_value)
+		if down_button != self._bank_down_button:
+			do_update = True
+			if self._bank_down_button != None:
+				self._bank_down_button.remove_value_listener(self._bank_down_value)
+			self._bank_down_button = down_button
+			if self._bank_down_button != None:
+				self._bank_down_button.add_value_listener(self._bank_down_value)
+		if do_update:
+			self.update()
+		return None
+	
+
+	def set_bank_buttons(self, buttons):
+		assert ((buttons == None) or isinstance(buttons, tuple))
+		if self._bank_buttons != None:
+			for button in self._bank_buttons:
+				button.remove_value_listener(self._bank_value)
+		self._bank_buttons = buttons
+		if self._bank_buttons != None:
+			identify_sender = True
+			for button in self._bank_buttons:
+				button.add_value_listener(self._bank_value, identify_sender)
+		self.update()
+		return None
+	
+
+	def set_parameter_controls(self, controls):
+		assert (controls != None)
+		assert isinstance(controls, tuple)
+		if self._device != None and self._parameter_controls != None:
+			for control in self._parameter_controls:
+				control.release_parameter()
+		for control in controls:
+			assert (control != None)
+			assert isinstance(control, EncoderElement)
+		self._parameter_controls = controls
+		self.update()
+		return None
+	
+
+	def set_lock_to_device(self, lock, device):
+		assert isinstance(lock, type(False))
+		assert (lock is not self._locked_to_device)
+		if lock:
+			self.set_device(device)
+		else:
+			assert (device == self._device)
+		self._locked_to_device = lock
+		if self.is_enabled():
+			if (self._lock_button != None):
+				if self._locked_to_device:
+					self._lock_button.turn_on()
+				else:
+					self._lock_button.turn_off()		
+	
+
+	def set_lock_button(self, button):
+		assert ((button == None) or isinstance(button, ButtonElement))
+		if self._lock_button != None:
+			self._lock_button.remove_value_listener(self._lock_value)
+			self._lock_button = None
+		self._lock_button = button
+		if self._lock_button != None:
+			self._lock_button.add_value_listener(self._lock_value)
+		self.update()
+		return None
+	
+
+	def set_on_off_button(self, button):
+		assert ((button == None) or isinstance(button, ButtonElement))
+		if self._on_off_button != None:
+			self._on_off_button.remove_value_listener(self._on_off_value)
+			self._on_off_button = None
+		self._on_off_button = button
+		if self._on_off_button != None:
+			self._on_off_button.add_value_listener(self._on_off_value)
+		self.update()
+		return None
+	
+
+	def set_lock_callback(self, callback):
+		assert (self._lock_callback == None)
+		assert (callback != None)
+		assert (dir(callback).count('im_func') is 1)
+		self._lock_callback = callback
+		return None
+	
+
+	def restore_bank(self, bank_index):
+		if self._device != None and self._is_banking_enabled() and self._locked_to_device and self._number_of_parameter_banks() > bank_index and self._bank_index != bank_index:
+			self._bank_index = bank_index
+			self.update()
+		return None
+	
+
+	def device_name_data_source(self):
+		if self._device_name_data_source == None:
+			self._device_name_data_source = DisplayDataSource()
+			self._on_device_name_changed()
+		return self._device_name_data_source
+	
+
+	def update(self):
+		if (self.is_enabled() and (self._device != None)):
+			self._device_bank_registry[self._device] = self._bank_index
+			if (self._parameter_controls != None):
+				old_bank_name = self._bank_name #added
+				self._assign_parameters()
+				if self._bank_name != old_bank_name: #added
+					self._show_msg_callback(self._device.name + ' Bank: ' + self._bank_name) #added
+			if ((self._bank_up_button != None) and (self._bank_down_button != None)):
+				if (self.number_of_parameter_banks()) > (self._bank_index + 1):
+					self._bank_up_button.turn_on()
+				else:
+					self._bank_up_button.turn_off()
+				if (self._bank_index > 0):
+					self._bank_down_button.turn_on()
+				else:
+					self._bank_down_button.turn_off()
+			if (self._bank_buttons != None):
+				for index in range(len(self._bank_buttons)):
+					if (index == self._bank_index):
+						self._bank_buttons[index].turn_on()
+					else:
+						self._bank_buttons[index].turn_off()
+		else:
+			if (self._lock_button != None):
+				self._lock_button.turn_off()
+			if (self._bank_up_button != None):
+				self._bank_up_button.turn_off()
+			if (self._bank_down_button != None):
+				self._bank_down_button.turn_off()
+			if (self._bank_buttons != None):
+				for button in self._bank_buttons:
+					button.turn_off()
+			if (self._parameter_controls != None):
+				for control in self._parameter_controls:
+					control.release_parameter()
+		#self._rebuild_callback()		
+	
+
+	def _bank_up_value(self, value):
+		assert (self._bank_up_button != None)
+		assert (value != None)
+		assert isinstance(value, int)
+		if self.is_enabled():
+			if ((not self._bank_up_button.is_momentary()) or (value is not 0)):
+				if (self._device != None):
+					num_banks = self._number_of_parameter_banks()
+					if (self._bank_down_button == None):
+						self._bank_name = ''
+						self._bank_index = ((self._bank_index + 1) % num_banks)
+						self.update()
+					elif (num_banks > (self._bank_index + 1)):
+						self._bank_name = ''
+						self._bank_index += 1
+						self.update()
+	
+
+	def _bank_down_value(self, value):
+		assert (self._bank_down_button != None)
+		assert (value != None)
+		assert isinstance(value, int)
+		if self.is_enabled():
+			if ((not self._bank_down_button.is_momentary()) or (value is not 0)):
+				if ((self._device != None) and (self._bank_index > 0)):
+					self._bank_name = ''
+					self._bank_index -= 1
+					self.update()
+	
+
+	def _lock_value(self, value):
+		assert (self._lock_button != None)
+		assert (self._lock_callback != None)
+		assert (value != None)
+		assert isinstance(value, int)
+		if not self._lock_button.is_momentary() or value is not 0:
+			self._lock_callback()
+		return None
+	
+
+	def _on_off_value(self, value):
+		assert (self._on_off_button != None)
+		assert (value in range(128))
+		if not self._on_off_button.is_momentary() or value is not 0:
+			parameter = self._on_off_parameter()
+			if parameter != None and parameter.is_enabled:
+				parameter.value = float(int(parameter.value == 0.0))
+		return None
+	
+
+	def _bank_value(self, value, button):
+		assert (self._bank_buttons != None)
+		assert (value != None)
+		assert (button != None)
+		assert isinstance(value, int)
+		assert isinstance(button, ButtonElement)
+		assert (list(self._bank_buttons).count(button) == 1)
+		if self.is_enabled() and self._device != None: #added
+			if ((not button.is_momentary()) or (value is not 0)):
+				bank = list(self._bank_buttons).index(button)
+				if (bank != self._bank_index):
+					if (self._number_of_parameter_banks() > bank):
+						self._bank_name = '' #added
+						self._bank_index = bank
+						self.update()
+				else:
+					self._show_msg_callback(self._device.name + ' Bank: ' + self._bank_name)
+	
+
+	def _is_banking_enabled(self):
+		direct_banking = (self._bank_buttons != None)
+		roundtrip_banking = (self._bank_up_button != None)
+		increment_banking = ((self._bank_up_button != None) and (self._bank_down_button != None))
+		return (direct_banking or (roundtrip_banking or increment_banking))
+	
+
+	def _assign_parameters(self):
+		assert self.is_enabled()
+		assert (self._device != None)
+		assert (self._parameter_controls != None)
+		self._bank_name = ('Bank ' + str(self._bank_index + 1)) #added
+		if (self._device.class_name in self._device_banks.keys()): #modified
+			assert (self._device.class_name in self._device_best_banks.keys())
+			banks = self._device_banks[self._device.class_name]
+			bank = None
+			#if (not self._is_banking_enabled()):
+			#	 banks = self._device_best_banks[self._device.class_name]
+			#	 self._bank_name = 'Best of Parameters' #added
+			if (len(banks) > self._bank_index):
+				bank = banks[self._bank_index]
+				if self._is_banking_enabled(): #added
+					if self._device.class_name in self._device_bank_names.keys(): #added
+						self._bank_name[self._bank_index] = self._device_bank_names[self._device.class_name] #added *recheck
+			assert ((bank == None) or (len(bank) >= len(self._parameter_controls)))
+			for index in range(len(self._parameter_controls)):
+				parameter = None
+				if (bank != None):
+					parameter = get_parameter_by_name(self._device, bank[index])
+				if (parameter != None):
+					self._parameter_controls[index].connect_to(parameter)
+				else:
+					self._parameter_controls[index].release_parameter()
+		else:
+			parameters = self._device_parameters_to_map()
+			num_controls = len(self._parameter_controls)
+			index = (self._bank_index * num_controls)
+			for control in self._parameter_controls:
+				if (index < len(parameters)):
+					control.connect_to(parameters[index])
+				else:
+					control.release_parameter()
+				index += 1
+	
+
+	def _on_device_name_changed(self):
+		if (self._device_name_data_source != None):
+			if (self.is_enabled() and (self._device != None)):
+				self._device_name_data_source.set_display_string(self._device.name)
+			else:
+				self._device_name_data_source.set_display_string('No Device')
+	
+
+	def _on_parameters_changed(self):
+		self.update()
+	
+
+	def _on_off_parameter(self):
+		result = None
+		if (self._device != None):
+			for parameter in self._device.parameters:
+				if str(parameter.name).startswith('Device On'):
+					result = parameter
+					break
+		return result
+	
+
+	def _on_on_off_changed(self):
+		if (self.is_enabled() and (self._on_off_button != None)):
+			turn_on = False
+			if (self._device != None):
+				parameter = self._on_off_parameter()
+				turn_on = ((parameter != None) and (parameter.value > 0.0))
+			if turn_on:
+				self._on_off_button.turn_on()
+			else:
+				self._on_off_button.turn_off()
+	
+
+	def _device_parameters_to_map(self):
+		assert self.is_enabled()
+		assert (self._device != None)
+		assert (self._parameter_controls != None)
+		return self._device.parameters[1:] #check this...
+	
+
+	def _number_of_parameter_banks(self):
+		return number_of_parameter_banks(self._device) #added
+	
+
+
+class PadOffsetComponent(ModeSelectorComponent):
+	__module__ = __name__
+
+
+	def __init__(self, script, *a, **k):
+		super(PadOffsetComponent, self).__init__(*a, **k)
+		self._script = script
+		self.set_mode(0)	
+	
+
+	def set_mode_buttons(self, buttons):
+		#self._script.log_message('set mode buttons' + str(buttons))
+		for button in self._modes_buttons:
+			button.remove_value_listener(self._mode_value)
+		self._modes_buttons = []
+		if (buttons != None):
+			for button in buttons:
+				assert isinstance(button, ButtonElement)
+				identify_sender = True
+				button.add_value_listener(self._mode_value, identify_sender)
+				self._modes_buttons.append(button)
+			for index in range(len(self._modes_buttons)):
+				if (index == self._mode_index):
+					self._script.log_message('turn on ' + str(index))
+					self._modes_buttons[index].turn_on(True)
+				else:
+					self._modes_buttons[index].turn_off(True)
+	
+
+	def number_of_modes(self):
+		return 8
+	
+
+	def update(self):
+		#self._script.log_message('mode update')
+		if(self.is_enabled() is True):
+			#for index in range(8):
+			#	self._script._pad[index].set_identifier(int(index + (self._mode_index*8)))
+			#	self._script._pad[index].set_channel(1)
+			for index in range(len(self._modes_buttons)):
+				if (index == self._mode_index):
+					self._modes_buttons[index].send_value(127, True)
+					#self._script.log_message('turn on ' + str(index))
+				else:
+					self._modes_buttons[index].send_value(0, True)
+		else:
+			for button in self._modes_buttons:
+				button.send_value(0, True)
+	
+
+
+class TweakerMonoButtonElement(MonoButtonElement):
+
+
+	def __init__(self, *a, **k):
+		super(TweakerMonoButtonElement, self).__init__(*a, **k)
+		self._color_map = COLOR_MAP
+	
 
 
 class Tweaker(ControlSurface):
 	__module__ = __name__
-	__doc__ = " MonOhmod companion controller script "
+	__doc__ = " Tweaker control surface script "
 
 
-	def __init__(self, c_instance):
-		"""everything except the '_on_selected_track_changed' override and 'disconnect' runs from here"""
-		ControlSurface.__init__(self, c_instance)
+	def __init__(self, c_instance, *a, **k):
+		super(Tweaker, self).__init__(c_instance, *a, **k)
 		with self.component_guard():
 			self._update_linked_device_selection = None
-			self._tweaker_version_check = '0.2'
+			self._tweaker_version_check = '0.3'
 			self.log_message("--------------= Tweaker Session " + str(self._tweaker_version_check) + " log opened =--------------") 
 			self._timer = 0
 			self.flash_status = 1
+			self._last_selected_strip_number = 0
 			self._device_selection_follows_track_selection = False
 			#self._pad_translations = PAD_TRANSLATION
 			self._linked_session = None
@@ -180,14 +641,17 @@ class Tweaker(ControlSurface):
 			self._setup_pads()
 			self._setup_navigation_lock()
 			self._setup_arrange_session_toggle()
-			self.assign_main_configuration()
-			self.request_rebuild_midi_map()
-			self._mixer._reassign_tracks()	#this is to update rebuild the cf_assign closure, otherwise the colors aren't correct
+			#self.assign_main_configuration()
+			#self.request_rebuild_midi_map()
+			#self._mixer._reassign_tracks()	#this is to update rebuild the cf_assign closure, otherwise the colors aren't correct
 			#self.schedule_message(30, self._detect_devices)
-			#self.schedule_message(10, self._shift_value, (self, 0))
-			self.show_message('Tweaker Control Surface Loaded')
-		self._shift_value(0)  #this updates the pads so that they transmit to Live on the assigned PAD_CHANNEL
 
+			self.show_message('Tweaker Control Surface Loaded')
+		self.show_message('Tweaker Control Surface Loaded')
+		#self._shift_value(0)  #this updates the pads so that they transmit to Live on the assigned PAD_CHANNEL...also, lights shift button
+		self.assign_main_configuration()
+		#self.schedule_message(2, self._shift_value, 0)
+		self.schedule_message(3, self._mixer._reassign_tracks)
 	
 
 	"""script initialization methods"""
@@ -195,15 +659,22 @@ class Tweaker(ControlSurface):
 		is_momentary = True
 		self._grid = [None for index in range(8)]
 		for column in range(8):
-			self._grid[column] = [FlashingButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, column + (row * 8) + 1, 'Grid_' + str(column) + '_' + str(row), self) for row in range(4)]
-		self._button = [FlashingButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, TWEAKER_BUTTONS[index], 'Button_' + str(index), self) for index in range(len(TWEAKER_BUTTONS))]
-		self._nav = [FlashingButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, TWEAKER_NAVS[index], 'Nav_' + str(index), self) for index in range(len(TWEAKER_NAVS))]
-		self._encoder_button = [FlashingButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, TWEAKER_ENCODER_BUTTONS[index], 'Encoder_Button_' + str(index), self) for index in range(len(TWEAKER_ENCODER_BUTTONS))]
+			self._grid[column] = [TweakerMonoButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, column + (row * 8) + 1, 'Grid_' + str(column) + '_' + str(row), self) for row in range(4)]
+		self._button = [TweakerMonoButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, TWEAKER_BUTTONS[index], 'Button_' + str(index), self) for index in range(len(TWEAKER_BUTTONS))]
+		self._nav = [TweakerMonoButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, TWEAKER_NAVS[index], 'Nav_' + str(index), self) for index in range(len(TWEAKER_NAVS))]
+		self._encoder_button = [TweakerMonoButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, TWEAKER_ENCODER_BUTTONS[index], 'Encoder_Button_' + str(index), self) for index in range(len(TWEAKER_ENCODER_BUTTONS))]
 		self._dial = [EncoderElement(MIDI_CC_TYPE, CHANNEL, TWEAKER_DIALS[index], Live.MidiMap.MapMode.absolute) for index in range(len(TWEAKER_DIALS))]
 		self._fader = [EncoderElement(MIDI_CC_TYPE, CHANNEL, TWEAKER_FADERS[index], Live.MidiMap.MapMode.absolute) for index in range(len(TWEAKER_FADERS))]
 		self._crossfader = EncoderElement(MIDI_CC_TYPE, CHANNEL, CROSSFADER, Live.MidiMap.MapMode.absolute)
 		self._encoder = [EncoderElement(MIDI_CC_TYPE, CHANNEL, TWEAKER_ENCODERS[index], Live.MidiMap.MapMode.absolute) for index in range(len(TWEAKER_ENCODERS))]
-		self._pad = [FlashingButtonElement(False, MIDI_NOTE_TYPE, CHANNEL, TWEAKER_PADS[index], 'Pad_' + str(index), self) for index in range(len(TWEAKER_PADS))]
+		self._pad = [TweakerMonoButtonElement(False, MIDI_NOTE_TYPE, CHANNEL, TWEAKER_PADS[index], 'Pad_' + str(index), self) for index in range(len(TWEAKER_PADS))]
+		for index in range(4):
+			self._pad[index].set_enabled(False)
+			self._pad[index].set_channel(PAD_CHANNEL)
+			self._pad[index].set_identifier(index + 4)
+			self._pad[index+4].set_enabled(False)
+			self._pad[index+4].set_channel(PAD_CHANNEL)
+			self._pad[index+4].set_identifier(index)
 		self._pad_pressure = [EncoderElement(MIDI_CC_TYPE, CHANNEL, TWEAKER_PAD_PRESSURES[index], Live.MidiMap.MapMode.absolute) for index in range(len(TWEAKER_PADS))]
 		for index in range(8):
 			self._pad_pressure[index]._last_sent = 0
@@ -239,11 +710,10 @@ class Tweaker(ControlSurface):
 			self._mixer.channel_strip(index)._invert_mute_feedback = True
 			self._mixer.channel_strip(index)._device_component = self._device[index]
 			self._mixer.channel_strip(index).update = self._channelstrip_update(self._mixer.channel_strip(index))
+			self._mixer.channel_strip(index)._select_value = self._channelstrip_select_value(self._mixer.channel_strip(index), index)
 			self._device_navigator[index] = DetailViewControllerComponent(self, self._mixer.channel_strip(index))
 			self._device_navigator[index].name = 'Device_Navigator_'+str(index)
-		#these need reinstated #
 		self._mixer.channel_strip(0).set_track = self._channelstrip_set_track(self._mixer.channel_strip(0), self._channelstrip1_cb)
-		#these need reinstated #
 		self._mixer.channel_strip(1).set_track = self._channelstrip_set_track(self._mixer.channel_strip(1), self._channelstrip2_cb)
 		self.song().view.selected_track = self._mixer.channel_strip(0)._track #set the selected strip to the first track, so that we don't, for example, try to assign a button to arm the master track, which would cause an assertion error
 		#self._mixer._reassign_tracks()
@@ -253,7 +723,6 @@ class Tweaker(ControlSurface):
 		is_momentary = True
 		num_tracks = NUM_TRACKS
 		num_scenes = NUM_SCENES
-		#global session
 		self._session = SessionComponent(num_tracks, num_scenes)
 		self._session.name = "Session"
 		self._session.set_offsets(0, 0)	 
@@ -282,8 +751,7 @@ class Tweaker(ControlSurface):
 		self._session_zoom.set_stopped_value(ZOOM_STOPPED)
 		self._session_zoom.set_playing_value(ZOOM_PLAYING)
 		self._session_zoom.set_selected_value(ZOOM_SELECTED)
-		#self._session_zoom.set_enabled(True) 
-		#self._session.add_offset_listener(self._update_track_position)
+		#self._session_zoom.set_enabled(True)
 	
 
 	def _setup_device_control(self):
@@ -305,6 +773,7 @@ class Tweaker(ControlSurface):
 
 	def _setup_modes(self):
 		self._pad_offset = PadOffsetComponent(self)
+		self._pad_offset._set_protected_mode_index(0)
 		self._pad_offset.set_enabled(False)
 	
 
@@ -365,23 +834,29 @@ class Tweaker(ControlSurface):
 		#	self._pad[index].set_identifier(index)
 		#	self._pad[index].set_enabled(False)	 #this has to happen for translate to work
 		if not self._grid[7][3].value_has_listener(self._shift_value):
-			self._grid[7][3].add_value_listener(self._shift_value)	
+			self._grid[7][3].add_value_listener(self._shift_value)
+		self._grid[7][3].send_value(127, True)
+		self.request_rebuild_midi_map()	
 	
 
 	"""Tweaker custom methods"""
 	def _shift_value(self, value):
-		#self.log_message('shift ' + str(value))
 		self._pad_offset.set_enabled(value>0)
 		if value > 0:
+			self._update_navigation_view()
 			for pad in self._pad:
 				pad.use_default_message()
 				pad.set_enabled(True)
 			self._pad_offset.set_mode_buttons(tuple(self._pad))
+			self.schedule_message(1, self._pad_offset.update)
 			if self._session.is_enabled():
 				#self._update_navigation_view()
 				#self.schedule_message(1, self._update_navigation_veiw)
 				self._update_navigation_view()
 			self._grid[7][3].send_value(SHIFT_ON)
+			for track in range(2):
+				self._mixer.channel_strip(track).set_crossfade_toggle(None)
+				self._mixer.channel_strip(track).set_select_button(self._button[2 + (track*3)])
 		else:
 			self._pad_offset.set_mode_buttons(None)
 			for index in range(4):
@@ -392,6 +867,9 @@ class Tweaker(ControlSurface):
 				self._pad[index+4].set_channel(PAD_CHANNEL)
 				self._pad[index+4].set_identifier(index + (self._pad_offset._mode_index * 8))
 			self._grid[7][3].send_value(SHIFT_OFF)
+			for track in range(2):
+				self._mixer.channel_strip(track).set_select_button(None)
+				self._mixer.channel_strip(track).set_crossfade_toggle(self._button[2 + (track*3)])
 	
 
 	def assign_track_selector(self, encoder):
@@ -420,7 +898,6 @@ class Tweaker(ControlSurface):
 				self._mixer.set_track_offset(self._session._track_offset + self._mixer_offset)
 			self._nav_lock = not self._nav_lock
 			self._session.update()
-			#self.log_message('nav_lock_value ' + str(self._nav_lock))
 	
 
 	def _arrange_session_value(self, value):
@@ -445,6 +922,8 @@ class Tweaker(ControlSurface):
 		else:
 			self._mixer.set_track_offset(self._mixer_offset)
 		self._session.update()
+		if self._mixer.channel_strip(self._last_selected_strip_number)._track != None:
+			self.song().view.selected_track = self._mixer.channel_strip(self._last_selected_strip_number)._track
 		if self._linked_session != None:
 			if self._linked_session._is_linked():
 				self._linked_session._unlink()
@@ -456,9 +935,9 @@ class Tweaker(ControlSurface):
 		dif = self._mixer._track_offset - self._session._track_offset
 		for index in range(7):
 			#if (index + self._session._track_offset) in range(len(self._session.tracks_to_use())):
-			if (index + self._session._track_offset) in range(len(self.song().visible_tracks)):
+			if (index + self._session._track_offset) in range(0, len(self.song().visible_tracks)):
 				self._grid[index][3].send_value(NAV_COLORS[int(index in range(dif, dif + 2))], True)
-			elif (index + self._session._track_offset) in range(len(self._session.tracks_to_use())):
+			elif (index + self._session._track_offset) in range(len(self.song().visible_tracks), len(self._session.tracks_to_use())):
 				self._grid[index][3].send_value(RETURN_NAV_COLORS[int(index in range(dif, dif + 2))], True)
 			else:
 				self._grid[index][3].send_value(0, True)
@@ -467,52 +946,40 @@ class Tweaker(ControlSurface):
 	
 
 	def _update_device(self, channelstrip):
-		#self.log_message('update device ' + str(channelstrip))
 		for control in channelstrip._device_component._parameter_controls:
 			control.send_value(0, True)
 		if channelstrip._device_component._on_off_button != None:
 			channelstrip._device_component._on_off_button.turn_off()
 		if not channelstrip._track is None:
 			if not channelstrip._device_component._device in channelstrip._track.devices:
-				#self.log_message('update device 1' + str(channelstrip))
 				track = channelstrip._track
 				device_to_select = track.view.selected_device
 				if (device_to_select == None) and (len(track.devices) > 0):
 					device_to_select = track.devices[0]
-					#self.log_message('no selected device' + str(device_to_select))
 				elif channelstrip._device_component and not type(channelstrip._device_component) is type(None):
 					channelstrip._device_component.set_device(device_to_select)
-					#self.log_message('previous device' + str(device_to_select))
 				else:
 					channelstrip._device_component.set_device(None)	
-					#self.log_message('device_none')
 			else:
-				#self.log_message('pass')
 				pass
 		else:
 			channelstrip._device_component.set_device(None)	
-			#self.log_message('failed all' + str(channelstrip))
 		channelstrip._device_component._on_on_off_changed()	
 	
 
 	def _light_pad(self, value, sender):
-		#with self.component_guard():
-		self.log_message(str(sender.name) + ' ' + str(value))
 		if not self._pad_offset.is_enabled():
 			if value > sender._last_sent:
-				self.log_message('more than zero')
 				if self._pad[self._pad_pressure.index(sender)]._last_sent_value < 1:
 					self._pad[self._pad_pressure.index(sender)].send_value(127, True)
 			else:
-				self.log_message('zero')
-				#self.schedule_message(1, self._pad[self._pad_pressure.index(sender)].send_value, (self._pad[self._pad_pressure.index(sender)], 0))
 				self._pad[self._pad_pressure.index(sender)].send_value(0, True)
 		sender._last_sent = value
 	
 
 	"""called on timer"""
 	def update_display(self):
-		ControlSurface.update_display(self)
+		super(Tweaker, self).update_display()
 		self._timer = (self._timer + 1) % 256
 		self.flash()
 	
@@ -520,7 +987,7 @@ class Tweaker(ControlSurface):
 	def flash(self):
 		if(self.flash_status > 0):
 			for control in self.controls:
-				if isinstance(control, FlashingButtonElement):
+				if isinstance(control, TweakerMonoButtonElement):
 					control.flash(self._timer)
 	
 
@@ -603,7 +1070,7 @@ class Tweaker(ControlSurface):
 			self._session._unlink()
 		self.deassign_track_selector(self._encoder[0])
 		self.log_message("--------------= Tweaker Session " + str(self._tweaker_version_check) + " log closed =--------------") #Create entry in log file
-		ControlSurface.disconnect(self)
+		super(Tweaker, self).disconnect()
 		return None
 	
 
@@ -612,7 +1079,7 @@ class Tweaker(ControlSurface):
 	
 
  	def _on_selected_track_changed(self):
-		ControlSurface._on_selected_track_changed(self)
+		super(Tweaker, self)._on_selected_track_changed()
 		if self._session.is_enabled():
 			self._session.update()
 		for index in range(2):
@@ -642,7 +1109,6 @@ class Tweaker(ControlSurface):
 		
 	
 
-
 	def _session_change_offsets(self, session): 
 		def _change_offsets(track_increment, scene_increment):
 			offsets_changed = (track_increment != 0) or (scene_increment != 0)
@@ -662,6 +1128,9 @@ class Tweaker(ControlSurface):
 				# this is replaced by notify_offset() in Live9 #for callback in session._offset_callbacks:
 				# this is replaced by notify_offset() in Live9 #	callback()
 				session.notify_offset()
+				self._update_navigation_view()
+				if self._mixer.channel_strip(self._last_selected_strip_number)._track != None:
+					self.song().view.selected_track = self._mixer.channel_strip(self._last_selected_strip_number)._track
 				if ((session.width() > 0) and (session.height() > 0)):
 					session._do_show_highlight()
 		return _change_offsets
@@ -670,16 +1139,23 @@ class Tweaker(ControlSurface):
 
 	def _session_on_fired_slot_index_changed(self, session):
 		def _on_fired_slot_index_changed(index):
-			"""if (session.is_enabled() and (session._stop_track_clip_buttons != None)):
-				if ((index in range(len(session._tracks_and_listeners))) and (session._tracks_and_listeners[index][0] in session.song().tracks) and (session._tracks_and_listeners[index][0].fired_slot_index == -2)):
-					session._stop_track_clip_buttons[index].send_value(session._stop_track_clip_value)
-				elif index in range(len(session.tracks_to_use())):
-					dif = self._mixer._track_offset - self._session._track_offset
-					session._stop_track_clip_buttons[index].send_value(NAV_COLORS[int(index in range(dif, dif + 2))], True)
-				else:
-					session._stop_track_clip_buttons[index].turn_off()"""
-			pass
+			tracks_to_use = tuple(self.song().visible_tracks) + tuple(self.song().return_tracks)
+			track_index = index + session.track_offset()
+			if session.is_enabled() and session._stop_track_clip_buttons != None:
+				if index < len(session._stop_track_clip_buttons):
+					button = session._stop_track_clip_buttons[index]
+					if button != None:
+						if(track_index < len(tracks_to_use)) and (tracks_to_use[track_index].clip_slots) and (tracks_to_use[track_index].fired_slot_index == -2):
+							button.send_value(session._stop_track_clip_value)
+						#elif index in range(len(session.tracks_to_use())):
+						#	dif = self._mixer._track_offset - self._session._track_offset
+						#	button.send_value(NAV_COLORS[int(index in range(dif, dif + 2))], True)
+						#else:
+						#	button.turn_off()
+						else:
+							self._update_navigation_view()
 		return _on_fired_slot_index_changed
+		
 	
 
 	def _session_stop_track_value(self, session):
@@ -705,6 +1181,7 @@ class Tweaker(ControlSurface):
 			ChannelStripComponent.update(channelstrip)
 			self._update_device(channelstrip)
 		return _update
+		
 	
 
 	def _channelstrip_set_track(self, channelstrip, cb):
@@ -717,6 +1194,15 @@ class Tweaker(ControlSurface):
 				track.add_devices_listener(cb)
 			ChannelStripComponent.set_track(channelstrip, track)
 		return _set_track
+		
+	
+
+	def _channelstrip_select_value(self, channelstrip, index):  
+		def _select_value(value):
+			ChannelStripComponent._select_value(channelstrip, value)
+			self._last_selected_strip_number = index
+		return _select_value
+		
 	
 
 	def _channelstrip_on_cf_assign_changed(self, channel_strip):
