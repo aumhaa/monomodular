@@ -1,5 +1,4 @@
-# http://www.aumhaa.com
-# by amounra 0313
+# by amounra 0513 : http://www.aumhaa.com
 
 from __future__ import with_statement
 import Live
@@ -28,6 +27,7 @@ from _Framework.SliderElement import SliderElement # Class representing a slider
 from _Framework.TrackEQComponent import TrackEQComponent # Class representing a track's EQ, it attaches to the last EQ device in the track
 from _Framework.TrackFilterComponent import TrackFilterComponent # Class representing a track's filter, attaches to the last filter in the track
 from _Framework.TransportComponent import TransportComponent # Class encapsulating all functions in Live's transport section
+from _Framework.SubjectSlot import subject_slot
 
 """Imports from _Mono_Framework"""
 from _Mono_Framework.MonoBridgeElement import MonoBridgeElement
@@ -50,6 +50,63 @@ switchxfaderrgb = (240, 00, 01, 97, 07, 15, 01, 247)
 assigncolors = (240, 00, 01, 97, 07, 34, 00, 07, 03, 06, 05, 01, 02, 04, 247)
 assign_default_colors = (240, 00, 01, 97, 07, 34, 00, 07, 06, 05, 01, 04, 03, 02, 247)
 check_model = (240, 126, 127, 6, 1, 247)
+
+class DummyButton(object):
+
+
+	def is_momentary(self):
+		return False
+	
+
+
+class MonOhmSessionZoomingComponent(SessionZoomingComponent):
+
+	
+	def __init__(self, *a, **k):
+		super(MonOhmSessionZoomingComponent, self).__init__(*a, **k)
+		self._zoom_button = DummyButton()
+	
+
+
+class MonOhmSessionComponent(SessionComponent):
+
+
+	def __init__(self, *a, **k):
+		super(MonOhmSessionComponent, self).__init__(*a, **k)
+		self.scene_component_type = MonOhmSceneComponent
+	
+
+	@subject_slot('value')
+	def _on_stop_track_value(self, value, sender):
+		#if self.is_enabled():
+		if value is not 0 or not sender.is_momentary():
+			tracks = self.tracks_to_use()
+			track_index = list(self._stop_track_clip_buttons).index(sender) + self.track_offset()
+			if in_range(track_index, 0, len(tracks)) and tracks[track_index] in self.song().tracks:
+				tracks[track_index].stop_all_clips()
+	
+
+
+class MonOhmSceneComponent(SceneComponent):
+
+
+	def _launch_value(self, value):
+		if self._select_button and self._select_button.is_pressed() and value:
+			self._do_select_scene(self._scene)
+		if self._delete_button and self._delete_button.is_pressed() and value:
+			self._do_delete_scene(self._scene)
+		elif self._scene != None:
+			launched = False
+			if self._launch_button.is_momentary():
+				self._scene.set_fire_button_state(value != 0)
+				launched = value != 0
+			elif value != 0:
+				self._scene.fire()
+				launched = True
+			if launched and self.song().select_on_launch:
+				self.song().view.selected_scene = self._scene
+	
+
 
 class FunctionModeComponent(ModeSelectorComponent):
 
@@ -245,6 +302,7 @@ class MonOhm(ControlSurface):
 					self._color_defs = RGB_COLOR_DEFS
 				else:
 					self._color_defs = MONOCHROME_COLOR_DEFS
+					self._host._navbox_selected = 8
 			else:
 				self.schedule_message(10, self.query_ohm)
 		self.schedule_message(1, self._open_log)
@@ -304,12 +362,12 @@ class MonOhm(ControlSurface):
 			for column in range(8):
 				button_row.append(self._grid[column][row])
 			self._monomod.add_row(tuple(button_row))
-		self._dummy_button = ButtonElement(is_momentary, MIDI_NOTE_TYPE, 15, 125)
-		self._dummy_button.name = 'Dummy1'
-		self._dummy_button2 = ButtonElement(is_momentary, MIDI_NOTE_TYPE, 15, 126)
-		self._dummy_button2.name = 'Dummy2'
-		self._dummy_button3 = ButtonElement(is_momentary, MIDI_NOTE_TYPE, 15, 127)
-		self._dummy_button2.name = 'Dummy3'
+		#self._dummy_button = ButtonElement(is_momentary, MIDI_NOTE_TYPE, 15, 125)
+		#self._dummy_button.name = 'Dummy1'
+		#self._dummy_button2 = ButtonElement(is_momentary, MIDI_NOTE_TYPE, 15, 126)
+		#self._dummy_button2.name = 'Dummy2'
+		#self._dummy_button3 = ButtonElement(is_momentary, MIDI_NOTE_TYPE, 15, 127)
+		#self._dummy_button2.name = 'Dummy3'
 		self._pedal = [None for index in range(8)]
 		if self._use_pedal is True:
 			for index in range(8):
@@ -359,7 +417,7 @@ class MonOhm(ControlSurface):
 		is_momentary = True
 		num_tracks = 4
 		num_scenes = 5 
-		self._session = SessionComponent(num_tracks, num_scenes)
+		self._session = MonOhmSessionComponent(num_tracks, num_scenes)
 		self._session.name = "Left_Session"
 		self._session.set_offsets(0, 0)	 
 		self._session.set_stop_track_clip_value(self._color_defs['STOP_CLIP'])
@@ -376,14 +434,14 @@ class MonOhm(ControlSurface):
 				clip_slot.set_started_value(self._color_defs['CLIP_STARTED'])
 				clip_slot.set_recording_value(self._color_defs['CLIP_RECORDING'])
 		self._session.set_mixer(self._mixer)
-		self._session_zoom = SessionZoomingComponent(self._session)	 
+		self._session_zoom = MonOhmSessionZoomingComponent(self._session)	 
 		self._session_zoom.name = 'L_Session_Overview'
 		self._session_zoom.set_stopped_value(self._color_defs['ZOOM_STOPPED'])
 		self._session_zoom.set_playing_value(self._color_defs['ZOOM_PLAYING'])
 		self._session_zoom.set_selected_value(self._color_defs['ZOOM_SELECTED'])
-		self._session_zoom._zoom_button = (self._dummy_button)
+		#self._session_zoom._zoom_button = (self._dummy_button)
 		self._session_zoom.set_enabled(True) 
-		self._session2 = SessionComponent(num_tracks, num_scenes)
+		self._session2 = MonOhmSessionComponent(num_tracks, num_scenes)
 		self._session2.name = 'Right_Session'
 		self._session2.set_offsets(4, 0)
 		self._session2.set_stop_track_clip_value(self._color_defs['STOP_CLIP'])
@@ -401,14 +459,14 @@ class MonOhm(ControlSurface):
 				clip_slot.set_recording_value(self._color_defs['CLIP_RECORDING'])
 		self._session2.set_mixer(self._mixer2)
 		self._session2.add_offset_listener(self._on_session_offset_changes)
-		self._session_zoom2 = SessionZoomingComponent(self._session2)	   
+		self._session_zoom2 = MonOhmSessionZoomingComponent(self._session2)	   
 		self._session_zoom2.name = 'R_Session_Overview'
 		self._session_zoom2.set_stopped_value(self._color_defs['ZOOM_STOPPED'])
 		self._session_zoom2.set_playing_value(self._color_defs['ZOOM_PLAYING'])
 		self._session_zoom2.set_selected_value(self._color_defs['ZOOM_SELECTED'])
 		self._session_zoom.set_enabled(True) 
-		self._session_zoom2._zoom_button = (self._dummy_button2)
-		self._session_main = SessionComponent(8, num_scenes)
+		#self._session_zoom2._zoom_button = (self._dummy_button2)
+		self._session_main = MonOhmSessionComponent(8, num_scenes)
 		self._session_main.name = 'Main_Session'
 		self._session_main.set_stop_track_clip_value(self._color_defs['STOP_CLIP'])
 		self._scene_main = [None for index in range(5)]
@@ -424,13 +482,13 @@ class MonOhm(ControlSurface):
 				clip_slot.set_started_value(self._color_defs['CLIP_STARTED'])
 				clip_slot.set_recording_value(self._color_defs['CLIP_RECORDING'])
 		self._session_main.set_mixer(self._mixer)
-		self._session_zoom_main = SessionZoomingComponent(self._session_main)
+		self._session_zoom_main = MonOhmSessionZoomingComponent(self._session_main)
 		self._session_zoom_main.name = 'M_Session_Overview'
 		self._session_zoom_main.set_stopped_value(self._color_defs['ZOOM_STOPPED'])
 		self._session_zoom_main.set_playing_value(self._color_defs['ZOOM_PLAYING'])
 		self._session_zoom_main.set_selected_value(self._color_defs['ZOOM_SELECTED'])
 		self._session_zoom_main.set_enabled(True)
-		self._session_zoom_main._zoom_button = (self._dummy_button3)
+		#self._session_zoom_main._zoom_button = (self._dummy_button3)
 		self._sessions = [self._session, self._session2, self._session_main]
 		self._zooms = [self._session_zoom, self._session_zoom2, self._session_zoom_main]
 	
@@ -1472,6 +1530,7 @@ class MonOhm(ControlSurface):
 						button._color_map = [127 for index in range(0, 7)]
 				self._color_defs = MONOCHROME_COLOR_DEFS
 				self._assign_session_colors()
+				self._host._navbox_selected = 8
 	
 
 	def receive_external_midi(self, midi_bytes):
@@ -1525,7 +1584,7 @@ class MonOhm(ControlSurface):
 			self._session2.remove_offset_listener(self._on_session_offset_changes)
 		#self._disconnect_notifier.set_mode(0)
 		self.log_message("--------------=  " + str(self._host_name) + " " + str(self._monomod_version) + " log closed =--------------") #Create entry in log file
-		ControlSurface.disconnect(self)
+		super(MonOhm, self).disconnect()
 		return None
 		
 	

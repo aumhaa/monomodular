@@ -193,16 +193,14 @@ class BlockMod(MonOhm):
 		self._color_type = 'Monochrome'
 		self._link_mixer = LINK_MIXER
 		self._rgb = 1
-		#self._backlight = 127
-		#self._backlight_type = 'static'
 		self._ohm = 127
 		self._ohm_type = 'static'
 		self._pad_translations = PAD_TRANSLATION
 		self._mem = [4, 8, 12, 16]
+		self._host._navbox_selected = 8
 	
 
 	"""script initialization methods"""
-
 	def _setup_monobridge(self):
 		self._monobridge = MonoBridgeElement(self)
 		self._monobridge.name = 'MonoBridge'
@@ -904,6 +902,13 @@ class BlockMod(MonOhm):
 		self._mixer.set_crossfader_control(self._fader[1])
 	
 
+
+	"""called on timer"""
+	def update(self):
+		super(BlockMod, self).update_display()
+		if(self._timer == 0):
+			self._shift_pressed_timer = -12
+	
 
 	def strobe(self):
 		if(self._ohm_type != 'static'):

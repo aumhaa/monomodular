@@ -394,14 +394,13 @@ class LemurPad(MonOhm):
 		self._osc_registry = {}
 		self._display_button_names = DISPLAY_BUTTON_NAMES		
 		super(LemurPad, self).__init__(*a, **k)
+		self._host_name = "LemurPad"
 		self._color_type = 'AumPad'
 		self.connected = 0
 		with self.component_guard():
 			self._setup_touchosc()
 			self._assign_host2()
 			self._assign_session_colors()
-		self.show_message('LemurPad Control Surface Loaded')
-		self.log_message("<<<<<<<<<<<<<<<<<<<<= LemurPad custom " + str(self._monomod_version) + " log opened =>>>>>>>>>>>>>>>>>>>") 
 	
 
 	def query_ohm(self):
@@ -751,7 +750,6 @@ class LemurPad(MonOhm):
 
 	"""general functionality"""
 	def disconnect(self):
-		self.log_message("--------------= LemurPad log closed =--------------")
 		super(MonOhm, self).disconnect()
 	
 
