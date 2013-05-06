@@ -15,6 +15,7 @@ from _Framework.SessionZoomingComponent import SessionZoomingComponent
 from _Framework.ChannelTranslationSelector import ChannelTranslationSelector
 from _Framework.ModeSelectorComponent import ModeSelectorComponent
 from _Framework.TransportComponent import TransportComponent
+from _Framework.DeviceComponent import DeviceComponent
 
 #from APC40.EncModeSelectorComponent import EncModeSelectorComponent
 #from APC40.DetailViewCntrlComponent import DetailViewCntrlComponent
@@ -208,7 +209,7 @@ class AumPC20(APC):
 		for track in range(8):
 			strip = self._mixer.channel_strip(track)
 			strip.name = 'Channel_Strip_' + str(track)
-			solo_button = AumPCMonoButtonElement(is_momentary, MIDI_NOTE_TYPE, track, 50, str(track) + '_Solo_Button', self)
+			solo_button = AumPCMonoButtonElement(is_momentary, MIDI_NOTE_TYPE, track, 49, str(track) + '_Solo_Button', self)
 			self._solo_buttons.append(solo_button)
 			mute_button = ButtonElement(is_momentary, MIDI_NOTE_TYPE, track, 50)
 			solo_button.name = str(track) + '_Solo_Button'
@@ -250,6 +251,7 @@ class AumPC20(APC):
 		self._shift_modes = AumPC20ShiftableSelectorComponent(tuple(select_buttons), master_select_button, tuple(arm_buttons), self._matrix, self._session, self._session_zoom, self._mixer, transport, slider_modes, self._send_introduction_message, self)
 		self._shift_modes.name = 'Shift_Modes'
 		self._shift_modes.set_mode_toggle(self._shift_button)
+		self._device = DeviceComponent()
 	
 
 	def _product_model_id_byte(self):
