@@ -216,9 +216,9 @@ class MonomodComponent(CompoundComponent):
 	
 
 	def _update_grid(self):
-		if self.is_enabled() and self._grid != None:
-			for column in range(self._grid.width()):
-				for row in range(self._grid.height()):
+		if self.is_enabled() and self._grid != None and self._active_client != None:
+			for column in range(len(self._active_client._grid)):
+				for row in range(len(self._active_client._grid[column])):
 					self._send_grid(column, row, self._active_client._grid[column][row])
 	
 

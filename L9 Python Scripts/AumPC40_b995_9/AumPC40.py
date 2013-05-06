@@ -28,9 +28,7 @@ from _Mono_Framework.MonoButtonElement import MonoButtonElement
 from _Mono_Framework.MonoEncoderElement import MonoEncoderElement
 from _Mono_Framework.MonomodComponent import MonomodComponent
 
-from RingedEncoderElement import RingedEncoderElement
-from MonoRingedEncoderElement import MonoRingedEncoderElement
-
+from MonoRingedEncoderElement import RingedEncoderElement, MonoRingedEncoderElement
 
 #from Map import *
 
@@ -58,6 +56,7 @@ class MonomodModeComponent(ModeSelectorComponent):
 		super(MonomodModeComponent, self).__init__(*a, **k)
 		self._script = script
 		self.update = callback
+		self._set_protected_mode_index(0)
 	
 
 	def number_of_modes(self):
@@ -307,7 +306,6 @@ class AumPC40(APC):
 		self._monomod.add_row(tuple(self._solo_buttons))
 		self._monomod_mode = MonomodModeComponent(self._monomod_mode_update, self)
 		self._monomod_mode.name = "Monomod_Mode_Component"
-		self._monomod_mode.set_mode(0)
 		self._shift_button.add_value_listener(self._shift_value)
 	
 
@@ -321,7 +319,7 @@ class AumPC40(APC):
 	
 
 	def _monomod_mode_update(self):
-		self.log_message('mode update: ' + str(self._monomod_mode._mode_index))
+		#self.log_message('mode update: ' + str(self._monomod_mode._mode_index))
 		if(self._monomod_mode._mode_index == 0) or (self._host._active_client == None):
 			self.flash_status = 0
 			self._host.set_enabled(False)
@@ -362,7 +360,7 @@ class AumPC40(APC):
 			self._host.set_enabled(True)
 			self.request_rebuild_midi_map()
 			self._master_select_button.turn_on()
-			self.log_message('mod mode')
+			#self.log_message('mod mode')
 	
 
 	"""m4l bridge"""
