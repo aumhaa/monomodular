@@ -1,4 +1,4 @@
-# by amounra 0313 : http://www.aumhaa.com
+# by amounra 0513 : http://www.aumhaa.com
 
 from __future__ import with_statement
 import Live
@@ -37,15 +37,16 @@ from _Mono_Framework.MonoBridgeElement import MonoBridgeElement
 from _Mono_Framework.MonoButtonElement import MonoButtonElement
 from _Mono_Framework.MonoEncoderElement import MonoEncoderElement
 from _Mono_Framework.ResetSendsComponent import ResetSendsComponent
-#from _Mono_Framework.DetailViewControllerComponent import DetailViewControllerComponent
 from _Mono_Framework.DeviceSelectorComponent import DeviceSelectorComponent
 from _Mono_Framework.DetailViewControllerComponent import DetailViewControllerComponent
+from _Mono_Framework.MonomodComponent import MonomodComponent
+from _Mono_Framework.MonoDeviceComponent import MonoDeviceComponent
 from _Mono_Framework.LiveUtils import *
 
 
 """Custom files, overrides, and files from other scripts"""
-from MonomodComponent import MonomodComponent
-
+from CNTRLR_9.Cntrlr import Cntrlr
+from ModDevices import *
 from Map import *
 
 
@@ -63,6 +64,241 @@ SLOWENCODER = (240, 0, 1, 97, 8, 30, 69, 00, 247)
 NORMALENCODER = (240, 0, 1, 97, 8, 30, 00, 00, 247)
 FASTENCODER = (240, 0, 1, 97, 8, 30, 04, 00, 247)
 
+ENDCODER_BANK_CONTROL = [['ModDevice_knob0', 'ModDevice_knob1', 'ModDevice_knob2', 'ModDevice_knob3'], ['ModDevice_knob4', 'ModDevice_knob5', 'ModDevice_knob6', 'ModDevice_knob7']]
+ENDCODER_BANKS = {'NoDevice':[ENDCODER_BANK_CONTROL[int(bank>3)] + ['CustomParameter_'+str(index+(bank*24)) for index in range(8)] for bank in range(8)]}
+
+ALT_DEVICE_BANKS = {'EndCoders':ENDCODER_BANKS}
+
+INITIAL_SCROLLING_DELAY = 5
+INTERVAL_SCROLLING_DELAY = 1
+
+
+class AumTrollMonoDevice(MonoDeviceComponent):
+
+
+	def __init__(self, *a, **k):
+		super(AumTrollMonoDevice, self).__init__(*a, **k)
+	
+
+
+class AumTrollMonomodComponent(MonomodComponent):
+
+
+	def __init__(self, *a, **k):
+		super(AumTrollMonomodComponent, self).__init__(*a, **k)
+		self._host_name = 'AumTroll'
+	
+
+	def disconnect(self, *a, **k):
+		self._release_mod_dials()
+		super(AumTrollMonomodComponent, self).disconnect(*a, **k)
+	
+
+	def connect_to_clients(self, *a, **k):
+		super(AumTrollMonomodComponent, self).connect_to_clients(*a, **k)
+		for index in range(4):
+			self._client[index]._mod_dial = (self._script._encoder[index])		#assign it a modDial so that we can control its modVolume from the unshifted CNTRLR
+	
+
+	def _select_client(self, *a, **k):
+		super(AumTrollMonomodComponent, self)._select_client(*a, **k)		
+		self._script.set_local_ring_control(self._active_client._c_local_ring_control)
+		self._script.set_absolute_mode(self._active_client._c_absolute_mode)
+		if not self._active_client._device_component == None:
+			self._active_client._device_component.update()
+	
+
+	def _matrix_value(self, value, x, y, is_momentary):	   #to be sent to client from controller
+		assert (self._grid != None)
+		assert (value in range(128))
+		assert isinstance(is_momentary, type(False))
+		if (self.is_enabled()):
+			self._active_client._send_c_grid(x + self._x, y + self._y, value)
+	
+
+	def _send_grid(self, *a):
+		pass
+	
+
+	def _alt_value(self, value):
+		if self._shift_pressed == 0:
+			self._alt_pressed = value != 0
+			self._active_client._send('alt', int(self._alt_pressed))
+			self.update()
+	
+
+	def _set_key_buttons(self, buttons):
+		#self._script.log_message('set key buttons ' + str(buttons))
+		assert (buttons == None) or (isinstance(buttons, tuple))
+		for key in self._keys:
+			if key.value_has_listener(self._key_value):
+				key.remove_value_listener(self._key_value)
+		self._keys = []
+		if buttons != None:
+			assert len(buttons) == 32
+			for button in buttons:
+				assert isinstance(button, MonoButtonElement)
+				self._keys.append(button)
+				button.add_value_listener(self._key_value, True)
+	
+
+	def _key_value(self, value, sender):
+		if self.is_enabled():
+			self._active_client._send_c_key(self._keys.index(sender), int(value!=0))
+	
+
+	def _update_keys(self):
+		for index in range(32):
+			self._send_c_key(index, self._active_client._c_key[index])
+	
+
+	def _update_grid(self):
+		if self.is_enabled() and self._grid != None:
+			for column in range(self._grid.width()):
+				for row in range(self._grid.height()):
+					self._send_c_grid(column, row, self._active_client._c_grid[column][row])
+	
+
+	def _send_key(self, *a):
+		pass
+	
+
+	def _set_knobs(self, knobs):
+		assert (knobs == None) or (isinstance(knobs, tuple))
+		for knob in self._knobs:
+			if knob.has_value_listener(self._knob_value):
+				knob.remove_value_listener(self._knob_value)
+		self._knobs = []
+		if knobs != None:
+			assert len(knobs) == 24
+			for knob in knobs:
+				assert isinstance(knob, EncoderElement)
+				self._knobs.append(knob)
+				knob.add_value_listener(self._knob_value, True)
+	
+
+	def _knob_value(self, value, sender):
+		if self.is_enabled():
+			self._active_client._send_c_knob(self._knobs.index(sender), value)
+	
+
+	def on_enabled_changed(self, *a, **k):
+		super(AumTrollMonomodComponent, self).on_enabled_changed(*a, **k)
+		if self._active_client != None:
+			if self.is_enabled():
+				if not self._active_client._device_component is None:
+					self._active_client._device_component.update()
+				self._script.set_absolute_mode(self._active_client._c_absolute_mode)
+				self._script.set_local_ring_control(self._active_client._c_local_ring_control)
+			else:
+				for control in self._parameter_controls:
+					control.release_parameter()
+				self._script.set_absolute_mode(1)
+				self._script.set_local_ring_control(1)
+	
+
+	def _dial_matrix_value(self, value, x, y):
+		if self.is_enabled() and self._active_client != None:
+			if self._script._absolute_mode == 0:
+				value = RELATIVE[int(value == 1)]
+			self._active_client._send_c_dial(x, y, value)
+	
+
+	def _reset_encoder(self, coord):
+		self._dial_matrix.get_dial(coord[0], coord[1])._reset_to_center()
+	
+
+	def _dial_button_matrix_value(self, value, x, y, force):
+		if (self.is_enabled()) and (self._active_client != None):
+			self._active_client._send_c_dial_button(x, y, value)
+	
+
+	"""CNTRLR specific methods"""
+	def _send_c_grid(self, column, row, value):		#to be sent to controller from client
+		if self.is_enabled() and self._grid != None:
+			if column in range(self._x, self._x + 4):
+				if row in range(self._y, self._y + 4):
+					self._grid.get_button(column - self._x, row - self._y).send_value(int(self._colors[value]))
+
+	
+
+	def _send_c_key(self, index, value):
+		if self.is_enabled():
+			#if (self._shift_pressed > 0) or (self._locked > 0):
+			#	self._grid.get_button(index, 7).send_value(int(self._colors[value]))
+			if  self._keys != None and len(self._keys) > index:
+				self._keys[index].send_value(int(self._colors[value]))
+	
+
+	def _send_c_wheel(self, column, row, wheel, parameter=None):		#to be sent to controller from client
+		if self.is_enabled() and wheel != None: 
+			if column < 4 and row < 3:
+				dial = self._dial_matrix.get_dial(column, row)
+				if(parameter=='value'):
+					dial._ring_value = int(wheel['value'])
+				dial._ring_mode = int(wheel['mode'])
+				dial._ring_green = int(wheel['green']!=0)
+				dial._ring_log = int(wheel['log'])
+				if(parameter=='custom'):
+					dial._ring_custom = dial._calculate_custom(str(wheel['custom']))
+			self._dial_button_matrix.send_value(column, row, wheel['white'])
+			if(self._script._absolute_mode > 0) and (not self._active_client._device_component.is_enabled()):
+				dial.send_value(wheel['log'], True)
+	
+
+	def _update_c_wheel(self):
+		if self._dial_button_matrix != None:
+			for column in range(4):
+				for row in range(3):
+					self._send_c_wheel(column, row, self._active_client._c_wheel[column][row])
+					if not self._active_client._device_component.is_enabled():
+						self._send_to_lcd(column, row, self._active_client._c_wheel[column][row])
+						#self._script.log_message('dial value update' +str(column) + str(row) + str(self._active_client._wheel[column][row]['value']))
+	
+
+	def set_c_local_ring_control(self, val = 1):
+		self._c_local_ring_control = (val!=0)
+		self._script.set_local_ring_control(self._c_local_ring_control)
+	
+
+	def set_c_absolute_mode(self, val=1):
+		self._c_absolute_mode = (val!=0)
+		self._script.set_absolute_mode(self._c_absolute_mode)
+	
+
+	def _release_mod_dials(self):
+		if not self._client is None:
+			for client in self._client:										#for each of our 4 clients:
+				if not client._mod_dial == None:								#if the client has a modDial assigned to it
+					#self._script.log_message('mod dial release ' + str(client))
+					client._mod_dial.release_parameter()						#remove the modDial's parameter assignment
+	
+
+	def _assign_mod_dials(self):
+		if not self._client is None:
+			for client in self._client:					#recursion to contain all available clients
+				param = client._mod_dial_parameter()	#param is a local variable, and we assign its value to the mod_dial_parameter (this is handled by each individual client module)
+				#self._script.log_message('mod dial param ' + str(param))
+				if not client._mod_dial == None:					#if the client has been assigned a mod dial (which it should have been in setup_mod() )
+					if not param == None:										#if the param variable was properly assigned in the client module
+						client._mod_dial.connect_to(param)			#connect the physical control to the parameter (this should be the moddial parameter in the m4l patch)
+					else:
+						client._mod_dial.release_parameter()		#if the param was None, release the physical control from any assignments
+			self._script.request_rebuild_midi_map()
+	
+
+	def _display_mod_colors(self):
+		if not self._client is None:
+			for index in range(4):							#set up a recursion of 4
+				self._script._shift_mode._modes_buttons[index].send_value(self._client[index]._mod_color)		#update the modLEDs to display the color assigned to its contained mod
+			if self._is_enabled:
+				self._script._shift_mode._modes_buttons[self._client.index(self._active_client)].send_value(8)
+		else:
+			for index in range(4):
+				self._script._shift_mode._modes_buttons[index].send_value(0)
+	
+
+
 class ShiftModeComponent(ModeSelectorComponent):
 	__module__ = __name__
 	__doc__ = ' Special Class that selects mode 0 if a mode button thats active is pressed'
@@ -73,8 +309,8 @@ class ShiftModeComponent(ModeSelectorComponent):
 		self._script = script
 		self.update = callback
 		self._modes_buttons = []
-		self.__mode_index = 0
 		self._last_mode = 0
+		self._set_protected_mode_index(0)
 	
 
 	def set_mode_buttons(self, buttons):
@@ -133,247 +369,42 @@ class AumTrollDetailViewController(DetailViewControllerComponent):
 	
 
 
-class AumTroll(ControlSurface):
+class AumTroll(Cntrlr):
 	__module__ = __name__
 	__doc__ = " MonOhmod companion controller script "
 
 
-	def __init__(self, c_instance):
-		"""everything except the '_on_selected_track_changed' override and 'disconnect' runs from here"""
-		ControlSurface.__init__(self, c_instance)
+	def __init__(self, *a, **k):
+		self._monohm = None
+		self._shifted = False
+		self._suppress_next_mod_display = False
+		self._monomod_version = 'b995'
+		self._codec_version = 'b995'
+		super(AumTroll, self).__init__(*a, **k)
+		"""these need to be moved into the _setup_mod() method of CNTRLR"""
+		self._client = None
+		self._active_client = None
+		self._host_name = "AumTroll"
 		with self.component_guard():
-
-			"""MonoComponent specific variables - best not change these unless you know what you're doing"""		
-			self._monomod_version = 'b995'
-			self._codec_version = 'b995'
-			self._color_type = 'OhmRGB'
-			self._host_name = 'Cntrlr'
-			self._color_type = 'OhmRGB'
-			self._hosts = []
-			self.hosts = []
-			self._monohm = None
-			self.log_message('<<<<<<<<<<<<<<<<<<<<<<<<< AumTroll ' + str(self._monomod_version) + ' log opened >>>>>>>>>>>>>>>>>>>>>>>>>')
-			self._rgb = 0 									##will change which color scheme is used, 0 is Livid 1 is AumHaa 2 is Monochrome(deprecated)
-			self._timer = 0									#used for flashing states, and is incremented by each call from self._update_display()
-			self._touched = 0								#used by the LCD patch to determine the last time a control was changed
-			self._local_ring_control = True					#used by CodecEncoderElement to determine whether individual ring LEDs are addressable
-			self._shifted = True
-			self.set_local_ring_control(1)					#initialize the local_control state of the encoder rings
-			self._absolute_mode = 1							#used by CodecEncoderElement to determine whether inc/dec or absolute changes are sent from CNTRLR
-			self.flash_status = 1							#used to determine whether button LED's use flashing states or not
-			self._device_selection_follows_track_selection = FOLLOW
-
-			self._last_client = None
-			self._supress_next_mod_display = False
-			self._shifted = False
-
-			"""Initialization methods - comments included in the corresponding method"""
-			self._setup_monobridge()
-			self._setup_controls()
-			self._setup_transport_control() 
-			self._setup_mixer_control()
-			self._setup_session_control()
-			self._assign_session_colors()
-			self._setup_device_control()
 			self._setup_alt_device_control()
-			self._setup_device_selector()
-			self._setup_monomod()
-			self._setup_chopper()
-			self._setup_modes() 
 			self._setup_alt_mixer()
 			self._setup_alt_device_control()
-
-			self.song().view.add_selected_track_listener(self._update_selected_device)		#Add a listener so that when the track content changes our device selection will aslo be updated
+		#self.schedule_message(3, self._session._do_show_highlight)
 	
 
 	"""script initialization methods"""
-	
-	"""monobridge is used to send parameter names and values to the m4l LCD patch"""
-	def _setup_monobridge(self):
-		self._monobridge = MonoBridgeElement(self)
-		self._monobridge.name = 'MonoBridge'
-	
 
-	"""it is valuable to set up all of our controls at the beginning of our script so that """
-	"""don't make the mistake of double assignments of identifiers, which is not tolerated by """
-	"""the components they are assigned to.  Each control element will also be named, so that it """
-	"""can be accessed via m4l if we need to listen to it or send messages to it"""
-	def _setup_controls(self):
-		is_momentary = True		#this variable will be used when sending arguments to the __init__ function of the modules we are creating instances of
-		"""since we have several controls of each type, we'll first need to set up some arrays to hold each collection of controls"""
-		"""initially, we set each one to None as a placeholder.  We could, in fact, create them at the same time as creating these functions in
-			the following manner:
-				self._fader = [MonoEncoderElement(MIDI_CC_TYPE, CHANNEL, CNTRLR_FADERS[index], Live.MidiMap.MapMode.absolute, 'Fader_' + str(index), index, self) for index in range(8)]
-			Instead, we'll name them later so that the script is a little more readable."""
-		
-		self._fader = [None for index in range(8)]
-		self._dial_left = [None for index in range(12)]
-		self._dial_right = [None for index in range(12)]
-		self._encoder = [None for index in range(12)]	
-		self._encoder_button = [None for index in range(12)]	
-		self._grid = [None for index in range(16)]
-		self._button = [None for index in range(32)]
-		
-		"""Now that we have our arrays, we can fill them with the controltypes that we'll be using."""
-		for index in range(8):
-			self._fader[index] = MonoEncoderElement(MIDI_CC_TYPE, CHANNEL, CNTRLR_FADERS[index], Live.MidiMap.MapMode.absolute, 'Fader_' + str(index), index, self)
-		self._knobs = []
-		for index in range(12):
-			self._dial_left[index] = MonoEncoderElement(MIDI_CC_TYPE, CHANNEL, CNTRLR_KNOBS_LEFT[index], Live.MidiMap.MapMode.absolute, 'Dial_Left_' + str(index), CNTRLR_KNOBS_LEFT[index], self)
-			self._knobs.append(self._dial_left[index])
-		for index in range(12):
-			self._dial_right[index] = MonoEncoderElement(MIDI_CC_TYPE, CHANNEL, CNTRLR_KNOBS_RIGHT[index], Live.MidiMap.MapMode.absolute, 'Dial_Right_' + str(index), CNTRLR_KNOBS_RIGHT[index], self)
-			self._knobs.append(self._dial_right[index])
-		for index in range(12):
-			self._encoder[index] = CodecEncoderElement(MIDI_CC_TYPE, CHANNEL, CNTRLR_DIALS[index], Live.MidiMap.MapMode.absolute, 'Encoder_' + str(index), CNTRLR_DIALS[index], self)
-		for index in range(12):
-			self._encoder_button[index] = MonoButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, CNTRLR_DIAL_BUTTONS[index], 'Encoder_Button_' + str(index), self)
-		for index in range(16):
-			self._grid[index] = MonoButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, CNTRLR_GRID[index], 'Grid' + str(index), self)
-		for index in range(32):
-			self._button[index] = MonoButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, CNTRLR_BUTTONS[index], 'Button_' + str(index), self)
-		
-		"""We'll also need to assign some of our controls to ButtonMatrixElements so that we can use them with the Session Zoom and the Mod components"""
-		"""We use the same formula here:  first we create the holders:"""
-		self._matrix = ButtonMatrixElement()				#this is a standard _Framework object used by many of the other scripts
-		self._matrix.name = 'Matrix'
-		self._dial_matrix = EncoderMatrixElement(self)		#this is a special Mono object, used specifically for the mod components
-		self._dial_matrix.name = 'Dial_Matrix'
-		self._dial_button_matrix = ButtonMatrixElement()	#this is a special Mono object, used specifically for the mod components
-		self._dial_button_matrix.name = 'Dial_Button_Matrix'
-		
-		"""And then we fill the with the control elements that are assigned to them"""
-		for row in range(4):		#we have 4 rows, and 4 columns, forming the 4x4 grid in the center of the controller
-			button_row = []			#since the matrix is two dimensional, first we create the outer array,
-			for column in range(4):
-				button_row.append(self._grid[(row*4) + column])		#then we create the inner array.  The process is the same for the other controls here.
-			self._matrix.add_row(tuple(button_row)) 				#add_row() is a method of the ButtonMatrixElement.  You can look in its parent module to see how it works
-		for row in range(3):
-			dial_row = []
-			for column in range(4):
-				dial_row.append(self._encoder[(row*4) + column])
-			self._dial_matrix.add_row(tuple(dial_row))
-		for row in range(3):
-			dial_button_row = []
-			for column in range(4):
-				dial_button_row.append(self._encoder_button[(row*4) + column])
-			self._dial_button_matrix.add_row(tuple(dial_button_row))
-		self._key_matrix = ButtonMatrixElement()
-		button_row = []						#since we only use one row for the chopper, we can define a 1 dimensional button matrix for this one.   
-		for column in range(16):			#We use the ButtonMatrixObject because it takes care of setting up callbacks for all the buttons easily when we need them later
-			button_row.append(self._button[16 + column])
-		self._key_matrix.add_row(tuple(button_row))
-	
-
-	"""the transport component allows us to assign controls to transport functions in Live"""
-	def _setup_transport_control(self):
-		self._transport = TransportComponent() 
-		self._transport.name = 'Transport'
-	
-
-	"""the mixer component corresponds and moves with our selection in Live, and allows us to assign physical controls"""
-	"""to Live's mixer functions without having to make all the links ourselves"""
-	def _setup_mixer_control(self):
-		is_momentary = True
-		self._num_tracks = (4) 								#A mixer is one-dimensional; 
-		self._mixer = MixerComponent(4, 2, True, False)		#These values represent the (Number_of_tracks, Number_of_returns, EQ_component, Filter_component)
-		self._mixer.name = 'Mixer'							#We name everything that we might want to access in m4l
-		self._mixer.set_track_offset(0) 					#Sets start point for mixer strip (offset from left)
-		for index in range(4):								
-			#self._mixer.channel_strip(index).set_volume_control(self._fader[index])		#Since we gave our mixer 4 tracks above, we'll now assign our fader controls to it						
-			self._mixer.channel_strip(index).name = 'Mixer_ChannelStrip_' + str(index)	#We also name the individual channel_strip so we can access it
-			self._mixer.track_eq(index).name = 'Mixer_EQ_' + str(index)					#We also name the individual EQ_component so we can access it
-			self._mixer.channel_strip(index)._invert_mute_feedback = True				#This makes it so that when a track is muted, the corresponding button is turned off
-		self.song().view.selected_track = self._mixer.channel_strip(0)._track 			#set the selected strip to the first track, so that we don't, for example, try to assign a button to arm the master track, which would cause an assertion error
-		self._send_reset = ResetSendsComponent(self)		#This creates a custom MonoComponent that allows us to reset all the sends on a track to zero with a single button
-		self._send_reset.name = 'Sends_Reset'				#We name it so that we can access it from m4l
-	
-
-	"""the session component represents a grid of buttons that can be used to fire, stop, and navigate clips in the session view"""
-	def _setup_session_control(self):
-		is_momentary = True
-		num_tracks = 4															#we are working with a 4x4 grid,	
-		num_scenes = 4 															#so the height and width are both set to 4
-		self._session = SessionComponent(num_tracks, num_scenes)				#we create our SessionComponent with the variables we set above it
-		self._session.name = "Session"											#we name it so we can access it in m4l
-		self._session.set_offsets(0, 0)											#we set the initial offset to the far left, top of the session grid
-		self._session.set_stop_track_clip_value(STOP_CLIP[self._rgb])			#we assign the colors that will be displayed when the stop_clip button is pressed. This value comes from CNTRLR_Map.py, which is imported in the header of our script
-		self._scene = [None for index in range(4)]								#we create an array to hold the Scene subcomponents so that we can get to them if we need them.
-		for row in range(num_scenes):											#now we'll fill the array with different objects that were created when we called the SessionComponent() module
-			self._scene[row] = self._session.scene(row)							#each session row is a SceneComponent
-			self._scene[row].name = 'Scene_' + str(row)							#name it so we can access it in m4l
-			for column in range(num_tracks):									#now we'll create holders and names for the contents of each scene
-				clip_slot = self._scene[row].clip_slot(column)					#we use our assignment of the scene above to gain access to the individual clipslots.  Here, we are just assigning 'clip_slot' each time as a local variable so we can manipulated it's properties
-				clip_slot.name = str(column) + '_Clip_Slot' + str(row)			#name it so that we can acces it in m4l
-				clip_slot.set_triggered_to_play_value(CLIP_TRG_PLAY[self._rgb])	#set its triggered to play color
-				clip_slot.set_triggered_to_record_value(CLIP_TRG_REC[self._rgb])#set its triggered to record color
-				clip_slot.set_stopped_value(CLIP_STOP[self._rgb])				#set its stop color
-				clip_slot.set_started_value(CLIP_STARTED[self._rgb])			#set its started color
-				clip_slot.set_recording_value(CLIP_RECORDING[self._rgb])		#set its recording value
-		self._session.set_mixer(self._mixer)									#now we link the MixerComponent we created in _setup_mixer_control() to our session component so that they will follow each other when either is navigated
-		self.set_highlighting_session_component(self._session)
-		self._session_zoom = SessionZoomingComponent(self._session)	 			#this creates the ZoomingComponent that allows navigation when the shift button is pressed
-		self._session_zoom.name = 'Session_Overview'							#name it so we can access it in m4l
-		self._session_zoom.set_stopped_value(ZOOM_STOPPED[self._rgb])			#set the zooms stopped color
-		self._session_zoom.set_playing_value(ZOOM_PLAYING[self._rgb])			#set the zooms playing color
-		self._session_zoom.set_selected_value(ZOOM_SELECTED[self._rgb])			#set the zooms selected color
-		self._session_zoom.set_button_matrix(self._matrix)						#assign the ButtonMatrixElement that we created in _setup_controls() to the zooming component so that we can control it
-		self._session_zoom.set_zoom_button(self._button[31])					#assign a shift button so that we can switch states between the SessionComponent and the SessionZoomingComponent
-	
-
-	"""this section is used so that we can reassign the color properties of each state.  Legacy, from the OhmModes script, to support either RGB or Monochrome"""
-	def _assign_session_colors(self):
-		num_tracks = 4
-		num_scenes = 4 
-		self._session.set_stop_track_clip_value(STOP_ALL[self._rgb])
-		for row in range(num_scenes): 
-			for column in range(num_tracks):
-				self._scene[row].clip_slot(column).set_triggered_to_play_value(CLIP_TRG_PLAY[self._rgb])
-				self._scene[row].clip_slot(column).set_triggered_to_record_value(CLIP_TRG_REC[self._rgb])
-				self._scene[row].clip_slot(column).set_stopped_value(CLIP_STOP[self._rgb])
-				self._scene[row].clip_slot(column).set_started_value(CLIP_STARTED[self._rgb])
-				self._scene[row].clip_slot(column).set_recording_value(CLIP_RECORDING[self._rgb])		
-		self._session_zoom.set_stopped_value(ZOOM_STOPPED[self._rgb])
-		self._session_zoom.set_playing_value(ZOOM_PLAYING[self._rgb])
-		self._session_zoom.set_selected_value(ZOOM_SELECTED[self._rgb])
-		self.refresh_state()
-	
-
-	"""the device component allows us to assign encoders to the selected device in Live"""
-	def _setup_device_control(self):
-		self._device = DeviceComponent()			#create the device component
-		self._device.name = 'Device_Component'		#name it so we can access it in m4l
-		self._device._is_banking_enabled = self.device_is_banking_enabled(self._device)  #we do this to defeat some undesirable behavior in the DeviceComponent which defeats banking if no controls are assigned
-		#self._device.set_device = self._device_set_device(self._device)
-		self._device.update = self._device_update(self._device)
-		self._device.set_parameter_controls(tuple([self._encoder[index+4] for index in range(8)]))		#set its controls to the bottom 8 encoders;  we use [index+4] to offset past the first 4 encoders
-		self.set_device_component(self._device)		#assign our component to the control_surface main script;  this allows special updating, like being able to lock the devicecomponent to the currently selected device
-		self._device_navigator = AumTrollDetailViewController(self)		#this is a special component taken out of the APC scripts; its used to move from one device to another with the controller
-		self._device_navigator.name = 'Device_Navigator'					#name it so that we can access it in m4l
-		self._device_selection_follows_track_selection = FOLLOW				#_device_selection_follows_track_selection is a property of the main ControlSurface script, and does what it says it does.  The FOLLOW variable is taken from CNTRLR_Map.py
-	
-
-	"""the device selector component allows the user to set buttons that will automatically select a device based on its name"""
-	"""its not used in the stock CNTRLR script, but it could easily be assigned to any buttons using the correct syntax"""
-	"""for more information, check out the documentation for the MonOhm script"""
-	def _setup_device_selector(self):
-		self._device_selector = DeviceSelectorComponent(self)
-		self._device_selector.name = 'Device_Selector'
+	def _open_log(self):
+		self.log_message("<<<<<<<<<<<<<<<<<<<<= " + str(self._host_name) + " " + str(self._monomod_version) + " log opened =>>>>>>>>>>>>>>>>>>>") 
+		self.show_message(str(self._host_name) + ' Control Surface Loaded')
 	
 
 	"""this section sets up the host environment that allows the controller to access different mods from the modButtons"""
-	def _setup_monomod(self):
-		self._host = MonomodComponent(self)						#the MonomodComponent is the bridge between the CNTRLR's controls and the client patches that connect to m4l
+	def _setup_mod(self):
+		self._host = AumTrollMonomodComponent(self)						#the MonomodComponent is the bridge between the CNTRLR's controls and the client patches that connect to m4l
 		self._host.name = 'Monomod_Host'						#name it so we can access it
 		self.hosts = [self._host]
 		self._host._set_parameter_controls(self._encoder)
-	
-
-	"""the clipchopper component is a custom component we can access by switching modes"""
-	def _setup_chopper(self):
-		self._chopper = MonoChopperComponent(self, self._mixer)		#create the chopper module, and pass it our mixer so that we can use it to navigate which clip is being manipulated
-		self._chopper.name = 'Chopper'					#name it so we can access it via m4l
-		self._chopper._set_button_matrix(self._key_matrix)	#set its controls to the ButtonMatrixElement we created in _setup_controls()
 	
 
 	"""since there are many different configurations possible with the modButtons, we'll need to create a ModeSelectorComponent"""
@@ -386,6 +417,10 @@ class AumTroll(ControlSurface):
 		self._last_client = None
 	
 
+	def _setup_switchboard(self):
+		pass
+	
+
 
 	"""cntrlr modes"""
 	"""here we set up some methods that will be used to update the control assignments when we change between different modes"""
@@ -396,6 +431,7 @@ class AumTroll(ControlSurface):
 		#for index in range(4):
 		#	if self._encoder[index].value_has_listener(self._client[index]._mod_dial_value):
 		#		self._encoder[index].remove_value_listener(self._client[index]._mod_dial_value)
+		#self.log_message('deassign live controls')
 		self._device_selector.set_mode_buttons(None)
 		self._device._parameter_controls = None
 		self._deassign_monomodular_controls()
@@ -436,7 +472,7 @@ class AumTroll(ControlSurface):
 			self._button[index].set_on_off_values(127, 0)					#reset the on/off values for the key buttons
 			self._button[index].release_parameter()							#remove the parameter assignment that was assigned to the keys
 			self._button[index].send_value(0, True)										#turn the buttons LEDs off
-		self._host._release_mod_dials()
+		#self._host._release_mod_dials()
 		
 		
 		#self._device.set_parameter_controls(tuple([self._encoder[index+4] for index in range(8)]))			#assign the encoders from the device component controls - we are doing this here b
@@ -449,17 +485,17 @@ class AumTroll(ControlSurface):
 		self._session.set_enabled(False)									#turn off the session component
 		self._session_zoom.set_enabled(False)								#turn off the zoom component
 		for index in range(16):
-			self._grid[index].clear_send_cache()							#set the last_sent value of the grid to -1, so that the next value it receives will always be transmitted to the CNTRLR
+			self._grid[index].force_next_send()							#set the last_sent value of the grid to -1, so that the next value it receives will always be transmitted to the CNTRLR
 		for index in range(32):
-			self._button[index].clear_send_cache()							#set the last_sent value of the keys to -1, so that the next value it receives will always be transmitted to the CNTRLR
+			self._button[index].force_next_send()							#set the last_sent value of the keys to -1, so that the next value it receives will always be transmitted to the CNTRLR
 		for index in range(12):
 			self._device._parameter_controls = None
 			self._encoder[index].release_parameter()
 			self._encoder[index].send_value(0, True)						#turn off all the encoder rings.  We send it the second argument, True, so that it is forced to update regardless of its last_sent property
-			self._encoder[index].clear_send_cache()							#set the last_sent value of the encoder rings to -1, so that the next value it receives will always be transmitted to the CNTRLR
+			self._encoder[index].force_next_send()							#set the last_sent value of the encoder rings to -1, so that the next value it receives will always be transmitted to the CNTRLR
 		for index in range(8):
 			self._encoder_button[index+4].send_value(0, True)				#turn off all the encoder LEDs.  We send it the second argument, True, so that it is forced to update regardless of its last_sent property
-			self._encoder_button[index+4].clear_send_cache()				#set the last_sent value of the encoder LEDs to -1, so that the next value it receives will always be transmitted to the CNTRLR
+			self._encoder_button[index+4].force_next_send()				#set the last_sent value of the encoder LEDs to -1, so that the next value it receives will always be transmitted to the CNTRLR
 		for index in range(8):
 			self._mixer2.channel_strip(index).set_select_button(None)
 			self._mixer2.channel_strip(index).set_mute_button(None)
@@ -475,18 +511,19 @@ class AumTroll(ControlSurface):
 		"""the following lines update all of the controls' last_sent properties, so that they forward the next value they receive regardless of whether or not it is the same as the last it recieved"""
 		"""we also reset the encoder rings and buttons, since the device component will not update them if it is not locked to a device in Live"""
 		for index in range(16):
-			self._grid[index].clear_send_cache()
+			self._grid[index].force_next_send()
 		for index in range(32):
-			self._button[index].clear_send_cache()
+			self._button[index].force_next_send()
 		for index in range(8):
 			self._encoder_button[index+4].send_value(0, True)
-			self._encoder_button[index+4].clear_send_cache()
+			self._encoder_button[index+4].force_next_send()
 		for index in range(12):
 			self._encoder[index].send_value(0, True)
-			self._encoder[index].clear_send_cache()
+			self._encoder[index].force_next_send()
 
 		"""here we assign the top encoders to the mod_dial, if it exists, in any connected mods"""
-		self.schedule_message(4, self._host._assign_mod_dials)
+		#self.schedule_message(4, self._host._assign_mod_dials)
+		self._host._assign_mod_dials()
 
 		"""here we assign the left side of our mixer's buttons on the lower 32 keys"""
 		if self._monohm is None:
@@ -582,18 +619,19 @@ class AumTroll(ControlSurface):
 		"""the following lines update all of the controls' last_sent properties, so that they forward the next value they receive regardless of whether or not it is the same as the last it recieved"""
 		"""we also reset the encoder rings and buttons, since the device component will not update them if it is not locked to a device in Live"""
 		for index in range(16):
-			self._grid[index].clear_send_cache()
+			self._grid[index].force_next_send()
 		for index in range(32):
-			self._button[index].clear_send_cache()
+			self._button[index].force_next_send()
 		for index in range(8):
 			self._encoder_button[index+4].send_value(0, True)
-			self._encoder_button[index+4].clear_send_cache()
+			self._encoder_button[index+4].force_next_send()
 		for index in range(12):
 			self._encoder[index].send_value(0, True)
-			self._encoder[index].clear_send_cache()
+			self._encoder[index].force_next_send()
 
 		"""here we assign the top encoders to the mod_dial, if it exists, in any connected mods"""
-		self.schedule_message(4, self._host._assign_mod_dials)
+		#self.schedule_message(4, self._host._assign_mod_dials)
+		self._host._assign_mod_dials()
 
 		"""the following lines differ from the assignments in self.assign_live_controls()"""
 		"""the assignments merely moving certain elements from their original positions"""
@@ -671,7 +709,8 @@ class AumTroll(ControlSurface):
 			self._host._display_mod_colors()
 		elif CHOPPER_ENABLE and not self._host._client is None and not self._host._client[3].is_connected() and self._shift_mode._mode_index == 4:		#if the fourth mod button has been pressed and there is no mod installed
 			self.deassign_live_controls()				#deassign the top level assignments
-			self.schedule_message(4, self._host._assign_mod_dials)
+			#self.schedule_message(4, self._host._assign_mod_dials)
+			self._host._assign_mod_dials()
 			self._host._set_dial_matrix(None, None)		#deassign the Monomod Components dial matrix 
 			self._host._set_button_matrix(None)			#deassign the Monomod Component's button matrix
 			self._host._set_key_buttons(None)			#deassign the Monomod Component's key matrix
@@ -700,245 +739,26 @@ class AumTroll(ControlSurface):
 			else:
 				self._host._set_button_matrix(self._matrix)									#assign the 4x4 to it
 				self._host._set_dial_matrix(self._dial_matrix, self._dial_button_matrix)	#assign the encoders to it
-				if not self._shifted:
+				if not self._shifted is True:
+					#self.log_message('setting keys')
 					self._host._set_key_buttons(tuple(self._button))						#assign the lower buttons to it
 					if(self._host._active_client._monomodular > 0):
+						#self.log_message('but monomod > 0')
 						self._assign_monomodular_controls()				
 				else:
+					#self.log_message('self._shifted is True')
 					self._host._set_key_buttons(None)
 					self._assign_shifted_controls()
 				self._host._select_client(self._shift_mode._mode_index-1)					#select the client corresponding to the button we pressed
-				if self._supress_next_mod_display:
-					self._supress_next_mod_display = False
+				if self._suppress_next_mod_display:
+					self._suppress_next_mod_display = False
 				else:
 					self._host.display_active_client()										#tell Monomod Component to update the LEDs on the CNTRLR corresponding to the client that is selected
 				self._host.set_enabled(True)												#turn on the Monomod Component
 				self._host._display_mod_colors()
-
-	"""assign alternate mappings to the controls when a modSlot is selected that doesn't contain a mod"""
-	def assign_alternate_mappings(self, chan):
-		chan = min(16, max(chan, 0))
-		for index in range(8):
-			self._encoder_button[index + 4].set_channel(chan)		#set the contols channel to the methods second argument
-			self._encoder_button[index + 4].set_enabled(chan is 0)	#if the channel is not 0, we need to disable the control so that it 
-		for encoder in self._encoder:								#is forwarded to Live, but not used by the script for internal processing
-			encoder.set_channel(chan)
-			encoder.set_enabled(chan is 0)
-		for button in self._button:
-			button.set_channel(chan)
-			button.set_enabled(chan is 0)
-		for cell in self._grid:
-			cell.set_channel(chan)
-			cell.set_enabled(chan is 0)
-		self.request_rebuild_midi_map()
-			
-	
-
-	"""reassign the original channel and identifier to all the controls that can be remapped through assign_alternate_mappings"""
-	def assign_original_mappings(self):
-		for index in range(8):
-			self._encoder_button[index + 4].set_channel(self._encoder_button[index + 4]._original_channel)
-			self._encoder_button[index + 4].set_enabled(True)
-		for encoder in self._encoder:
-			encoder.set_channel(encoder._original_channel)
-			encoder.set_enabled(True)
-		for button in self._button:
-			button.set_channel(button._original_channel)
-			button.set_enabled(True)
-		for cell in self._grid:
-			cell.set_channel(cell._original_channel)
-			cell.set_enabled(True)
-		self.request_rebuild_midi_map()
-	
-
-	"""called on timer"""
-	def update_display(self):
-		""" Live -> Script
-		Aka on_timer. Called every 100 ms and should be used to update display relevant
-		parts of the controller
-		"""
-		ControlSurface.update_display(self)		#since we are overriding this from the inherited method, we need to call the original routine as well
-		self._timer = (self._timer + 1) % 256	#each 100/60ms, increase the self._timer property by one.  Start over at 0 when we hit 256
-		if(self._local_ring_control is False):	#if local rings are turned off, then we need to send the new values if they've changed
-			self.send_ring_leds()			
-		self.flash()							#call the flash method below
-	
-
-	"""this method recurses through all the controls, causing them to flash depending on their stored values"""
-	def flash(self):
-		if(self.flash_status > 0):
-			for control in self.controls:
-				if isinstance(control, MonoButtonElement):
-					control.flash(self._timer)		
 	
 
 
-	"""m4l bridge"""
-
-	"""this is a method taken and modified from the MackieControl scripts"""
-	"""it takes a display string and modifies it to be a specified length"""
-	def generate_strip_string(self, display_string):
-		NUM_CHARS_PER_DISPLAY_STRIP = 12
-		if (not display_string):
-			return (' ' * NUM_CHARS_PER_DISPLAY_STRIP)
-		if ((len(display_string.strip()) > (NUM_CHARS_PER_DISPLAY_STRIP - 1)) and (display_string.endswith('dB') and (display_string.find('.') != -1))):
-			display_string = display_string[:-2]
-		if (len(display_string) > (NUM_CHARS_PER_DISPLAY_STRIP - 1)):
-			for um in [' ',
-			 'i',
-			 'o',
-			 'u',
-			 'e',
-			 'a']:
-				while ((len(display_string) > (NUM_CHARS_PER_DISPLAY_STRIP - 1)) and (display_string.rfind(um, 1) != -1)):
-					um_pos = display_string.rfind(um, 1)
-					display_string = (display_string[:um_pos] + display_string[(um_pos + 1):])
-		else:
-			display_string = display_string.center((NUM_CHARS_PER_DISPLAY_STRIP - 1))
-		ret = u''
-		for i in range((NUM_CHARS_PER_DISPLAY_STRIP - 1)):
-			if ((ord(display_string[i]) > 127) or (ord(display_string[i]) < 0)):
-				ret += ' '
-			else:
-				ret += display_string[i]
-
-		ret += ' '
-		ret = ret.replace(' ', '_')
-		assert (len(ret) == NUM_CHARS_PER_DISPLAY_STRIP)
-		return ret
-	
-
-	"""this method forwards display information from control elements to the LCD patch"""
-	def notification_to_bridge(self, name, value, sender):
-		if(isinstance(sender, (MonoEncoderElement, CodecEncoderElement))):
-			pn = str(self.generate_strip_string(name))
-			pv = str(self.generate_strip_string(value))
-			self._monobridge._send(sender.name, 'lcd_name', pn)
-			self._monobridge._send(sender.name, 'lcd_value', pv)
-	
-
-	"""this method regulates parameter values from being sent on updates if the control has not actually been changed"""
-	def touched(self):
-		if self._touched is 0:
-			self._monobridge._send('touch', 'on')
-			self.schedule_message(2, self.check_touch)
-		self._touched +=1
-	
-
-	"""this method is called by the LCD patch to determine whether any controls have been changed"""
-	def check_touch(self):
-		if self._touched > 5:
-			self._touched = 5
-		elif self._touched > 0:
-			self._touched -= 1
-		if self._touched is 0:
-			self._monobridge._send('touch', 'off')
-		else:
-			self.schedule_message(2, self.check_touch)
-	
-
-	"""this is an unnused method.  It provides a way to retrieve all the clip names belonging to the current session views clips"""
-	def get_clip_names(self):
-		clip_names = []
-		for scene in self._session._scenes:
-			for clip_slot in scene._clip_slots:
-				if clip_slot.has_clip() is True:
-					clip_names.append(clip_slot._clip_slot)##.clip.name)
-					return clip_slot._clip_slot
-		return clip_names
-	
-
-
-	"""midi functionality"""
-	
-
-	"""this method needs to be here so that Live knows what to do (nothing, in this case) when it receives sysex from the CNTRLR"""
-	def handle_sysex(self, midi_bytes):
-		pass
-	
-
-	"""this method can be linked to from m4l, and provides a way to update the parameter value of an assigned DeviceComponent parameter control"""
-	def to_encoder(self, num, val):
-		rv=int(val*127)
-		self._device._parameter_controls[num].receive_value(rv)
-		p = self._device._parameter_controls[num]._parameter_to_map_to
-		newval = (val * (p.max - p.min)) + p.min
-		p.value = newval
-	
-
-	"""this method sets the instance variable for local ring control, and sends the appropriate sysex string to change states on the CNTRLR"""
-	def set_local_ring_control(self, val = 1):
-		self._local_ring_control = (val!=0)
-		if(self._local_ring_control is True):
-			self._send_midi(tuple([240, 0, 1, 97, 8, 32, 0, 247]))
-		else:
-			self._send_midi(tuple([240, 0, 1, 97, 8, 32, 1, 247]))
-	
-
-	"""this method sets the instance variable for absolute encoder changes, and sends the appropriate sysex string to change states on the CNTRLR"""			
-	def set_absolute_mode(self, val = 1):
-		self._absolute_mode = (val!=0)
-		if self._absolute_mode is True:
-			self._send_midi(tuple([240, 0, 1, 97, 8, 17, 0, 0, 0, 0, 0, 0, 0, 0, 247]))
-		else:
-			self._send_midi(tuple([240, 0, 1, 97, 8, 17, 127, 127, 127, 127, 127, 127, 127, 127, 247]))
-	
-
-	"""this method is used to update the individual elements of the encoder rings when the CNTRLR is in local ring control mode"""
-	def send_ring_leds(self):
-		if self._host._is_enabled == True:
-			leds = [240, 0, 1, 97, 8, 31]
-			for index in range(12):
-				wheel = self._encoder[index]
-				bytes = wheel._get_ring()
-				leds.append(bytes[0])
-				leds.append(int(bytes[1]) + int(bytes[2]))
-			leds.append(247)
-			self._send_midi(tuple(leds))
-	
-
-
-	"""general functionality"""
-	
-	"""this method is called by Live when it needs to disconnect.  It's very important that any observers that were set up in the script are removed here"""
-	def disconnect(self):
-		"""clean things up on disconnect"""
-		if self.song().view.selected_track_has_listener(self._update_selected_device):
-			self.song().view.remove_selected_track_listener(self._update_selected_device)
-		#self._host._set_parameter_controls(None)
-		self._hosts = []
-		self.log_message("<<<<<<<<<<<<<<<<<<<<<<<<< AumTroll log closed >>>>>>>>>>>>>>>>>>>>>>>>>")
-		ControlSurface.disconnect(self)
-		return None
-	
-
-	"""this provides a hook that can be called from m4l to change the DeviceComponent's behavior"""
-	def device_follows_track(self, val):
-		self._device_selection_follows_track_selection = (val == 1)
-		return self
-	
-
-	"""this is a customizationo of the inherited behavior of ControlSurface"""
-	def _update_selected_device(self):
-		if self._device_selection_follows_track_selection is True:
-			track = self.song().view.selected_track
-			device_to_select = track.view.selected_device
-			if device_to_select == None and len(track.devices) > 0:
-				device_to_select = track.devices[0]
-			if device_to_select != None:
-				self.song().view.select_device(device_to_select)
-			#self._device.set_device(device_to_select)
-			self.set_appointed_device(device_to_select)
-			#self._device_selector.set_enabled(True)
-		self.request_rebuild_midi_map()
-		return None 
-	
-
-	"""this provides a hook to get the current tracks length from other modules"""
-	def _get_num_tracks(self):
-		return self.num_tracks
-	
-	
 	"""used to connect different control_surfaces so that they can communicate"""
 	def connect_script_instances(self, instanciated_scripts):
 		if MONOHM_LINK is True:
@@ -1035,8 +855,8 @@ class AumTroll(ControlSurface):
 		def _is_banking_enabled():
 			return True
 		return _is_banking_enabled
+		
 	
-
 
 	"""alt_build methods used when Monomodular capable controller is used in conjunction with the CNTRLR"""
 	"""monohm connectivity methods"""
@@ -1064,6 +884,7 @@ class AumTroll(ControlSurface):
 		#self.deassign_live_controls()
 		#self.shift_update()
 		self._monohm_shift(0)
+		
 	
 
 	"""these two secondary DeviceComponents are only set up if the MONOHM_LINK flag in .Map is turned on"""
@@ -1110,11 +931,11 @@ class AumTroll(ControlSurface):
 		def _monohm_shift(mode):
 			#self.log_message('block monohm shift ' + str(mode))
 			self._shifted = mode > 1
-			self._supress_next_mod_display = True
+			self._suppress_next_mod_display = True
 			self.shift_update() 
 		return _monohm_shift
 					
-
+		
 	
 
 	def _assign_monomodular_controls(self):
@@ -1130,7 +951,7 @@ class AumTroll(ControlSurface):
 	
 
 	def _deassign_monomodular_controls(self):
-		#self.log_message('deassign mod controls')
+		self.log_message('deassign mod controls')
 		if self._monohm != None:
 			self._monohm._host._set_key_buttons(None)
 			self._monohm._host._set_bank_buttons(None)
@@ -1156,6 +977,8 @@ class AumTroll(ControlSurface):
 		self._chopper.get_pos()
 	
 
-
+	def _assign_mod_dials(self):
+		pass
+	
 
 #	a

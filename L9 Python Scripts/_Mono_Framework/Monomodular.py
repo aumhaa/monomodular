@@ -42,6 +42,7 @@ from _Framework.TransportComponent import TransportComponent # Class encapsulati
 from SwitchboardElement import SwitchboardElement
 from MonoClient import MonoClient
 from LiveUtils import *
+from ModDevices import *
 
 """Custom files, overrides, and files from other scripts"""
 from MonoLinkClient import MonoLinkClient
@@ -95,6 +96,7 @@ class Monomodular(ControlSurface):
 		for index in range(16):
 			self._client[index] = MonoClient(self, index)
 			self._client[index].name = 'Client_' + str(index)
+			self._client[index]._device_component.set_device_defs(MOD_BANK_DICT, MOD_TYPES)
 		self._active_client = self._client[0]
 		self._active_client._is_active = True
 	

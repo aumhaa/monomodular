@@ -55,7 +55,7 @@ class DummyButton(object):
 
 
 	def is_momentary(self):
-		return False
+		return True
 	
 
 
@@ -67,13 +67,23 @@ class MonOhmSessionZoomingComponent(SessionZoomingComponent):
 		self._zoom_button = DummyButton()
 	
 
+	def _session_set_enabled(self, is_enabled, *a, **k):
+		pass
+	
+
 
 class MonOhmSessionComponent(SessionComponent):
 
 
-	def __init__(self, *a, **k):
+	def __init__(self, script, *a, **k):
 		super(MonOhmSessionComponent, self).__init__(*a, **k)
+		self._script = script
 		self.scene_component_type = MonOhmSceneComponent
+	
+
+	def set_enabled(self, *a, **k):
+		super(MonOhmSessionComponent, self).set_enabled(*a, **k)
+		self._script.log_message(str(self.name) + ' is enabled: ' + str(self.is_enabled()))
 	
 
 	@subject_slot('value')
@@ -417,7 +427,7 @@ class MonOhm(ControlSurface):
 		is_momentary = True
 		num_tracks = 4
 		num_scenes = 5 
-		self._session = MonOhmSessionComponent(num_tracks, num_scenes)
+		self._session = MonOhmSessionComponent(self, num_tracks, num_scenes)
 		self._session.name = "Left_Session"
 		self._session.set_offsets(0, 0)	 
 		self._session.set_stop_track_clip_value(self._color_defs['STOP_CLIP'])
@@ -441,7 +451,7 @@ class MonOhm(ControlSurface):
 		self._session_zoom.set_selected_value(self._color_defs['ZOOM_SELECTED'])
 		#self._session_zoom._zoom_button = (self._dummy_button)
 		self._session_zoom.set_enabled(True) 
-		self._session2 = MonOhmSessionComponent(num_tracks, num_scenes)
+		self._session2 = MonOhmSessionComponent(self, num_tracks, num_scenes)
 		self._session2.name = 'Right_Session'
 		self._session2.set_offsets(4, 0)
 		self._session2.set_stop_track_clip_value(self._color_defs['STOP_CLIP'])
@@ -466,7 +476,7 @@ class MonOhm(ControlSurface):
 		self._session_zoom2.set_selected_value(self._color_defs['ZOOM_SELECTED'])
 		self._session_zoom.set_enabled(True) 
 		#self._session_zoom2._zoom_button = (self._dummy_button2)
-		self._session_main = MonOhmSessionComponent(8, num_scenes)
+		self._session_main = MonOhmSessionComponent(self, 8, num_scenes)
 		self._session_main.name = 'Main_Session'
 		self._session_main.set_stop_track_clip_value(self._color_defs['STOP_CLIP'])
 		self._scene_main = [None for index in range(5)]
@@ -679,9 +689,9 @@ class MonOhm(ControlSurface):
 			self._mixer.channel_strip(index).set_crossfade_toggle(self._grid[index][6])
 			self._grid[index + 4][6].set_on_value(self._color_defs['CROSSFADE_TOGGLE'])
 			self._mixer2.channel_strip(index).set_crossfade_toggle(self._grid[index + 4][6])
-			self._grid[index][7].set_on_value(self._color_defs['TRACK_STOP'])
+			self._grid[index][7].set_off_value(self._color_defs['TRACK_STOP'])
 			track_stop_buttons.append(self._grid[index][7])
-			self._grid[index + 4][7].set_on_value(self._color_defs['TRACK_STOP'])
+			self._grid[index + 4][7].set_off_value(self._color_defs['TRACK_STOP'])
 			track_stop_buttons2.append(self._grid[index + 4][7])
 		for index in range(5):
 			self._grid[7][index].set_off_value(self._color_defs['SCENE_LAUNCH'])
@@ -751,7 +761,7 @@ class MonOhm(ControlSurface):
 		for index in range(8):
 			self._grid[index][6].set_on_value(self._color_defs['CROSSFADE_TOGGLE'])
 			self._mixer.channel_strip(index).set_crossfade_toggle(self._grid[index][6])
-			self._grid[index][7].set_on_value(self._color_defs['TRACK_STOP'])
+			self._grid[index][7].set_off_value(self._color_defs['TRACK_STOP'])
 			track_stop_buttons.append(self._grid[index][7])
 		for index in range(5):
 			self._grid[7][index].set_on_value(self._color_defs['SCENE_LAUNCH'])
@@ -930,7 +940,7 @@ class MonOhm(ControlSurface):
 					self.zoom_left()
 					#self._session_zoom._zoom_value(1)
 					self._session_zoom._on_zoom_value(1)
-					self._session.set_enabled(True) #this is a workaround so that the stop buttons still function
+					#self._session.set_enabled(True) #this is a workaround so that the stop buttons still function
 					self._l_function_mode.set_enabled(True)
 					self.set_highlighting_session_component(self._session)
 					self._session._do_show_highlight()
@@ -938,7 +948,7 @@ class MonOhm(ControlSurface):
 					self._shift_mode._mode_toggle2.turn_on()
 					self.zoom_right()
 					self._session_zoom2._on_zoom_value(1)
-					self._session2.set_enabled(True)  #this is a workaround so that the stop buttons still function
+					#self._session2.set_enabled(True)  #this is a workaround so that the stop buttons still function
 					self._r_function_mode.set_enabled(True)
 					self.assign_shift_controls()
 					if(self._r_function_mode._mode_index < 4):
@@ -949,7 +959,7 @@ class MonOhm(ControlSurface):
 					self._shift_mode._mode_toggle2.turn_on()
 					self.zoom_main()
 					self._session_zoom_main._on_zoom_value(1)
-					self._session_main.set_enabled(True) #this is a workaround so that the stop buttons still function
+					#self._session_main.set_enabled(True) #this is a workaround so that the stop buttons still function
 					self._m_function_mode.set_enabled(True)
 					self.assign_shift_controls()
 					self.set_highlighting_session_component(self._session_main)
@@ -1014,7 +1024,7 @@ class MonOhm(ControlSurface):
 				self._host._shift_value(0)
 		self.allow_updates(True)
 		self._clutch_device_selection = False
-		#self._request_rebuild_midi_map()
+		self.request_rebuild_midi_map()
 		if(self._shift_mode._mode_index < 2):
 			self._monobridge._send('touch', 'off')
 		else:

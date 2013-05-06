@@ -55,6 +55,12 @@ class MonoDeviceComponent(DeviceComponent):
 
 	
 
+	def set_device_defs(self, bank_dict={}, mod_types={}):
+		self._MOD_BANK_DICT = bank_dict
+		self._MOD_TYPES = mod_types
+		self.update()
+	
+
 	def _set_type(self, mod_device_type):
 		#self._parent._host.log_message('mods: ' + str(self._mod_types))
 		if mod_device_type == None:
