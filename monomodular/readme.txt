@@ -1,3 +1,7 @@
+050613
+
+Completion of all Live9 Monomodular scripts.  Various changes to mod patches, but most mods still untested at this point.  Beginning restructure of files looking forward to b996 and Git hosting.
+
 041213
 
 Updated installer to work with Live 9.  Many Live 9 Python scripts have already been added, and most patches are already b995 compatible in Live 8.
