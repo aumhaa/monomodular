@@ -252,7 +252,8 @@ class BaseModeSelector(ModeSelectorComponent):
 	def __init__(self, script):
 		super(BaseModeSelector, self).__init__()
 		self._held = None
-		self._script = script	
+		self._script = script
+		self._set_protected_mode_index(0)	
 	
 
 	def number_of_modes(self):
@@ -310,7 +311,8 @@ class BaseUserModeSelector(ModeSelectorComponent):
 	def __init__(self, script):
 		super(BaseUserModeSelector, self).__init__()
 		self._held = None
-		self._script = script	
+		self._script = script
+		self._set_protected_mode_index(0)	
 	
 
 	def number_of_modes(self):
@@ -347,7 +349,8 @@ class BaseMidiModeSelector(ModeSelectorComponent):
 
 	def __init__(self, callback):
 		super(BaseMidiModeSelector, self).__init__()
-		self._report_mode = callback	
+		self._report_mode = callback
+		self._set_protected_mode_index(0)	
 	
 
 	def number_of_modes(self):
@@ -377,6 +380,7 @@ class BaseSplitModeSelector(ModeSelectorComponent):
 		super(BaseSplitModeSelector, self).__init__()
 		self._report_mode = callback
 		self._modes_buttons = []
+		self._set_protected_mode_index(0)
 	
 
 	def number_of_modes(self):
@@ -532,7 +536,7 @@ class DeviceNavigator(ControlSurfaceComponent):
 	
 
 	def set_nav_buttons(self, prev_button, next_button):
-		self._script.log_message('set nav: ' + str(prev_button) + ' ' + str(next_button))
+		#self._script.log_message('set nav: ' + str(prev_button) + ' ' + str(next_button))
 		identify_sender = True
 		if self._prev_button != None:
 			if self._prev_button.value_has_listener(self._nav_value):
@@ -602,7 +606,7 @@ class ScaleModeComponent(ModeSelectorComponent):
 	def __init__(self, script):
 		super(ScaleModeComponent, self).__init__()
 		self._script = script
-		self._mode_index = 0
+		self._set_protected_mode_index(0)
 	
 
 	def set_mode_buttons(self, buttons):
@@ -830,8 +834,7 @@ class Base(ControlSurface):
 		self.schedule_message(3, self._send_midi, LINKFUNCBUTTONS)
 		self.schedule_message(3, self._send_midi, DISABLECAPFADERNOTES)
 		self.schedule_message(3, self._send_midi, (191, 122, 64))
-		self.schedule_message(4, self._session._do_show_highlight)
-		self.schedule_message(5, self._layers[0])
+		self.schedule_message(3, self._layers[0])
 	
 
 	"""script initialization methods"""
@@ -884,6 +887,8 @@ class Base(ControlSurface):
 				clip_slot.set_started_value(CLIP_STARTED)
 				clip_slot.set_recording_value(CLIP_RECORDING)
 		self._session.set_mixer(self._mixer)
+		self.set_highlighting_session_component(self._session)
+		self._session._do_show_highlight()
 	
 
 	def _setup_selected_session_control(self):
@@ -1187,7 +1192,7 @@ class Base(ControlSurface):
 	
 
 	def _split_mode_value(self, mode):
-		self.log_message('split mode value' + str(mode))
+		#self.log_message('split mode value' + str(mode))
 		if not self.pad_held():
 			if self.shift_pressed():
 				#if self.select_pressed():
@@ -1214,7 +1219,7 @@ class Base(ControlSurface):
 			self._selected_session.deassign_all()
 			self._session.deassign_all()
 			self.set_highlighting_session_component(self._session)
-			self._selected_session._do_show_highlight()
+			self._session._do_show_highlight()
 			self._user_mode_selector.set_enabled(False)
 			self._midi_mode_selector.set_enabled(False)
 			self._split_mode_selector.set_enabled(False)
@@ -1696,7 +1701,6 @@ class Base(ControlSurface):
 					control.flash(self._timer)
 	
 
-
 	"""m4l bridge"""
 	def generate_strip_string(self, display_string):
 		NUM_CHARS_PER_DISPLAY_STRIP = 12
@@ -1836,7 +1840,6 @@ class Base(ControlSurface):
 	#def _do_send_midi(self, midi_event_bytes):
 	#	self.log_message(str(midi_event_bytes))
 	#	super(Base, self)._do_send_midi(midi_event_bytes)
-	
 
 	"""device component methods and overrides"""
 
