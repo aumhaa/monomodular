@@ -141,7 +141,7 @@ function assign_api()
 function pipe(args)
 {
 	//args = arrayfromargs(messagename, arguments);
-	post('monobridge callback', args, '\n');
+	//post('monobridge callback', args, '\n');
 	if(args[0]=='value')
 	{
 		//post('pipe osc: ', args[2], '~', args[3], ':', typeof(args[3]), '\n');

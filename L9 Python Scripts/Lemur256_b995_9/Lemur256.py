@@ -48,10 +48,6 @@ from SpecialMonomodComponent import SpecialMonomodComponent
 from Map import *
 
 
-
-
-
-
 class OSCMonoButtonElement(MonoButtonElement):
 
 
@@ -187,8 +183,6 @@ class OSCMonoEncoderElement(MonoEncoderElement):
 	
 
 
-
-
 class OSCMonoBridgeElement(MonoBridgeElement):
 
 
@@ -243,7 +237,7 @@ class OSCMonoBridgeElement(MonoBridgeElement):
 	
 
 	def osc_in(self, messagename, arguments = None):
-		self._script.log_message('osc_in ' + str(messagename) +  '-' + str(arguments))
+		#self._script.log_message('osc_in ' + str(messagename) +  '-' + str(arguments))
 		if self._script._osc_registry.has_key(messagename):
 			self._script._osc_registry[messagename](arguments)
 		else:
@@ -348,11 +342,9 @@ class Lemur256(ControlSurface):
 			self._assign_host2()
 		self.reset()
 		self.refresh_state()
-		self.show_message('Lemur256 Control Surface Loaded')
+		self.show_message(str(self._host_name) + ' Control Surface Loaded')
 		self.log_message("<<<<<<<<<<<<<<<<<<<<  "+ str(self._host_name) + " " + str(self._monomod_version) + " log opened   >>>>>>>>>>>>>>>>>>>>") 
 	
-
-
 
 	def _setup_controls(self):
 		is_momentary = True
@@ -403,9 +395,8 @@ class Lemur256(ControlSurface):
 
 	def _setup_touchosc(self):
 		self._osc_registry = {}
-		#self._osc_registry['/ping'] = self._monobridge.ping
-		#self._osc_registry['/1'] = self._monobridge.page1
-		#self._osc_registry['/2'] = self._monobridge.page2
+		self._osc_registry['/ping'] = self._monobridge.ping
+		self._osc_registry['/1'] = self._monobridge.page1
 		for control in self.controls:
 			if hasattr(control, 'osc'):
 				self._osc_registry[control.osc] = control.set_value
@@ -414,17 +405,6 @@ class Lemur256(ControlSurface):
 				#self.log_message('create dict key: ' + str(control.osc) + str(control.name))
 	
 
-	"""def _setup_touchosc(self):
-		self._osc_registry = {}
-		self._osc_registry['/ping'] = self._monobridge.ping
-		self._osc_registry['/1'] = self._monobridge.page1
-		self._osc_registry['/2'] = self._monobridge.page2
-		for control in self.controls:
-			if hasattr(control, 'osc'):
-				self._osc_registry[control.osc] = control.set_value
-			if hasattr(control, 'osc_alt'):
-				self._osc_registry[control.osc_alt] = control.set_value"""
-	
 
 	"""m4l bridge"""
 	def generate_strip_string(self, display_string):
@@ -552,3 +532,8 @@ class Lemur256(ControlSurface):
 		self.schedule_message(1, self.reset)
 		self.schedule_message(2, self.refresh_state)
 	
+
+
+
+#a
+
