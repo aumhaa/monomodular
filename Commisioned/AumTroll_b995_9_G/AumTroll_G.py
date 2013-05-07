@@ -82,6 +82,7 @@ class AumTroll_G(AumTroll):
 		self._session = SessionComponent(num_tracks, num_scenes)				#we create our SessionComponent with the variables we set above it
 		self._session.name = "Session"											#we name it so we can access it in m4l
 		self._session.set_offsets(0, 0)											#we set the initial offset to the far left, top of the session grid
+		self._session._track_banking_increment = 4
 		self._session.set_stop_track_clip_value(STOP_CLIP[self._rgb])			#we assign the colors that will be displayed when the stop_clip button is pressed. This value comes from CNTRLR_Map.py, which is imported in the header of our script
 		self._scene = [None for index in range(4)]								#we create an array to hold the Scene subcomponents so that we can get to them if we need them.
 		for row in range(num_scenes):											#now we'll fill the array with different objects that were created when we called the SessionComponent() module
@@ -124,11 +125,18 @@ class AumTroll_G(AumTroll):
 		self.refresh_state()
 	
 
-	def _deassign_all(self, *a, **k):
+	def deassign_live_controls(self, *a, **k):
 		for index in range(4):
 			self._encoder[index].send_value(0, True)
-			self._encoder[index].clear_send_cache()
-		super(AumTroll_G, self)._deassign_all(*a, **k)
+			self._encoder[index].clear_send_cache()							
+			self._mixer.channel_strip(index+4).set_volume_control(None)		#Since we gave our mixer 4 tracks above, we'll now assign our fader controls to it																#for the left side of the mixer
+			self._mixer.channel_strip(index+4).set_solo_button(None)		#remove the solo button assignments
+			self._mixer.channel_strip(index+4).set_arm_button(None)		#remove the arm button assignments
+			self._mixer.channel_strip(index+4).set_mute_button(None)		#remove the mute button assignments
+			self._mixer.channel_strip(index+4).set_select_button(None)	#remove the select button assignments
+		self._device_navigator.set_device_clip_toggle_button(None)
+		self._device_navigator.set_detail_toggle_button(None)
+		super(AumTroll_G, self).deassign_live_controls(*a, **k)
 	
 
 
@@ -138,6 +146,8 @@ class AumTroll_G(AumTroll):
 		for index in range(16):
 			self._grid[index].force_next_send()
 		for index in range(32):
+			#self._button[index].set_on_off_values(0, 127)
+			self._button[index].send_value(0, True)
 			self._button[index].force_next_send()
 		for index in range(8):
 			self._encoder_button[index+4].send_value(0, True)
@@ -151,41 +161,42 @@ class AumTroll_G(AumTroll):
 
 		"""here we assign the left side of our mixer's buttons on the lower 32 keys"""
 		if self._monohm is None:
-			for index in range(4):															#we set up a recursive loop to assign all four of our track channel strips' controls
-				self._button[index+16].set_on_value(MUTE[self._rgb])						#set the mute color from the Map.py
-				self._mixer.channel_strip(index).set_mute_button(self._button[index+16])	#assign the mute buttons to our mixer channel strips
-				self._button[index+28].set_on_value(MUTE[self._rgb])						#set the mute color from the Map.py
-				self._mixer.channel_strip(index+4).set_mute_button(self._button[index+28])	#assign the mute buttons to our mixer channel strips
+			with self.component_guard():
+				for index in range(4):															#we set up a recursive loop to assign all four of our track channel strips' controls
+					self._button[index+16].set_on_value(MUTE[self._rgb])						#set the mute color from the Map.py
+					self._mixer.channel_strip(index).set_mute_button(self._button[index+16])	#assign the mute buttons to our mixer channel strips
+					self._button[index+28].set_on_value(MUTE[self._rgb])						#set the mute color from the Map.py
+					self._mixer.channel_strip(index+4).set_mute_button(self._button[index+28])	#assign the mute buttons to our mixer channel strips
 
-				self._button[index].set_on_off_values(SELECT[self._rgb], SELECT_OFF[self._rgb])
-				self._mixer.channel_strip(index).set_select_button(self._button[index])	#assign the select buttons to our mixer channel strips
-				self._button[index+12].set_on_off_values(SELECT[self._rgb], SELECT_OFF[self._rgb])	#set the select color from the Map.py
-				self._mixer.channel_strip(index+4).set_select_button(self._button[index+12])	#assign the select buttons to our mixer channel strips
+					self._button[index].set_on_off_values(SELECT[self._rgb], SELECT_OFF[self._rgb])
+					self._mixer.channel_strip(index).set_select_button(self._button[index])	#assign the select buttons to our mixer channel strips
+					self._button[index+12].set_on_off_values(SELECT[self._rgb], SELECT_OFF[self._rgb])	#set the select color from the Map.py
+					self._mixer.channel_strip(index+4).set_select_button(self._button[index+12])	#assign the select buttons to our mixer channel strips
 
-			self._session.set_stop_track_clip_buttons(tuple(self._button[index+4] for index in range(8)))	#these last two lines assign the send_reset buttons and the stop_clip buttons for each track
-			for index in range(8):
-				self._button[index + 4].set_on_off_values(STOP_CLIP[self._rgb], STOP_CLIP[self._rgb])	#this assigns the custom colors defined in the Map.py file to the stop_clip buttons.  They have seperate on/off values, but we assign them both the same value so we can always identify them
-				self._button[index + 4].send_value(STOP_CLIP[self._rgb], True)				#finally, we send the on/off colors out to turn the LEDs on for the stop clip buttons
-			for index in range(4):															#set up a for loop to generate an index for assigning the session nav buttons' colors
-				self._button[index + 20].set_on_off_values(SESSION_NAV[self._rgb], SESSION_NAV_OFF[self._rgb])	#assign the colors from Map.py to the session nav buttons
-			self._session.set_track_bank_buttons(self._button[21], self._button[20])		#set the track bank buttons for the Session navigation controls
-			self._session.set_scene_bank_buttons(self._button[23], self._button[22])		#set the scnee bank buttons for the Session navigation controls
+				self._session.set_stop_track_clip_buttons(tuple(self._button[index+4] for index in range(8)))	#these last two lines assign the send_reset buttons and the stop_clip buttons for each track
+				for index in range(8):
+					self._button[index + 4].set_on_off_values(STOP_CLIP[self._rgb], STOP_CLIP[self._rgb])	#this assigns the custom colors defined in the Map.py file to the stop_clip buttons.  They have seperate on/off values, but we assign them both the same value so we can always identify them
+					self._button[index + 4].send_value(STOP_CLIP[self._rgb], True)				#finally, we send the on/off colors out to turn the LEDs on for the stop clip buttons
+				for index in range(4):															#set up a for loop to generate an index for assigning the session nav buttons' colors
+					self._button[index + 20].set_on_off_values(SESSION_NAV[self._rgb], SESSION_NAV_OFF[self._rgb])	#assign the colors from Map.py to the session nav buttons
+				self._session.set_track_bank_buttons(self._button[21], self._button[20])		#set the track bank buttons for the Session navigation controls
+				self._session.set_scene_bank_buttons(self._button[23], self._button[22])		#set the scnee bank buttons for the Session navigation controls
 
-			"""this section assigns the grid to the clip launch functionality of the SessionComponent"""
-			for column in range(4):															#we need to set up a double recursion so that we can generate the indexes needed to assign the grid buttons
-				for row in range(4):														#the first recursion passes the column index, the second the row index
-					self._scene[row].clip_slot(column).set_launch_button(self._grid[(row*4)+column])	#we use the indexes to grab the first the scene and then the clip we assigned above, and then we use them again to define the button held in the grid array that we want to assign to the clip slot from the session component
+				"""this section assigns the grid to the clip launch functionality of the SessionComponent"""
+				for column in range(4):															#we need to set up a double recursion so that we can generate the indexes needed to assign the grid buttons
+					for row in range(4):														#the first recursion passes the column index, the second the row index
+						self._scene[row].clip_slot(column).set_launch_button(self._grid[(row*4)+column])	#we use the indexes to grab the first the scene and then the clip we assigned above, and then we use them again to define the button held in the grid array that we want to assign to the clip slot from the session component
 
-			for index in range(4):															#set up a for loop to generate an index for assigning the session nav buttons' colors
-				self._button[index + 24].set_on_off_values(SHIFTS[self._rgb], SHIFTS_OFF[self._rgb])	#assign the colors from Map.py to the session nav buttons
+				for index in range(4):															#set up a for loop to generate an index for assigning the session nav buttons' colors
+					self._button[index + 24].set_on_off_values(SHIFTS[self._rgb], SHIFTS_OFF[self._rgb])	#assign the colors from Map.py to the session nav buttons
 
-			self._session_zoom.set_zoom_button(self._button[24])							#assign the lower right key button to the shift function of the Zoom component
-			self._session.update()															#tell the Session component to update so that the grid will display the currently selected session region
-			self._session.set_enabled(True)													#enable the Session Component
-			self._session_zoom.set_enabled(True)											#enable the Session Zoom
+				self._session_zoom.set_zoom_button(self._button[24])							#assign the lower right key button to the shift function of the Zoom component
+				self._session.update()															#tell the Session component to update so that the grid will display the currently selected session region
+				self._session.set_enabled(True)													#enable the Session Component
+				self._session_zoom.set_enabled(True)											#enable the Session Zoom
 
-			self._device_navigator.set_device_clip_toggle_button(self._button[25])
-			self._device_navigator.set_detail_toggle_button(self._button[26])
+				self._device_navigator.set_device_clip_toggle_button(self._button[25])
+				self._device_navigator.set_detail_toggle_button(self._button[26])
 		else:
 			for index in range(8):
 				self._mixer2.channel_strip(index).set_volume_control(self._fader[index])
@@ -219,4 +230,11 @@ class AumTroll_G(AumTroll):
 		self._device.set_enabled(True)													#enable the Device Component
 		self._device_navigator.set_enabled(True)										#enable the Device Navigator
 		self._device.update()															#tell the Device component to update its assingments so that it will detect the currently selected device parameters and display them on the encoder rings
-		
+		#self._mixer.update()
+		#self.request_rebuild_midi_map()
+	
+
+
+
+#a
+
