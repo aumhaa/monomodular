@@ -951,7 +951,7 @@ class AumTroll(Cntrlr):
 	
 
 	def _deassign_monomodular_controls(self):
-		self.log_message('deassign mod controls')
+		#self.log_message('deassign mod controls')
 		if self._monohm != None:
 			self._monohm._host._set_key_buttons(None)
 			self._monohm._host._set_bank_buttons(None)
