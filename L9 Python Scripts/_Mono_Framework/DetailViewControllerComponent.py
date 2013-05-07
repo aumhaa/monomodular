@@ -51,7 +51,7 @@ class DetailViewControllerComponent(ControlSurfaceComponent):
             self._device_clip_toggle_button = button
             if self._device_clip_toggle_button != None:
                 self._device_clip_toggle_button.add_value_listener(self._device_clip_toggle_value)
-            self._rebuild_callback()
+            #self._rebuild_callback()
             self.update()
         return None
 
@@ -65,7 +65,7 @@ class DetailViewControllerComponent(ControlSurfaceComponent):
             self._detail_toggle_button = button
             if self._detail_toggle_button != None:
                 self._detail_toggle_button.add_value_listener(self._detail_toggle_value)
-            self._rebuild_callback()
+            #self._rebuild_callback()
             self.update()
         return None
 
@@ -101,7 +101,7 @@ class DetailViewControllerComponent(ControlSurfaceComponent):
             self._shift_button = button
             if self._shift_button != None:
                 self._shift_button.add_value_listener(self._shift_value)
-            self._rebuild_callback()
+            #self._rebuild_callback()
             self.update()
         return None
 

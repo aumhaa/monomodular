@@ -113,7 +113,7 @@ class MonoLinkClient(MonoClient):
 		self._send(MSG[self._format], [column, row, value])
 	
 
-	def _send(self, addr = None, val = None):
+	def _send(self, addr = None, val = None, args3 = None, args4 = None):
 		#self._host.log_message('_send' + str(addr) + str(val))
 		if (self._enabled is True) and (self.oscServer != None):
 			#self._host.log_message('really _send' + str(self._prefix) + str(addr) + ' ' + str(val))
