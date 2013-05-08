@@ -1368,13 +1368,13 @@ class Base(ControlSurface):
 					for column in range(8): 
 						for row in range(4):
 							self._scene[row].clip_slot(column).set_launch_button(self._pad[column + (row*8)])
-					self._device.set_bank_nav_buttons(self._button[4], self._button[5])
-					self._device_navigator.set_nav_buttons(self._button[7], self._button[6])
-					self._current_nav_buttons = self._button[4:8]
-					for index in range(4):
-						self._button[index+4].set_on_off_values(DEVICE_NAV, 0)
-					self._device.update()
-					self._device_navigator.update()
+				self._device.set_bank_nav_buttons(self._button[4], self._button[5])
+				self._device_navigator.set_nav_buttons(self._button[7], self._button[6])
+				self._current_nav_buttons = self._button[4:8]
+				for index in range(4):
+					self._button[index+4].set_on_off_values(DEVICE_NAV, 0)
+				self._device.update()
+				self._device_navigator.update()
 			else:
 				if not self._assign_midi_shift_layer():
 					for index in range(8):
