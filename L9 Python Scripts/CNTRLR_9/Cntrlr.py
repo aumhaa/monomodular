@@ -1017,6 +1017,8 @@ class Cntrlr(ControlSurface):
 				self._scene[row].clip_slot(column).set_launch_button(self._grid[(row*4)+column])	#we use the indexes to grab the first the scene and then the clip we assigned above, and then we use them again to define the button held in the grid array that we want to assign to the clip slot from the session component
 
 		"""this section assigns the faders and knobs"""
+		for index in range(4):								
+			self._mixer.channel_strip(index).set_volume_control(self._fader[index])		#Since we gave our mixer 4 tracks above, we'll now assign our fader controls to it						
 		for index in range(2):
 			self._mixer.return_strip(index).set_volume_control(self._fader[index+4])	#assign the right faders to control the volume of our return strips
 		self._mixer.master_strip().set_volume_control(self._fader[7])					#assign the far right fader to control our master channel strip
@@ -1159,6 +1161,7 @@ class Cntrlr(ControlSurface):
 			self._chopper.set_enabled(True)				#turn the Chopper Component on
 		else:											#otherwise, if we are in modMode
 			self.deassign_live_controls()				#remove all of our assignments from the controls and refresh their caches
+			self.assign_mixer_controls()
 			self._host.set_enabled(True)				#turn on the Monomod Component
 			self._host._set_dial_matrix(self._dial_matrix, self._dial_button_matrix)	#assign the encoders to it
 			#self._host._set_knobs(tuple(self._knobs))
@@ -1171,6 +1174,15 @@ class Cntrlr(ControlSurface):
 					self._shift_mode._modes_buttons[index].send_value(1)				#turn the LED white
 			if not self._host._active_client.is_connected():							#if there is not a mod in the currently selected modSlot
 				self.assign_alternate_mappings(self._shift_mode._mode_index)			#assign a different MIDI channel that the controls translated to when entering Live
+	
+
+	def assign_mixer_controls(self):
+		for index in range(4):								
+			self._mixer.channel_strip(index).set_volume_control(self._fader[index])		#Since we gave our mixer 4 tracks above, we'll now assign our fader controls to it						
+		for index in range(2):
+			self._mixer.return_strip(index).set_volume_control(self._fader[index+4])	#assign the right faders to control the volume of our return strips
+		self._mixer.master_strip().set_volume_control(self._fader[7])					#assign the far right fader to control our master channel strip
+		self._mixer.set_prehear_volume_control(self._fader[6])							#assign the remaining fader to control our prehear volume of the the master channel strip
 	
 
 	"""assign alternate mappings to the controls when a modSlot is selected that doesn't contain a mod"""
