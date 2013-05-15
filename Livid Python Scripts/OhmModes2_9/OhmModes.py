@@ -1,5 +1,5 @@
-# 2013.03.09 13:59:21 PST
-#Embedded file name: /Applications/Ableton Live 9 Beta.app/Contents/App-Resources/MIDI Remote Scripts/OhmModes2/OhmModes.py
+# amounra 0513 : http://www.aumhaa.com
+
 from __future__ import with_statement
 import Live
 import time
@@ -25,25 +25,23 @@ from _Framework.SessionZoomingComponent import SessionZoomingComponent
 from _Framework.SliderElement import SliderElement
 from _Framework.TrackFilterComponent import TrackFilterComponent
 from _Framework.TransportComponent import TransportComponent
-from SpecialMixerComponent import SpecialMixerComponent
-from ShiftModeComponent import ShiftModeComponent
-from DetailViewControllerComponent import DetailViewControllerComponent
-from FlashingButtonElement import FlashingButtonElement
-from ScaleModeComponent import ScaleModeComponent
-from OctaveModeComponent import OctaveModeComponent
-from MonoBridgeElement import MonoBridgeElement
-from MonoEncoderElement2 import MonoEncoderElement2
-from ModNumModeComponent import ModNumModeComponent
-from MonoBridgeElement import MonoBridgeElement
-from MonomodComponent import MonomodComponent
-from MonomodModeComponent import MonomodModeComponent
-from SwitchboardElement import SwitchboardElement
-from MonoClient import MonoClient
-from CodecEncoderElement import CodecEncoderElement
-from EncoderMatrixElement import EncoderMatrixElement
-import LiveUtils
+
+
+from _Mono_Framework.MonomodComponent import MonomodComponent
+from _Mono_Framework.MonoBridgeElement import MonoBridgeElement
+from _Mono_Framework.MonoEncoderElement import MonoEncoderElement
+from _Mono_Framework.MonoBridgeElement import MonoBridgeElement
+from _Mono_Framework.DetailViewControllerComponent import DetailViewControllerComponent
+from _Mono_Framework.MonoButtonElement import MonoButtonElement
+from _Mono_Framework.SwitchboardElement import SwitchboardElement
+from _Mono_Framework.MonoClient import MonoClient
+from _Mono_Framework.CodecEncoderElement import CodecEncoderElement
+from _Mono_Framework.EncoderMatrixElement import EncoderMatrixElement
+from _Mono_Framework.LiveUtils import *
+
 from _Generic.Devices import *
 from Ohm64_Map import *
+
 session = None
 mixer = None
 switchxfader = (240, 0, 1, 97, 2, 15, 1, 247)
@@ -91,34 +89,563 @@ MIDI_NOTE_OFF_STATUS = 128
 MIDI_CC_STATUS = 176
 MIDI_PB_STATUS = 224
 
+INC_DEC = [-1, 1]
+
+
+class ModNumModeComponent(ModeSelectorComponent):
+	__module__ = __name__
+	__doc__ = ' Special Class that selects mode 0 if a mode button thats active is pressed'
+
+
+	def __init__(self, script, callback, *a, **k):
+		super(ModNumModeComponent, self).__init__(*a, **k)
+		self._script = script
+		self.update = callback
+		self._modes_buttons = []
+		self._set_protected_mode_index(0)
+		self._last_mode = 0
+	
+
+	def set_mode_buttons(self, buttons):
+		for button in self._modes_buttons:
+			button.remove_value_listener(self._mode_value)
+		self._modes_buttons = []
+		if (buttons != None):
+			for button in buttons:
+				assert isinstance(button, ButtonElement or MonoButtonElement)
+				identify_sender = True
+				button.add_value_listener(self._mode_value, identify_sender)
+				self._modes_buttons.append(button)
+	
+
+	def number_of_modes(self):
+		return 6
+	
+
+	def set_mode(self, mode):
+		assert isinstance(mode, int)
+		assert (mode in range(self.number_of_modes()))
+		if (self._mode_index != mode):
+			self._mode_index = mode
+			self.update()
+	
+
+
+class OctaveModeComponent(ModeSelectorComponent):
+
+
+	def __init__(self, script, *a, **k):
+		super(OctaveModeComponent, self).__init__(*a, **k)
+		self._script = script
+		self._set_protected_mode_index(3)
+	
+
+	def set_mode_buttons(self, buttons):
+		for button in self._modes_buttons:
+			button.remove_value_listener(self._mode_value)
+		self._modes_buttons = []
+		if (buttons != None):
+			for button in buttons:
+				assert isinstance(button, ButtonElement or MonoButtonElement)
+				identify_sender = True
+				button.add_value_listener(self._mode_value, identify_sender)
+				self._modes_buttons.append(button)
+			if (self._mode_index < 6):
+				self._modes_buttons[1].turn_on()
+			else:
+				self._modes_buttons[1].turn_off()
+			if (self._mode_index > 0):
+				self._modes_buttons[0].turn_on()
+			else:
+				self._modes_buttons[0].turn_off()
+	
+
+	def set_mode(self, mode):
+		assert isinstance(mode, int)
+		mode = max(min(self._mode_index + INC_DEC[mode], 7), 0)
+		if (self._mode_index != mode):
+			self._mode_index = mode
+			self.update()		
+	
+
+	def set_mode_toggle(self, button):
+		assert ((button == None) or isinstance(button, ButtonElement or MonoButtonElement))
+		if (self._mode_toggle != None):
+			self._mode_toggle.remove_value_listener(self._toggle_value)
+		self._mode_toggle = button
+		if (self._mode_toggle != None):
+			self._mode_toggle.add_value_listener(self._toggle_value)
+	
+
+	def number_of_modes(self):
+		return 7
+	
+
+	def update(self):
+		if(self.is_enabled() is True):
+			for column in range(8):
+				for row in range(3):
+					self._script._grid[column][row + 4].set_identifier(int(PAGE1_KEYS_MAP[column][row]) + int(PAGE1_MODES_MAP[self._script._scale_mode._mode_index][column]) + int(self._script._octave_mode._mode_index * 12)) 
+			if (self._mode_index < 6):
+				self._modes_buttons[0].turn_on()
+			else:
+				self._modes_buttons[0].turn_off()
+			if (self._mode_index > 0):
+				self._modes_buttons[1].turn_on()
+			else:
+				self._modes_buttons[1].turn_off()
+	
+
+
+class ShiftModeComponent(ModeSelectorComponent):
+	__module__ = __name__
+	__doc__ = ' Special Class that uses two shift buttons and is lockable '
+
+
+	def __init__(self, script, *a, **k):
+		super(ShiftModeComponent, self).__init__(*a, **k)
+		self._script = script
+		self._mode_toggle1 = None
+		self._mode_toggle2 = None
+		self._mode_toggle3 = None
+		self._set_protected_mode_index(0)
+		self._last_mode = 0
+	
+
+	def set_mode_toggle(self, button1, button2, button3):
+		assert ((button1 == None) or isinstance(button1, ButtonElement or MonoButtonElement))
+		if (self._mode_toggle1 != None):
+			self._mode_toggle1.remove_value_listener(self._toggle_value_left)
+		self._mode_toggle1 = button1
+		if (self._mode_toggle1 != None):
+			self._mode_toggle1.add_value_listener(self._toggle_value_left)
+		assert ((button2 == None) or isinstance(button2, ButtonElement or MonoButtonElement))
+		if (self._mode_toggle2 != None):
+			self._mode_toggle2.remove_value_listener(self._toggle_value_right)
+		self._mode_toggle2 = button2
+		if (self._mode_toggle2 != None):
+			self._mode_toggle2.add_value_listener(self._toggle_value_right)
+		assert ((button3 == None) or isinstance(button3, ButtonElement or MonoButtonElement))
+		if (self._mode_toggle3 != None):
+			self._mode_toggle3.remove_value_listener(self._toggle_value_mod)
+		self._mode_toggle3 = button3
+		if (self._mode_toggle3 != None):
+			self._mode_toggle3.add_value_listener(self._toggle_value_mod)
+		self._script.request_rebuild_midi_map()
+	
+
+	def _toggle_value_left(self, value):
+		if(value>0):
+			self._toggle_value(1)
+	
+
+	def _toggle_value_right(self, value):
+		if(value>0):
+			self._toggle_value(2)
+	
+
+	def _toggle_value_mod(self, value):
+		if(value>0):
+			self._toggle_value(3)
+	
+
+	def _toggle_value(self, value):
+		assert (self._mode_toggle1 != None)
+		assert (self._mode_toggle2 != None)
+		assert (self._mode_toggle3 != None)
+		assert isinstance(value, int)
+		if(value is self._mode_index):
+			if value is 3:
+				self.set_mode(self._last_mode)
+			else:
+				self.set_mode(0)
+		else:
+			self.set_mode(value)
+	
+
+	def number_of_modes(self):
+		return 4
+	
+
+	def update(self):
+		self._script.deassign_matrix()
+		if(self._mode_index is 0):
+			self._mode_toggle1.turn_off()
+			self._mode_toggle2.turn_off()
+			self._mode_toggle3.turn_off()
+			self._script.schedule_message(1, self._script.assign_page_0)
+			#self._script.assign_page_0()
+		elif(self._mode_index is 1):
+			self._mode_toggle1.turn_on()
+			self._mode_toggle2.turn_off()
+			self._mode_toggle3.turn_off()
+			self._script.schedule_message(1, self._script.assign_page_1)
+			#self._script.assign_page_1()
+		elif(self._mode_index is 2):
+			self._mode_toggle1.turn_off()
+			self._mode_toggle2.turn_on()
+			self._mode_toggle3.turn_off()
+			self._script.schedule_message(1, self._script.assign_page_2)
+			#self._script.assign_page_2()
+		elif(self._mode_index is 3):
+			self._mode_toggle1.turn_off()
+			self._mode_toggle2.turn_off()
+			self._mode_toggle3.turn_on()
+			self._script.schedule_message(1, self._script.assign_mod)
+			#self._script.assign_mod()
+	
+
+	def set_mode(self, mode):
+		assert isinstance(mode, int)
+		assert (mode in range(self.number_of_modes()))
+		if (self._mode_index != mode):
+			if mode < 3:
+				self._last_mode = mode
+			self._mode_index = mode
+			self.update()
+	
+
+
+class SpecialMixerComponent(MixerComponent):
+	' Special mixer class that uses return tracks alongside midi and audio tracks'
+	__module__ = __name__
+
+
+	def __init__(self, *a, **k):
+		self._is_locked = False #added
+		super(SpecialMixerComponent, self).__init__(*a, **k)
+	
+
+	def on_selected_track_changed(self):
+		selected_track = self.song().view.selected_track
+		if selected_track != None:
+			if (self._selected_strip != None):
+				if self._is_locked == False: #added
+					self._selected_strip.set_track(selected_track)
+			if self.is_enabled():
+				if (self._next_track_button != None):
+					if (selected_track != self.song().master_track):
+						self._next_track_button.turn_on()
+					else:
+						self._next_track_button.turn_off()
+				if (self._prev_track_button != None):
+					if (selected_track != self.song().tracks[0]):
+						self._prev_track_button.turn_on()
+					else:
+						self._prev_track_button.turn_off()		  
+	
+
+	def tracks_to_use(self):
+		return tuple(self.song().visible_tracks) + tuple(self.song().return_tracks)
+	
+
+class ScaleModeComponent(ModeSelectorComponent):
+
+
+	def __init__(self, script, *a, **k):
+		super(ScaleModeComponent, self).__init__(*a, **k)
+		self._script = script
+		self._set_protected_mode_index(0)
+	
+
+	def set_mode_buttons(self, buttons):
+		for button in self._modes_buttons:
+			button.remove_value_listener(self._mode_value)
+		self._modes_buttons = []
+		if (buttons != None):
+			for button in buttons:
+				assert isinstance(button, ButtonElement or MonoButtonElement)
+				identify_sender = True
+				button.add_value_listener(self._mode_value, identify_sender)
+				self._modes_buttons.append(button)
+			for index in range(len(self._modes_buttons)):
+				if (index == self._mode_index):
+					self._modes_buttons[index].turn_on()
+				else:
+					self._modes_buttons[index].turn_off()
+	
+
+	def set_mode_toggle(self, button):
+		assert ((button == None) or isinstance(button, ButtonElement or MonoButtonElement))
+		if (self._mode_toggle != None):
+			self._mode_toggle.remove_value_listener(self._toggle_value)
+		self._mode_toggle = button
+		if (self._mode_toggle != None):
+			self._mode_toggle.add_value_listener(self._toggle_value)
+	
+
+	def number_of_modes(self):
+		return 8
+	
+
+	def update(self):
+		if(self.is_enabled() is True):
+			for column in range(8):
+				for row in range(3):
+					self._script._grid[column][row + 4].set_identifier(int(PAGE1_KEYS_MAP[column][row]) + int(PAGE1_MODES_MAP[self._script._scale_mode._mode_index][column]) + int(self._script._octave_mode._mode_index * 12))
+			for index in range(len(self._modes_buttons)):
+				if (index == self._mode_index):
+					self._modes_buttons[index].turn_on()
+				else:
+					self._modes_buttons[index].turn_off()
+	
+
+		
+
+class OhmModesMonomodComponent(MonomodComponent):
+	__module__ = __name__
+	__doc__ = ' Component that encompasses and controls 4 Monomod clients '
+
+
+	def __init__(self, script, *a, **k):
+		super(OhmModesMonomodComponent, self).__init__(script, *a, **k)
+		self._host_name = 'Cntrlr'
+	
+
+	def disconnect(self):
+		#self._script.log_message('monomod disconnect')
+		self.set_allow_update(False)  ###added
+		self._active_client = None
+		self._set_shift_button(None)
+		self._set_lock_button(None)
+		self._set_nav_buttons(None)
+		self._set_key_buttons(None)
+#		self._set_dial_matrix(None, None)
+		self._set_button_matrix(None)
+		self._client = []
+		self._script = []
+		return None 
+	
+
+	def connect_to_clients(self, monomod):
+		self._client = monomod._client
+		self._select_client(0)
+		#self._active_client._is_active = True
+		#self._script.log_message('connected to clients')
+	
+
+	def _select_client(self, number):
+		self._active_client = self._client[number]
+		self._colors = self._color_maps[number]
+		for client in self._client:
+			if self in client._active_host:
+				client._active_host.remove(self)
+		self._active_client._active_host.append(self)
+		self._x = self._offsets[number][0]
+		self._y = self._offsets[number][1]
+		self._script.set_local_ring_control(self._active_client._local_ring_control)
+		self._script.schedule_message(5, self._script.set_absolute_mode, self._active_client._absolute_mode)
+		self._active_client._device_component.set_enabled(self._active_client._device_component._type != None)
+		#self._active_client.set_channel()
+		self.update()
+	
+
+	def _set_button_matrix(self, grid):
+		assert isinstance(grid, (ButtonMatrixElement, type(None)))
+		if grid != self._grid:
+			if self._grid != None:
+				self._grid.remove_value_listener(self._matrix_value)
+			self._grid = grid
+			if self._grid != None:
+				self._grid.add_value_listener(self._matrix_value)
+			for client in self._client:
+				client._update_controls_dictionary()
+			self.update()
+		return None
+	
+
+	def _matrix_value(self, value, x, y, is_momentary):
+		assert (self._grid != None)
+		assert (value in range(128))
+		assert isinstance(is_momentary, type(False))
+		if (self.is_enabled()):
+			self._active_client._send_grid(x + self._x, y + self._y, value)
+	
+
+	def _send_grid(self, column, row, value):
+		if self.is_enabled() and self._grid != None:
+			if column in range(self._x, self._x + 4):
+				if row in range(self._y, self._y + 4):
+					self._grid.get_button(column - self._x, row - self._y).send_value(int(self._colors[value]))
+
+	
+
+	def _alt_value(self, value):
+		if self._shift_pressed == 0:
+			self._alt_pressed = value != 0
+			self._active_client._send('alt', int(self._alt_pressed))
+			self.update()
+	
+
+	def _update_alt_button(self):
+		if self._alt_button!=None:
+			if self._alt_pressed != 0:
+				self._alt_button.turn_on()
+			else:
+				self._alt_button.turn_off()
+	
+
+	def _set_key_buttons(self, *a, **k):
+		super(OhmModesMonomodComponent, self)._set_key_buttons(*a, **k)
+		for client in self._client:
+			client._update_controls_dictionary()
+	
+
+	def _key_value(self, value, sender):
+		if self.is_enabled():
+			self._active_client._send_key(self._keys.index(sender), int(value!=0))
+	
+
+	def _update_keys(self):
+		for index in range(32):
+			self._send_key(index, self._active_client._key[index])
+	
+
+	def _send_key(self, index, value):
+		if self.is_enabled():
+			#if (self._shift_pressed > 0) or (self._locked > 0):
+			#	self._grid.get_button(index, 7).send_value(int(self._colors[value]))
+			if  self._keys != None and len(self._keys) > index:
+				self._keys[index].send_value(int(self._colors[value]))
+	
+
+	def _set_knobs(self, knobs):
+		assert (knobs == None) or (isinstance(knobs, tuple))
+		for knob in self._knobs:
+			knob.remove_value_listener(self._knob_value)
+		self._knobs = []
+		if knobs != None:
+			assert len(knobs) == 24
+			for knob in knobs:
+				assert isinstance(knob, EncoderElement)
+				self._knobs.append(knob)
+				knob.add_value_listener(self._knob_value, True)
+	
+
+	def _knob_value(self, value, sender):
+		if self.is_enabled():
+			self._active_client._send_knob(self._knobs.index(sender), value)
+	
+
+	def on_enabled_changed(self):
+		self._scroll_up_ticks_delay = -1
+		self._scroll_down_ticks_delay = -1
+		self._scroll_right_ticks_delay = -1
+		self._scroll_left_ticks_delay = -1
+		if self.is_enabled():
+			self._active_client._device_component.set_enabled(self._active_client._device_component._type!=None)
+			self._script.set_absolute_mode(self._active_client._absolute_mode)
+			self._script.set_local_ring_control(self._active_client._local_ring_control)
+		else:
+			self._active_client._device_component.set_enabled(False)
+			self._script.set_absolute_mode(1)
+			self._script.set_local_ring_control(1)
+		self.update()
+	
+
+	def _set_dial_matrix(self, dial_matrix, button_matrix):
+		assert isinstance(dial_matrix, (EncoderMatrixElement, type(None)))
+		if dial_matrix != self._dial_matrix:
+			if self._dial_matrix != None:
+				self._dial_matrix.remove_value_listener(self._dial_matrix_value)
+			self._dial_matrix = dial_matrix
+			if self._dial_matrix != None:
+				self._dial_matrix.add_value_listener(self._dial_matrix_value)
+			
+		assert isinstance(button_matrix, (ButtonMatrixElement, type(None)))
+		if button_matrix != self._dial_button_matrix:
+			if self._dial_button_matrix != None:
+				self._dial_button_matrix.remove_value_listener(self._dial_button_matrix_value)
+			self._dial_button_matrix = button_matrix
+			if self._dial_button_matrix != None:
+				self._dial_button_matrix.add_value_listener(self._dial_button_matrix_value)
+		for client in self._client:
+			client._update_controls_dictionary()
+		self.update()
+		return None
+	
+
+	def _dial_matrix_value(self, value, x, y):
+		if self.is_enabled() and self._active_client != None:
+			if self._script._absolute_mode == 0:
+				value = RELATIVE[int(value == 1)]
+			self._active_client._send_dial(x, y, value)
+	
+
+	def _reset_encoder(self, coord):
+		self._dial_matrix.get_dial(coord[0], coord[1])._reset_to_center()
+	
+
+	def _dial_button_matrix_value(self, value, x, y, force):
+		if (self.is_enabled()) and (self._active_client != None):
+			self._active_client._send_dial_button(x, y, value)
+	
+
+	def _send_wheel(self, column, row, wheel):
+		if self.is_enabled() and wheel != None:  ##not isinstance(wheel, type(None)):
+				if column < 4 and row < 3:
+					dial = self._dial_matrix.get_dial(column, row)
+					dial._ring_value = int(wheel['value'])
+					dial._ring_mode = int(wheel['mode'])
+					dial._ring_green = int(wheel['green']!=0)
+					dial._ring_log = int(wheel['log'])
+					#if dial._raw_custom != str(wheel['custom']):
+					dial._ring_custom = dial._calculate_custom(str(wheel['custom']))	##comon, really?  Everytime??
+				self._dial_button_matrix.send_value(column, row, wheel['white'])
+				if(self._script._absolute_mode > 0) and (not self._active_client._device_component.is_enabled()):
+					dial.send_value(wheel['log'], True)
+				#elif(self._device.is_enabled()):
+				#	self._dial_matrix.get_dial(column, row).set_value(wheel['value'])
+					
+				##Need to insert routine for sending to MonoDevice from here, so that parameters can be updated from it.
+
+	
+
+	def _send_to_lcd(self, column, row, wheel):
+		#self._script.log_message('send lcd ' + str(column) + ' ' + str(row) + ' ' + str(wheel['pn']))
+		if self.is_enabled() and not self._active_client._device_component.is_enabled():
+			self._script.notification_to_bridge(str(wheel['pn']), str(wheel['pv']), self._dial_matrix.get_dial(column, row))
+	
+
+	def _update_wheel(self):
+		if self._dial_button_matrix != None:
+			for column in range(4):
+				for row in range(3):
+					self._send_wheel(column, row, self._active_client._wheel[column][row])
+					if not self._active_client._device_component.is_enabled():
+						self._send_to_lcd(column, row, self._active_client._wheel[column][row])
+						#self._script.log_message('dial value update' +str(column) + str(row) + str(self._active_client._wheel[column][row]['value']))
+	
+
+
 class OhmModes(ControlSurface):
 	__module__ = __name__
 	__doc__ = ' OhmModes controller script '
 
+
 	def __init__(self, c_instance):
-		ControlSurface.__init__(self, c_instance)
+		super(OhmModes, self).__init__(c_instance)
+		self._version_check = 'b994'
+		self._host_name = 'Ohm'
+		self._color_type = 'OhmRGB'
+		self._hosts = []
+		self.hosts = []
+		self._client = [ None for index in range(6) ]
+		self._active_client = None
+		self._rgb = 0
+		self._timer = 0
+		self._touched = 0
+		self.flash_status = 1
+		self._backlight = 127
+		self._backlight_type = 'static'
+		self._ohm = 127
+		self._ohm_type = 'static'
+		self._pad_translations = PAD_TRANSLATION
+		self._device_selection_follows_track_selection = FOLLOW
+		self._keys_octave = 5
+		self._keys_scale = 0
+		self._tempo_buttons = None
 		with self.component_guard():
-			self._version_check = 'b994'
-			self._host_name = 'Ohm'
-			self._color_type = 'OhmRGB'
-			self._hosts = []
-			self.hosts = []
-			self._client = [ None for index in range(6) ]
-			self._active_client = None
-			self.log_message('<<<<<<<<<<<<<<<<<<<<<<<<< OhmModes ' + str(self._version_check) + ' log opened >>>>>>>>>>>>>>>>>>>>>>>>>')
-			self._rgb = 0
-			self._timer = 0
-			self._touched = 0
-			self.flash_status = 1
-			self._backlight = 127
-			self._backlight_type = 'static'
-			self._ohm = 127
-			self._ohm_type = 'static'
-			self._pad_translations = PAD_TRANSLATION
-			self._device_selection_follows_track_selection = FOLLOW
-			self._keys_octave = 5
-			self._keys_scale = 0
-			self._tempo_buttons = None
 			self._setup_monobridge()
 			self._setup_controls()
 			self._setup_transport_control()
@@ -138,23 +665,28 @@ class OhmModes(ControlSurface):
 				self._rgb = FORCE_COLOR_TYPE
 			else:
 				self.schedule_message(10, self.query_ohm, None)
-			self.log_message(str(self._highlighting_session_component))
+		self.log_message('<<<<<<<<<<<<<<<<<<<<<<<<< OhmModes ' + str(self._version_check) + ' log opened >>>>>>>>>>>>>>>>>>>>>>>>>')
+	
 
 	def query_ohm(self):
 		self._send_midi(tuple(check_model))
+	
 
 	def update_display(self):
 		ControlSurface.update_display(self)
 		self._timer = (self._timer + 1) % 256
 		self.flash()
 		self.strobe()
+	
 
 	def _setup_monobridge(self):
 		self._monobridge = MonoBridgeElement(self)
 		self._monobridge.name = 'MonoBridge'
+	
 
 	def get_device_bank(self):
 		return self._device._bank_index
+	
 
 	def _setup_controls(self):
 		is_momentary = True
@@ -163,10 +695,10 @@ class OhmModes(ControlSurface):
 		self._button = [ None for index in range(8) ]
 		self._menu = [ None for index in range(6) ]
 		for index in range(8):
-			self._fader[index] = MonoEncoderElement2(MIDI_CC_TYPE, CHANNEL, OHM_FADERS[index], Live.MidiMap.MapMode.absolute, 'Fader_' + str(index), index, self)
+			self._fader[index] = MonoEncoderElement(MIDI_CC_TYPE, CHANNEL, OHM_FADERS[index], Live.MidiMap.MapMode.absolute, 'Fader_' + str(index), index, self)
 
 		for index in range(8):
-			self._button[index] = FlashingButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, OHM_BUTTONS[index], 'Button_' + str(index), self)
+			self._button[index] = MonoButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, OHM_BUTTONS[index], 'Button_' + str(index), self)
 
 		for index in range(16):
 			self._dial[index] = CodecEncoderElement(MIDI_CC_TYPE, CHANNEL, OHM_DIALS[index], Live.MidiMap.MapMode.absolute, 'Encoder_' + str(index), index, self)
@@ -176,13 +708,13 @@ class OhmModes(ControlSurface):
 			self._knobs.append(self._dial[index])
 
 		for index in range(6):
-			self._menu[index] = FlashingButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, OHM_MENU[index], 'Menu_' + str(index), self)
+			self._menu[index] = MonoButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, OHM_MENU[index], 'Menu_' + str(index), self)
 
 		self._crossfader = EncoderElement(MIDI_CC_TYPE, CHANNEL, CROSSFADER, Live.MidiMap.MapMode.absolute)
 		self._crossfader.name = 'Crossfader'
-		self._livid = FlashingButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, LIVID, 'Livid_Button', self)
-		self._shift_l = FlashingButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, SHIFT_L, 'Page_Button_Left', self)
-		self._shift_r = FlashingButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, SHIFT_R, 'Page_Button_Right', self)
+		self._livid = MonoButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, LIVID, 'Livid_Button', self)
+		self._shift_l = MonoButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, SHIFT_L, 'Page_Button_Left', self)
+		self._shift_r = MonoButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, SHIFT_R, 'Page_Button_Right', self)
 		self._matrix = ButtonMatrixElement()
 		self._matrix.name = 'Matrix'
 		self._grid = [ None for index in range(8) ]
@@ -191,7 +723,7 @@ class OhmModes(ControlSurface):
 		for column in range(8):
 			self._grid[column] = [ None for index in range(8) ]
 			for row in range(8):
-				self._grid[column][row] = FlashingButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, column * 8 + row, 'Grid_' + str(column) + '_' + str(row), self)
+				self._grid[column][row] = MonoButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, column * 8 + row, 'Grid_' + str(column) + '_' + str(row), self)
 
 		for row in range(5):
 			button_row = []
@@ -242,9 +774,10 @@ class OhmModes(ControlSurface):
 			button_row.append(self._key[16 + column])
 
 		self._key_matrix.add_row(tuple(button_row))
+	
 
 	def _setup_ohmmod(self):
-		self._host = MonomodComponent(self)
+		self._host = OhmModesMonomodComponent(self)
 		self._host.name = 'Monomod_Host'
 		self.hosts = [self._host]
 		self._hosts = [self._host]
@@ -261,10 +794,12 @@ class OhmModes(ControlSurface):
 		self._host._active_client = self._client[0]
 		self._host._active_client._is_active = True
 		self._host.connect_to_clients(self)
+	
 
 	def _setup_switchboard(self):
 		self._switchboard = SwitchboardElement(self, self._client)
 		self._switchboard.name = 'Switchboard'
+	
 
 	def _setup_modes(self):
 		self._shift_mode = ShiftModeComponent(self)
@@ -278,6 +813,7 @@ class OhmModes(ControlSurface):
 		self._modNum.name = 'Mod_Number'
 		self._modNum.set_mode = self._modNum_set_mode(self._modNum)
 		self._modNum.set_mode_buttons([ self._menu[index] for index in range(6) ])
+	
 
 	def _modNum_set_mode(self, modNum):
 		def set_mode(mode):
@@ -288,11 +824,13 @@ class OhmModes(ControlSurface):
 					modNum._mode_index = mode
 					modNum.update()
 		return set_mode
+		
 	
 
 	def _setup_transport_control(self):
 		self._transport = TransportComponent()
 		self._transport.name = 'Transport'
+	
 
 	def _setup_mixer_control(self):
 		global mixer
@@ -310,6 +848,7 @@ class OhmModes(ControlSurface):
 			mixer.channel_strip(index)._invert_mute_feedback = True
 
 		self.song().view.selected_track = mixer.channel_strip(0)._track
+	
 
 	def _setup_session_control(self):
 		global session
@@ -333,6 +872,7 @@ class OhmModes(ControlSurface):
 		self._session_zoom = SessionZoomingComponent(session)
 		self._session_zoom.name = 'Session_Overview'
 		self.set_highlighting_session_component(self._session)
+	
 
 	def _assign_session_colors(self):
 		self.log_message('assign session colors')
@@ -356,6 +896,7 @@ class OhmModes(ControlSurface):
 
 		self._session.on_scene_list_changed()
 		self._shift_mode.update()
+	
 
 	def _setup_device_control(self):
 		self._device = DeviceComponent()
@@ -364,31 +905,34 @@ class OhmModes(ControlSurface):
 		self._device_navigator = DetailViewControllerComponent()
 		self._device_navigator.name = 'Device_Navigator'
 		self._device_selection_follows_track_selection = FOLLOW
+	
 
 	def device_follows_track(self, val):
 		self._device_selection_follows_track_selection = val == 1
 		return self
+	
 
 	def _setup_crossfader(self):
 		self._mixer.set_crossfader_control(self._crossfader)
+	
 
 	def disconnect(self):
 		"""clean things up on disconnect"""
 		self.song().view.remove_selected_track_listener(self._update_selected_device)
 		self.log_message(time.strftime('%d.%m.%Y %H:%M:%S', time.localtime()) + '--------------= OhmModes log closed =--------------')
 		ControlSurface.disconnect(self)
+	
 
 	def _get_num_tracks(self):
 		return self.num_tracks
+	
 
 	def flash(self):
-		for row in range(8):
-			if self._button[row]._flash_state > 0:
-				self._button[row].flash(self._timer)
-			for column in range(8):
-				button = self._grid[column][row]
-				if button._flash_state > 0:
-					button.flash(self._timer)
+		if(self.flash_status > 0):
+			for control in self.controls:
+				if isinstance(control, MonoButtonElement):
+					control.flash(self._timer)
+	
 
 	def strobe(self):
 		if self._backlight_type != 'static':
@@ -408,6 +952,7 @@ class OhmModes(ControlSurface):
 				self._ohm = int(math.fabs(int(self._timer * 8 % 64 - 64)) + 16)
 		self._send_midi(tuple([176, 63, int(self._ohm)]))
 		self._send_midi(tuple([176, 31, int(self._ohm)]))
+	
 
 	def deassign_matrix(self):
 		with self.component_guard():
@@ -475,6 +1020,7 @@ class OhmModes(ControlSurface):
 			self._mixer.update()
 			self._matrix.reset()
 		self.request_rebuild_midi_map()
+	
 
 	def _assign_page_constants(self):
 		with self.component_guard():
@@ -495,6 +1041,7 @@ class OhmModes(ControlSurface):
 			self._menu[1]._on_value = STOP_COLOR[self._rgb]
 			self._menu[1].send_value(STOP_COLOR[self._rgb], True)
 			self._device_navigator.set_device_nav_buttons(self._menu[3], self._menu[4])
+	
 
 	def assign_page_0(self):
 		with self.component_guard():
@@ -532,6 +1079,7 @@ class OhmModes(ControlSurface):
 			#self._mixer.update_all()
 		self.request_rebuild_midi_map()
 		#self.log_message('assign_page_0')
+	
 
 	def assign_page_1(self):
 		with self.component_guard():
@@ -583,6 +1131,7 @@ class OhmModes(ControlSurface):
 			self._menu[1]._on_value = STOP_COLOR[self._rgb]
 			self._transport.set_enabled(True)
 		self.request_rebuild_midi_map()
+	
 
 	def assign_page_2(self):
 		with self.component_guard():
@@ -626,6 +1175,7 @@ class OhmModes(ControlSurface):
 			self._transport.set_enabled(True)
 			#self._mixer.update()
 		self.request_rebuild_midi_map()
+	
 
 	def assign_mod(self):
 		with self.component_guard():
@@ -637,6 +1187,7 @@ class OhmModes(ControlSurface):
 			self._host._set_key_buttons(tuple(self._key))
 			if not self._host._active_client.is_connected():
 				self.assign_alternate_mappings(self._modNum._mode_index + 1)
+	
 
 	def modNum_update(self):
 		if self._modNum._is_enabled == True:
@@ -650,6 +1201,7 @@ class OhmModes(ControlSurface):
 					button.send_value(1)
 				else:
 					button.send_value(self._client[self._modNum._modes_buttons.index(button)]._mod_color)
+	
 
 	def assign_alternate_mappings(self, chan):
 		for column in range(8):
@@ -660,9 +1212,11 @@ class OhmModes(ControlSurface):
 			knob.set_enabled(chan is 0)
 
 		self.request_rebuild_midi_map()
+	
 
 	def display_mod_colors(self):
 		pass
+	
 
 	def _update_selected_device(self):
 		if self._device_selection_follows_track_selection is True:
@@ -674,6 +1228,7 @@ class OhmModes(ControlSurface):
 				self.song().view.select_device(device_to_select)
 			self.set_appointed_device(device_to_select)
 			self.request_rebuild_midi_map()
+	
 
 	def handle_sysex(self, midi_bytes):
 		if len(midi_bytes) > 10:
@@ -704,6 +1259,7 @@ class OhmModes(ControlSurface):
 				self.log_message(str('>>>mono detected'))
 				self._rgb = 1
 		self._assign_session_colors()
+	
 
 	def to_encoder(self, num, val):
 		rv = int(val * 127)
@@ -711,25 +1267,19 @@ class OhmModes(ControlSurface):
 		p = self._device._parameter_controls[num]._parameter_to_map_to
 		newval = val * (p.max - p.min) + p.min
 		p.value = newval
+	
 
 	def set_local_ring_control(self, val = 1):
 		self._local_ring_control = val != 0
+	
 
 	def set_absolute_mode(self, val = 1):
 		self._absolute_mode = val != 0
+	
 
 	def send_ring_leds(self):
-		"""if self._host._is_enabled == True:
-		leds = [240, 0, 1, 97, 8, 31]
-		for index in range(12):
-				wheel = self._encoder[index]
-				bytes = wheel._get_ring()
-				leds.append(bytes[0])
-				leds.append(int(bytes[1]) + int(bytes[2]))
-		leds.append(247)
-		self._send_midi(tuple(leds))"""
 		pass
-
+	
 
 	def _set_tempo_buttons(self, buttons):
 		if self._tempo_buttons != None:
@@ -738,19 +1288,21 @@ class OhmModes(ControlSurface):
 		self._tempo_buttons = buttons
 		if buttons != None:
 			for button in buttons:
-				 assert isinstance(button, FlashingButtonElement)
+				 assert isinstance(button, MonoButtonElement)
 			self._tempo_buttons[0].set_on_off_values(4, 0)
 			self._tempo_buttons[0].add_value_listener(self._tempo_value, True)
 			self._tempo_buttons[1].set_on_off_values(4, 0)
 			self._tempo_buttons[1].add_value_listener(self._tempo_value, True)
 			self._tempo_buttons[0].turn_on()
 			self._tempo_buttons[1].turn_on()
+	
 
 	def _tempo_value(self, value, sender):
 		if value > 0 and self._tempo_buttons.index(sender) == 0:
 			self.song().tempo = round(min(self.song().tempo + 1, 999))
 		elif value > 0 and self._tempo_buttons.index(sender) == 1:
 			self.song().tempo = round(max(self.song().tempo - 1, 20))
+	
 
 	def generate_strip_string(self, display_string):
 		NUM_CHARS_PER_DISPLAY_STRIP = 12
@@ -780,17 +1332,20 @@ class OhmModes(ControlSurface):
 
 		ret += ' '
 		return ret
+	
 
 	def notification_to_bridge(self, name, value, sender):
-		if isinstance(sender, tuple([MonoEncoderElement2, CodecEncoderElement])):
+		if isinstance(sender, tuple([MonoButtonElement, CodecEncoderElement])):
 			self._monobridge._send(sender.name, 'lcd_name', str(self.generate_strip_string(name)))
 			self._monobridge._send(sender.name, 'lcd_value', str(self.generate_strip_string(value)))
+	
 
 	def touched(self):
 		if self._touched is 0:
 			self._monobridge._send('touch', 'on')
 			self.schedule_message(2, self.check_touch)
 		self._touched += 1
+	
 
 	def check_touch(self):
 		if self._touched > 5:
@@ -801,6 +1356,7 @@ class OhmModes(ControlSurface):
 			self._monobridge._send('touch', 'off')
 		else:
 			self.schedule_message(2, self.check_touch)
+	
 
 	def get_clip_names(self):
 		clip_names = []
@@ -811,7 +1367,9 @@ class OhmModes(ControlSurface):
 					return clip_slot._clip_slot
 
 		return clip_names
+	
 
 	def shift_update(self):
 		pass
+	
 
