@@ -1556,6 +1556,11 @@ class Base(ControlSurface):
 
 	def _assign_alternate_mappings(self, chan = 0):
 		self._send_midi(USERBUTTONMODE)
+		for pad in self._touchpad:
+			pad.use_default_message()
+			pad.set_channel(chan)
+			pad.set_enabled(False)
+			pad.reset()
 		for pad in self._pad:
 			pad.use_default_message()
 			pad.set_channel(chan)
