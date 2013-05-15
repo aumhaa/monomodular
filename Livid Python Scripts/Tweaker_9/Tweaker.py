@@ -559,7 +559,7 @@ class PadOffsetComponent(ModeSelectorComponent):
 	def __init__(self, script, *a, **k):
 		super(PadOffsetComponent, self).__init__(*a, **k)
 		self._script = script
-		self.set_mode(0)	
+		self._set_protected_mode_index(0)	
 	
 
 	def set_mode_buttons(self, buttons):
