@@ -30,16 +30,18 @@ from _Framework.PhysicalDisplayElement import PhysicalDisplayElement
 from _Framework.SubjectSlot import subject_slot, subject_slot_group
 
 """Custom files, overrides, and files from other scripts"""
-from MonoButtonElement import *
-from MonoEncoderElement import MonoEncoderElement
-from MonoBridgeElement import MonoBridgeElement
+from _Mono_Framework.MonoButtonElement import *
+from _Mono_Framework.MonoEncoderElement import MonoEncoderElement
+from _Mono_Framework.MonoBridgeElement import MonoBridgeElement
 
 """to be included from Monomodular"""
 import sys
-import modRemixNet as RemixNet
-import modOSC
+import _Mono_Framework.modRemixNet as RemixNet
+import _Mono_Framework.modOSC
 
 DIRS = [47, 48, 50, 49]
+_NOTENAMES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B']
+NOTENAMES = [(_NOTENAMES[index%12] + ' ' + str(int(index/12))) for index in range(128)]
 SCALENAMES = None
 SCALEABBREVS = None
 from Map import *
@@ -1136,7 +1138,7 @@ class Base(ControlSurface):
 							self._display_chars('-', newval[0])
 					else:
 						self._offsets[cur_chan]['offset'] = offset
-						self.show_message('New root is ' + str(self._offsets[cur_chan]['offset']))
+						self.show_message('New root is Note# ' + str(self._offsets[cur_chan]['offset']) + ', ' + str(NOTENAMES[self._offsets[cur_chan]['offset']]))
 						newval = list(str(offset))
 						if len(newval)>=2:
 							self._display_chars(newval[0], newval[1])
@@ -1459,7 +1461,7 @@ class Base(ControlSurface):
 								self._pad[column + (row*8)].press_flash(0, True)
 								self._pad_CC[column + (row*8)].set_identifier((DRUMNOTES[column + (row*8)] + (self._offsets[cur_chan]['drumoffset']*4))%127)
 							else:
-								note_pos = column + (abs(3-row)*int(vertoffset/2))
+								note_pos = column + (abs(3-row)*int(vertoffset))
 								note =	offset + SCALES[scale][note_pos%scale_len] + (12*int(note_pos/scale_len))
 								self._pad[column + (row*8)].set_identifier(note%127)
 								self._pad[column + (row*8)].scale_color = KEYCOLORS[(note%12 in WHITEKEYS) + (((note_pos%scale_len)==0)*2)]

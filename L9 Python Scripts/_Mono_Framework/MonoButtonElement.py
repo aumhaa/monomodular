@@ -68,19 +68,23 @@ class MonoButtonElement(ButtonElement):
 	
 
 	def set_force_next_value(self):
+		self._last_sent_message = None
 		self._force_next_value = True
 
 	def set_enabled(self, enabled):
 		self._is_enabled = enabled
 		self._request_rebuild()
 
-	def turn_on(self):
+	def turn_on(self, force = False):
+		self.force_next_send()
 		self.send_value(self._on_value)
 
-	def turn_off(self):
+	def turn_off(self, force = False):
+		self.force_next_send()
 		self.send_value(self._off_value)
 
-	def reset(self):
+	def reset(self, force = False):
+		self.force_next_send()
 		self.send_value(0)
 		
 	def receive_value(self, value):
@@ -117,6 +121,7 @@ class MonoButtonElement(ButtonElement):
 					is_input = True
 					self._report_value(value, (not is_input))
 				self._flash_state = round((value -1)/self._num_colors)
+				self._force_next_value = False
 
 
 	def script_wants_forwarding(self):
