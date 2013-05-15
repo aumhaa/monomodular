@@ -40,7 +40,7 @@ from _Mono_Framework.EncoderMatrixElement import EncoderMatrixElement
 from _Mono_Framework.LiveUtils import *
 
 from _Generic.Devices import *
-from Ohm64_Map import *
+from Map import *
 
 session = None
 mixer = None
@@ -390,7 +390,166 @@ class ScaleModeComponent(ModeSelectorComponent):
 					self._modes_buttons[index].turn_off()
 	
 
+
+class OhmModesMonoClient(MonoClient):
+
+
+	def __init__(self, *a, **k):
+		super(OhmModesMonoClient, self).__init__(*a, **k)
+		self._raw = False
+	
+
+	def _banner(self):
+		pass
+	
+
+	def disconnect_client(self, *a, **k):
+		super(CntrlrMonoClient, self).disconnect_client(*a, **k)
+		if not self._mod_dial == None:
+			if self._mod_dial._parameter is self._mod_dial_parameter:
+				self._mod_dial.release_parameter()
+	
+
+	def _create_knobs(self):
+		self._knob = [None for index in range(24)]
+		for index in range(24):
+			self._knob[index] = 0
+	
+
+	def _send_knob(self, index, value):
+		self._send('knob', index, value)
+	
+
+	def _send_key(self, index, value):
+		self._send('key', index, value)
+		if self._raw is True:
+			control = self._host._host._keys[index]
+			if control != None:
+				self._send('raw', control._msg_type + control._original_channel, control._original_identifier, value)
+	
+
+	def _send_grid(self, column, row, value):
+		self._send('grid', column, row, value)
+		if self._raw is True:
+			control = self._host._host._grid.get_button(column, row)
+			if control != None:
+				self._send('raw', control._msg_type + control._original_channel, control._original_identifier, value)
+		#self._host.log_message('client ' + str(self._number) + ' received')
+	
+
+	def _send_dial(self, column, row, value):
+		self._send('dial', column, row, value)
+		if self._raw is True:
+			control = self._host._host._dial_matrix.get_dial(column, row)
+			if control != None:
+				self._send('raw', control._msg_type + control._original_channel, control._original_identifier, value)
+	
+
+	def _send_dial_button(self, column, row, value):
+		if row > 0:
+			self._send('dial_button', column, row-1, value)
+			if self._raw is True:
+				control = self._host._host._dial_button_matrix.get_button(column, row)
+				if control != None:
+					self._send('raw', control._msg_type + control._original_channel, control._original_identifier, value)
+	
+
+	def receive_wheel(self, number, parameter, value):
+		column = number%4
+		row = int(number/4)
+		#if row > 0:
+		self._wheel[column][row][parameter] = value
+		if self.is_active():
+			if parameter == 'pn' or parameter == 'pv':
+				for host in self._active_host:
+					#host._script.log_message(str(column) + str(row) + str(self._wheel[column][row][parameter]))
+					host._send_to_lcd(column, row, self._wheel[column][row])
+			if parameter!='white':
+				for host in self._active_host:
+					host._send_wheel(column, row, self._wheel[column][row])
+			elif row > 0:
+				for host in self._active_host:
+					host._send_wheel(column, row, self._wheel[column][row])
+		#elif (column==self._number) and  (parameter=='value'):
+		#	self._wheel[column][row][parameter] = value	
+			
+	
+
+	"""raw data integration"""
+	def set_raw_enabled(self, value):
+		self._raw = value > 0
+		#self._host.log_message('raw enabled' + str(self._raw))
+		if(self._raw is True):
+			self._update_controls_dictionary()
+	
+
+	def receive_raw(self, Type, Identifier, value):
+		#self._host.log_message('recieve raw' + str(Type) + str(Identifier) + str(value))
+		if self._controls[Type]:
+			if Identifier in self._controls[Type]:
+				self._controls[Type][Identifier](value)
+	
+
+	def _update_controls_dictionary(self):
+		if self._host._host != None:
+			self._controls = [{}, {}]
+			if self._control_defs['grid'] != None:
+				for column in range(self._control_defs['grid'].width()):
+					for row in range(self._control_defs['grid'].height()):
+						button = self._control_defs['grid'].get_button(column, row)
+						if button != None:
+							self._controls[0][button._original_identifier]=self._make_grid_call(column, row)
+			if self._control_defs['keys'] != None:
+				for index in range(len(self._control_defs['keys'])):
+					key = self._control_defs['keys'][index]
+					if key != None:
+						self._controls[0][key._original_identifier]=self._make_key_call(index)
+			if self._control_defs['dials'] != None:
+				for index in range(12):
+					column = index%4
+					row = int(index/4)
+					dial = self._control_defs['dials'].get_dial(column, row)
+					if dial != None:
+						self._controls[1][dial._original_identifier]=self._make_dial_call(index)
+			if self._control_defs['buttons'] != None:
+				for index in range(8):
+					column = index%4
+					row = int(index/4)+1
+					button = self._control_defs['buttons'].get_button(column, row)
+					if button != None:
+						self._controls[0][button._original_identifier]=self._make_dial_button_call(index+4)
+	
+
+	def _make_grid_call(self, column, row):
+		def recieve_grid(value):
+			#self._host.log_message('receive grid' + str(value) + str(column) + str(row))
+			self.receive_grid(column, row, value)
+		return recieve_grid
 		
+	
+
+	def _make_key_call(self, number):
+		def receive_key(value):
+			#self._host.log_message('receive key' + str(number) + str(value))
+			self.receive_key(number, value)
+		return receive_key
+		
+	
+
+	def _make_dial_call(self, number):
+		def receive_wheel(value):
+			self.receive_wheel(number, 'value', value)
+		return receive_wheel
+		
+	
+
+	def _make_dial_button_call(self, number):
+		def receive_wheel(value):
+			self.receive_wheel(number, 'white', value)
+		return receive_wheel
+		
+	
+
 
 class OhmModesMonomodComponent(MonomodComponent):
 	__module__ = __name__
@@ -782,7 +941,7 @@ class OhmModes(ControlSurface):
 		self.hosts = [self._host]
 		self._hosts = [self._host]
 		for index in range(6):
-			self._client[index] = MonoClient(self, index)
+			self._client[index] = OhmModesMonoClient(self, index)
 			self._client[index].name = 'Client_' + str(index)
 			self._client[index]._device_component.set_parameter_controls(tuple([ self._dial[num] for num in range(12) ]))
 			self._client[index]._control_defs = {'dials': self._dial_matrix,
