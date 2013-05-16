@@ -1,4 +1,4 @@
-# by amounra 0413 : http://www.aumhaa.com
+# by amounra 0513 : http://www.aumhaa.com
 
 from __future__ import with_statement
 import Live
@@ -22,7 +22,7 @@ from Push.Push import Push
 from Push.OptionalElement import OptionalElement
 from Push.ComboElement import ComboElement
 from Push.HandshakeComponent import HandshakeComponent, make_dongle_message
-from Push.ValueComponent import ValueComponent, ParameterValueComponent
+from Push.ValueComponent import ValueComponent, ParameterValueComponent, ValueDisplayComponent, ParameterValueDisplayComponent
 from Push.ConfigurableButtonElement import ConfigurableButtonElement
 from Push.SpecialSessionComponent import SpecialSessionComponent, SpecialSessionZoomingComponent
 from Push.SpecialMixerComponent import SpecialMixerComponent
@@ -52,7 +52,7 @@ from Push.TouchStripController import TouchStripControllerComponent, TouchStripE
 from Push.Selection import L9CSelection
 from Push.AccentComponent import AccentComponent
 from Push.AutoArmComponent import AutoArmComponent
-from Push.PadSensitivity import PadSensitivity
+#from Push.PadSensitivity import PadSensitivity
 
 from _Mono_Framework.MonomodComponent import MonomodComponent
 from _Mono_Framework.MonoDeviceComponent import MonoDeviceComponent
@@ -130,7 +130,7 @@ class AumPushDisplayingDeviceComponent(MonoDeviceComponent):
 	
 
 	def set_alternating_display(self, display):
-		self._parent._host.log_message('set alternating display: ' + str(display))
+		#self._parent._host.log_message('set alternating display: ' + str(display))
 		if not display:
 			display = None
 		if self._alternating_display != display:
@@ -139,17 +139,17 @@ class AumPushDisplayingDeviceComponent(MonoDeviceComponent):
 	
 
 	def set_name_display_line(self, line):
-		self._parent._host.log_message('set name display: ' + str(line))
+		#self._parent._host.log_message('set name display: ' + str(line))
 		self._set_display_line(line, self._parameter_name_data_sources)
 	
 
 	def set_value_display_line(self, line):
-		self._parent._host.log_message('set value display: ' + str(line))
+		#self._parent._host.log_message('set value display: ' + str(line))
 		self._set_display_line(line, self._parameter_value_data_sources)
 	
 
 	def set_graphic_display_line(self, line):
-		self._parent._host.log_message('set graphic display: ' + str(line))
+		#self._parent._host.log_message('set graphic display: ' + str(line))
 		self._set_display_line(line, self._parameter_graphic_data_sources)
 	
 
@@ -208,7 +208,7 @@ class AumPushDisplayingDeviceComponent(MonoDeviceComponent):
 				shift_knobs = int(host._alt_pressed and host_is_push) * 4
 				for index in range(len(host._parameter_controls)):
 					parameter_index = index + (shift_knobs * (index > 3))
-					self._parent._host.log_message('index: ' + str(parameter_index) + ' ' + str(shift_knobs))
+					#self._parent._host.log_message('index: ' + str(parameter_index) + ' ' + str(shift_knobs))
 					parameter = None
 					if (bank != None) and (parameter_index in range(len(bank))):
 						parameter = self.get_parameter_by_name(self._device, bank[parameter_index])
@@ -232,7 +232,7 @@ class AumPushDisplayingDeviceComponent(MonoDeviceComponent):
 					index += 1
 
 			#_, self._mapped_parameters = self._current_bank_details()
-			self._parent._host.log_message('new parameters: ' + str(self._mapped_parameters))
+			#self._parent._host.log_message('new parameters: ' + str(self._mapped_parameters))
 			parameters = map(self._mapped_parameter, xrange(len(self._parameter_name_data_sources)))
 			self._update_parameter_values()
 			for parameter, name_data_source in zip(parameters, self._parameter_name_data_sources):
@@ -265,7 +265,7 @@ class AumPushDisplayingDeviceComponent(MonoDeviceComponent):
 			for index, data_source in enumerate(self._parameter_value_data_sources):
 				parameter = self._mapped_parameter(index)
 				data_source.set_display_string(' ' if parameter == None else unicode(parameter))
-				self._parent._host.log_message('parameter: ' + str(' ' if parameter == None else unicode(parameter)))
+				#self._parent._host.log_message('parameter: ' + str(' ' if parameter == None else unicode(parameter)))
 
 			for index, data_source in enumerate(self._parameter_graphic_data_sources):
 				param = self._mapped_parameter(index)
@@ -348,8 +348,8 @@ class AumPush(Push):
 		self._host.name = 'Monomod_Host'
 		self._host._host_name = 'AumPush'
 		#self._mod.set_button_matrix(self._matrix)
-		self._host.layer = Layer( button_matrix = self._matrix, shift_button = self._shift_button, alt_button = self._select_button, nav_up_button = self._nav_up_button, nav_down_button = self._nav_down_button, nav_left_button = self._nav_left_button, nav_right_button = self._nav_right_button, encoder_touch_buttons=self._global_param_touch_buttons, name_display_line=self._display_line1, value_display_line=self._display_line2, alternating_display=self._display_line3, device_controls = self._global_param_controls, device_buttons = self._track_state_buttons )  #, lcd_displays = self._display_line1)
-		self._host.layer.priority = 1
+		self._host.layer = Layer( button_matrix = self._matrix, shift_button = self._shift_button, alt_button = self._select_button, nav_up_button = self._nav_up_button, nav_down_button = self._nav_down_button, nav_left_button = self._nav_left_button, nav_right_button = self._nav_right_button, encoder_touch_buttons=self._global_param_touch_buttons, name_display_line=self._display_line1, value_display_line=self._display_line2, alternating_display=self._display_line3, device_controls = self._global_param_controls, key_buttons = self._track_state_buttons )  #, lcd_displays = self._display_line1)
+		self._host.layer.priority = 4
 		self.hosts = [self._host]
 	
 
@@ -358,6 +358,13 @@ class AumPush(Push):
 		self._setup_mod()
 		self._note_modes.add_mode('mod', self._host)
 		self._note_modes.add_mode('looperhack', self._audio_loop)
+	
+
+	def _init_global_actions(self, *a, **k):
+		super(AumPush, self)._init_global_actions(*a, **k)
+		self._tempo._display.update = self._make_display_update(self._tempo._display)
+		self._swing_amount._display.update = self._make_display_update(self._swing_amount._display)
+		self._master_vol._display.update = self._make_parameter_display_update(self._master_vol._display)
 	
 
 	def _on_new_device_set(self):
@@ -386,6 +393,7 @@ class AumPush(Push):
 			self._note_modes.selected_mode = 'disabled'
 			#self._device.set_enabled(False)
 			self._note_modes.selected_mode = 'mod'
+			self._update_monodevice_hack()
 		elif track and track.has_audio_input:
 			self._note_modes.selected_mode = 'looperhack'
 		elif drum_device:
@@ -398,12 +406,28 @@ class AumPush(Push):
 		super(AumPush, self).disconnect()
 	
 
-#	def connect_script_instances(self, *a, **k):
-#		super(AumPush, self).connect_script_instances(*a, **k)
-#		with self.component_guard():
-#			for client in self._host._client:
-#				client._device_component = AumPushDisplayingDeviceComponent(client, MOD_BANK_DICT, MOD_TYPES)
+	def _make_display_update(self, display):
+		def update():
+			ValueDisplayComponent.update(display)
+			if not display.is_enabled():
+				self._update_monodevice_hack()
+		return update
+		
+	
 
+	def _make_parameter_display_update(self, display):
+		def update():
+			ParameterValueDisplayComponent.update(display)
+			if not display.is_enabled():
+				self._update_monodevice_hack()
+		return update
+		
+	
+
+	def _update_monodevice_hack(self):
+		#self.log_message('update hack')
+		if self._note_modes.selected_mode is 'mod':
+			self._host._active_client._device_component.update()
 	
 
 
@@ -446,16 +470,6 @@ class PushMonomodComponent(MonomodComponent):
 			with self._script.component_guard():
 				self._client[number]._device_component = AumPushDisplayingDeviceComponent(self._client[number], MOD_BANK_DICT, MOD_TYPES)
 		super(PushMonomodComponent, self)._select_client(number)
-	
-
-	def set_device_buttons(self, buttons):
-		#if buttons != self._device_buttons:
-		#	self._device_buttons = buttons
-		#	if self._device_buttons != None:
-		#		for button in self._device_buttons:
-		#			button.turn_off()
-		#	self._on_device_buttons_value.subject = self._device_buttons
-		pass
 	
 
 	def select_active_client(self):
@@ -557,6 +571,13 @@ class PushMonomodComponent(MonomodComponent):
 					self._set_parameter_controls([control for control in controls])
 				else:
 					self._set_parameter_controls(None)
+	
+
+	def set_key_buttons(self, buttons):
+		key_buttons = None
+		if isinstance(buttons, ButtonMatrixElement):
+			key_buttons = tuple([button for button in buttons])
+		self._set_key_buttons(key_buttons)
 	
 
 	def set_lcd_displays(self, lcds):
