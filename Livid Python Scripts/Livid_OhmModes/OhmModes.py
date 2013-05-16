@@ -410,6 +410,29 @@ class OhmModesMonoClient(MonoClient):
 				self._mod_dial.release_parameter()
 	
 
+	"""initiation methods"""
+	def _create_grid(self):
+		self._grid = [None for index in range(4)]
+		for column in range(4):
+			self._grid[column] = [None for index in range(4)]
+			for row in range(4):
+				self._grid[column][row] = 0
+	
+
+	def _create_keys(self):
+		self._key = [None for index in range(32)]
+		for index in range(32):
+			self._key[index] = 0
+	
+
+	def _create_wheels(self):
+		self._wheel = [[] for index in range(4)]
+		for column in range(4):
+			self._wheel[column] = [[] for index in range(3)]
+			for row in range(3):
+				self._wheel[column][row] = {'log': 0, 'value': 0, 'mode':0, 'white': 0, 'green': 0, 'custom':'00000000', 'pn':' ', 'pv': '0'}
+	
+
 	def _create_knobs(self):
 		self._knob = [None for index in range(24)]
 		for index in range(24):
@@ -644,8 +667,18 @@ class OhmModesMonomodComponent(MonomodComponent):
 				self._alt_button.turn_off()
 	
 
-	def _set_key_buttons(self, *a, **k):
-		super(OhmModesMonomodComponent, self)._set_key_buttons(*a, **k)
+	def _set_key_buttons(self, buttons, *a, **k):
+		assert (buttons == None) or (isinstance(buttons, tuple))
+		for key in self._keys:
+			if key.value_has_listener(self._key_value):
+				key.remove_value_listener(self._key_value)
+		self._keys = []
+		if buttons != None:
+			assert len(buttons) == 32
+			for button in buttons:
+				#assert isinstance(button, MonoButtonElement)
+				self._keys.append(button)
+				button.add_value_listener(self._key_value, True)
 		for client in self._client:
 			client._update_controls_dictionary()
 	
@@ -820,10 +853,10 @@ class OhmModes(ControlSurface):
 			self.song().view.add_selected_track_listener(self._update_selected_device)
 			self.show_message('OhmModes Control Surface Loaded')
 			self._send_midi(tuple(switchxfader))
-			if FORCE_TYPE is True:
-				self._rgb = FORCE_COLOR_TYPE
-			else:
-				self.schedule_message(10, self.query_ohm, None)
+		if FORCE_TYPE is True:
+			self._rgb = FORCE_COLOR_TYPE
+		else:
+			self.schedule_message(10, self.query_ohm, None)
 		self.log_message('<<<<<<<<<<<<<<<<<<<<<<<<< OhmModes ' + str(self._version_check) + ' log opened >>>>>>>>>>>>>>>>>>>>>>>>>')
 	
 
@@ -1390,6 +1423,7 @@ class OhmModes(ControlSurface):
 	
 
 	def handle_sysex(self, midi_bytes):
+		#self.log_message('sysex: ' + str(midi_bytes))
 		if len(midi_bytes) > 10:
 			if midi_bytes[:11] == tuple([240,
 			 126,
@@ -1404,6 +1438,11 @@ class OhmModes(ControlSurface):
 			 7]):
 				self.log_message(str('>>>color detected'))
 				self._rgb = 0
+				for button in self._button:
+					button._color_map = COLOR_MAP
+				for column in self._grid:
+					for button in column:
+						button._color_map = COLOR_MAP
 			elif midi_bytes[:11] == tuple([240,
 			 126,
 			 0,
@@ -1417,6 +1456,11 @@ class OhmModes(ControlSurface):
 			 2]):
 				self.log_message(str('>>>mono detected'))
 				self._rgb = 1
+				for button in self._button:
+					button._color_map = [127 for index in range(0, 7)]
+				for column in self._grid:
+					for button in column:
+						button._color_map = [127 for index in range(0, 7)]
 		self._assign_session_colors()
 	
 
