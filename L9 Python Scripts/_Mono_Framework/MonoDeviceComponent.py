@@ -62,7 +62,7 @@ class MonoDeviceComponent(DeviceComponent):
 	
 
 	def _set_type(self, mod_device_type):
-		#self._parent._host.log_message('mods: ' + str(self._mod_types))
+		#self._parent._host.log_message('mods: ' + str(self._MOD_TYPES))
 		if mod_device_type == None:
 			self._device_banks = DEVICE_DICT
 			self._device_best_banks = DEVICE_BOB_DICT
@@ -75,7 +75,7 @@ class MonoDeviceComponent(DeviceComponent):
 			self._type = mod_device_type
 			self._device_banks = self._MOD_TYPES[self._type]
 			self._device_best_banks = self._MOD_TYPES[self._type]
-			self._device_bank_names = self._MOD_BANK_DICT[self._type]
+			self._device_bank_names = self._MOD_BANK_DICT
 			self._set_device_parent(self._device_parent)
 
 	
@@ -86,15 +86,18 @@ class MonoDeviceComponent(DeviceComponent):
 			if self._device_parent.canonical_parent != None:
 				if self._device_parent.canonical_parent.devices_has_listener(self._parent_device_changed):
 					self._device_parent.canonical_parent.remove_devices_listener(self._parent_device_changed)
+		#self._parent._host.log_message('_set_device_parent 1')
 		if isinstance(mod_device_parent, Live.Device.Device):
 			if mod_device_parent.can_have_chains and single is None:
 				self._device_parent = mod_device_parent
 				if self._device_parent.canonical_parent != None:
 					if not self._device_parent.canonical_parent.devices_has_listener(self._parent_device_changed):
 						self._device_parent.canonical_parent.add_devices_listener(self._parent_device_changed)
+				#self._parent._host.log_message('_set_device_parent 2')
 				self._select_parent_chain(self._device_chain)
 			else:
 				self._device_parent = mod_device_parent
+				#self._parent._host.log_message('_set_device_parent 3')
 				self.set_device(self._device_parent, True)
 		elif 'NoDevice' in self._device_banks.keys():
 			#self._parent._host.log_message('setting NoDevice')
@@ -109,13 +112,17 @@ class MonoDeviceComponent(DeviceComponent):
 	
 
 	def _select_parent_chain(self, chain, force = False):
-		#self._parent._host.log_message('_select_parent_chain ' + str(chain) + ' ' + str(self.is_enabled()))
-		self._chain = chain
+		#self._parent._host.log_message('_select_parent_chain ' + str(chain)) # + ' ' + str(self.is_enabled()))
+		self._device_chain = chain  #self._chain = chain  
 		if self._device_parent != None:
 			if isinstance(self._device_parent, Live.Device.Device):
+				#self._parent._host.log_message('_select_parent_chain 1') 
 				if self._device_parent.can_have_chains:
+					#self._parent._host.log_message('_select_parent_chain 2') 
 					if len(self._device_parent.chains) > chain:
+						#self._parent._host.log_message('_select_parent_chain 3') 
 						if len(self._device_parent.chains[chain].devices) > 0:
+							#self._parent._host.log_message('_select_parent_chain 4') 
 							self.set_device(self._device_parent.chains[chain].devices[0], force)
 							#self._parent._host.log_message('_select_parent_chain successful' + str(self._device_parent.chains[chain].devices[0].name))
 					elif 'NoDevice' in self._device_banks.keys():
@@ -235,13 +242,17 @@ class MonoDeviceComponent(DeviceComponent):
 		if self._device != None and not len(self._params) is 0:
 			self._bank_name = ('Bank ' + str(self._bank_index + 1)) #added
 			if (self._device.class_name in self._device_banks.keys()): #modified
+				#self._parent._host.log_message('assign params 1')
 				assert (self._device.class_name in self._device_best_banks.keys())
+				#self._parent._host.log_message('assign params 2')
 				banks = self._device_banks[self._device.class_name]
 				bank = None
 				if (len(banks) > self._bank_index):
 					bank = banks[self._bank_index]
 					if self._is_banking_enabled(): #added
+						#self._parent._host.log_message('_device_bank_names: ' + str(self._device_bank_names))
 						if self._device.class_name in self._device_bank_names.keys(): #added
+							#self._parent._host.log_message('assign params 3')
 							self._bank_name[self._bank_index] = self._device_bank_names[self._device.class_name] #added *recheck
 				for index in range(len(self._params)):
 					parameter = None
@@ -354,11 +365,14 @@ class MonoDeviceComponent(DeviceComponent):
 	
 
 	def set_device(self, device, force = False):
+		#self._parent._host.log_message('set device: ' + str(device) + ' ' + str(force))
+		self._post('set device 0')
 		assert ((device == None) or isinstance(device, Live.Device.Device) or isinstance(device, NoDevice))
 		if self._device != None:
 			if self._device.canonical_parent != None:
 				if self._device.canonical_parent.devices_has_listener(self._device_changed):
 					self._device.canonical_parent.remove_devices_listener(self._device_changed)
+		self._post('set device 1')
 		if ((not self._locked_to_device) and (device != self._device)) or force==True:
 			if (self._device != None):
 				self._device.remove_name_listener(self._on_device_name_changed)
@@ -371,6 +385,7 @@ class MonoDeviceComponent(DeviceComponent):
 						for control in host._parameter_controls:
 							control.release_parameter()
 			self._device = device
+			self._post('set device 2')
 			if (self._device != None):
 				if self._device.canonical_parent != None:
 					if not self._device.canonical_parent.devices_has_listener(self._device_changed):
@@ -381,14 +396,21 @@ class MonoDeviceComponent(DeviceComponent):
 				parameter = self._on_off_parameter()
 				if (parameter != None):
 					parameter.add_value_listener(self._on_on_off_changed)
+			self._post('set device 3')
 			for key in self._device_bank_registry.keys():
 				if (key == self._device):
 					self._bank_index = self._device_bank_registry.get(key, 0)
 					del self._device_bank_registry[key]
 					break
 			self._bank_name = '<No Bank>' #added
+			self._post('set device 4')
 			self._on_device_name_changed()
 			self.update() 
+	
+
+	def _post(self, msg):
+		#self._parent._host.log_message(str(msg))
+		pass
 	
 
 	def update(self):
@@ -397,7 +419,7 @@ class MonoDeviceComponent(DeviceComponent):
 			if self._device != None:
 				self._device_bank_registry[self._device] = self._bank_index
 				for host in self._parent._active_host:
-					if host.is_enabled() and host._parameter_controls != None:
+					if host.is_enabled() and len(host._parameter_controls) > 0:
 						old_bank_name = self._bank_name
 						self._assign_parameters(host)
 						if self._bank_name != old_bank_name:
@@ -410,7 +432,7 @@ class MonoDeviceComponent(DeviceComponent):
 		self._assign_params(self._update_params())
 		if self.is_enabled():
 			for host in self._parent._active_host:
-				if host.is_enabled() and host._parameter_controls != None:
+				if host.is_enabled() and len(host._parameter_controls) > 0:
 					host._script.request_rebuild_midi_map()
 	
 
