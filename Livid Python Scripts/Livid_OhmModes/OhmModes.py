@@ -976,13 +976,13 @@ class OhmModes(ControlSurface):
 		for index in range(6):
 			self._client[index] = OhmModesMonoClient(self, index)
 			self._client[index].name = 'Client_' + str(index)
-			self._client[index]._device_component.set_parameter_controls(tuple([ self._dial[num] for num in range(12) ]))
+			#self._client[index]._device_component.set_parameter_controls(tuple([ self._dial[num] for num in range(12) ]))
 			self._client[index]._control_defs = {'dials': self._dial_matrix,
 			 'buttons': self._dial_button_matrix,
 			 'grid': self._mod_matrix,
 			 'keys': self._key,
 			 'knobs': [ self._dial[num + 12] for num in range(4) ]}
-
+		self._host._set_parameter_controls(self._dial)
 		self._host._active_client = self._client[0]
 		self._host._active_client._is_active = True
 		self._host.connect_to_clients(self)

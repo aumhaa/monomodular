@@ -76,11 +76,6 @@ class MonoDeviceComponent(DeviceComponent):
 			self._device_best_banks = self._MOD_TYPES[self._type]
 			self._device_bank_names = self._MOD_BANK_DICT
 			self._set_device_parent(self._device_parent)
-		#else:
-		#	self._device_banks = DEVICE_DICT
-		#	self._device_best_banks = DEVICE_BOB_DICT
-		#	self._device_bank_names = BANK_NAME_DICT
-		#	self._set_device_parent(self._parent.device)
 	
 
 	def _set_device_parent(self, mod_device_parent, single = None):
@@ -432,8 +427,9 @@ class MonoDeviceComponent(DeviceComponent):
 				if host.is_enabled():
 					if len(host._parameter_controls) > 0:
 						host._script.request_rebuild_midi_map()
-					if not host._device_component is None:
-						host._device_component.update()
+					if hasattr(host, '_device_component'):
+						if not host._device_component is None:
+							host._device_component.update()
 	
 
 	#major hack here....this will need to be changed to a constant based on the length of the MOD_TYPES bank used

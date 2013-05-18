@@ -110,7 +110,7 @@ class AumPush(Push):
 		if not current_device is None:
 			if self._host and self._host._client:
 				for client in self._host._client:
-					self.log_message('cur device: ' + str(current_device) + ' client: ' + str(client.device) + ' ' + str(mod_device))
+					#self.log_message('cur device: ' + str(current_device) + ' client: ' + str(client.device) + ' ' + str(mod_device))
 					if client.device == current_device:
 						mod_device = client.device
 						break
@@ -143,7 +143,7 @@ class AumPush(Push):
 					bank = [param._parameter for param in self._host._active_client._device_component._params]
 					if device_component._alt_pressed is True:
 						bank = bank[8:]
-					self.log_message('current mod bank details: ' + str(bank_name) + ' ' + str(bank))
+					#self.log_message('current mod bank details: ' + str(bank_name) + ' ' + str(bank))
 					return (bank_name, bank)
 				else:
 					return DisplayingDeviceComponent._current_bank_details(device_component)
@@ -232,10 +232,8 @@ class PushMonomodComponent(MonomodComponent):
 
 	def _alt_value(self, value):
 		super(PushMonomodComponent, self)._alt_value(value)
-		self._script.log_message('alt value ' + str(value))
 		if self._shift_pressed > 0 and value > 0:
 			self._nav_locked = not self._nav_locked
-			self._script.log_message('nav_locked ' + str(self._nav_locked))
 			self.set_nav_buttons()
 		self._device_component._alt_pressed = (value > 0)
 		self._device_component.update()
@@ -262,7 +260,7 @@ class PushMonomodComponent(MonomodComponent):
 	
 
 	def set_nav_buttons(self):
-		self._script.log_message('set nav buttons ' + str(self._nav_locked))
+		#self._script.log_message('set nav buttons ' + str(self._nav_locked))
 		if self.nav_buttons_layer:
 			if self._nav_locked:
 				self.nav_buttons_layer.enter_mode()
