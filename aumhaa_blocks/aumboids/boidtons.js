@@ -1,7 +1,7 @@
 autowatch = 1;
 
-var inlets = 2;
-var outlets = 2;
+inlets = 2;
+outlets = 2;
 var alt_val = 0;
 var ccmutes=[];
 var leader;

@@ -81,6 +81,13 @@ class MonoEncoderElement(EncoderElement):
 		elif ((self._msg_channel != self._original_channel) or (self._msg_identifier != self._original_identifier)):
 			self._install_translation(self._msg_type, self._original_identifier, self._original_channel, self._msg_identifier, self._msg_channel)"""
 
+	def script_wants_forwarding(self):
+		if not self._is_enabled:
+			return False
+		else:
+			return InputControlElement.script_wants_forwarding(self)
+	
+
 	def forward_parameter_value(self):
 		if(not (type(self._parameter) is type(None))):
 			#new_value=int(((self._parameter.value - self._parameter.min) / (self._parameter.max - self._parameter.min))  * 127)

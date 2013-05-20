@@ -30,16 +30,18 @@ from _Framework.PhysicalDisplayElement import PhysicalDisplayElement
 from _Framework.SubjectSlot import subject_slot, subject_slot_group
 
 """Custom files, overrides, and files from other scripts"""
-from MonoButtonElement import *
-from MonoEncoderElement import MonoEncoderElement
-from MonoBridgeElement import MonoBridgeElement
+from _Mono_Framework.MonoButtonElement import *
+from _Mono_Framework.MonoEncoderElement import MonoEncoderElement
+from _Mono_Framework.MonoBridgeElement import MonoBridgeElement
 
 """to be included from Monomodular"""
 import sys
-import modRemixNet as RemixNet
-import modOSC
+import _Mono_Framework.modRemixNet as RemixNet
+import _Mono_Framework.modOSC
 
 DIRS = [47, 48, 50, 49]
+_NOTENAMES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B']
+NOTENAMES = [(_NOTENAMES[index%12] + ' ' + str(int(index/12))) for index in range(128)]
 SCALENAMES = None
 SCALEABBREVS = None
 from Map import *
@@ -252,7 +254,8 @@ class BaseModeSelector(ModeSelectorComponent):
 	def __init__(self, script):
 		super(BaseModeSelector, self).__init__()
 		self._held = None
-		self._script = script	
+		self._script = script
+		self._set_protected_mode_index(0)	
 	
 
 	def number_of_modes(self):
@@ -310,7 +313,8 @@ class BaseUserModeSelector(ModeSelectorComponent):
 	def __init__(self, script):
 		super(BaseUserModeSelector, self).__init__()
 		self._held = None
-		self._script = script	
+		self._script = script
+		self._set_protected_mode_index(0)	
 	
 
 	def number_of_modes(self):
@@ -347,7 +351,8 @@ class BaseMidiModeSelector(ModeSelectorComponent):
 
 	def __init__(self, callback):
 		super(BaseMidiModeSelector, self).__init__()
-		self._report_mode = callback	
+		self._report_mode = callback
+		self._set_protected_mode_index(0)	
 	
 
 	def number_of_modes(self):
@@ -377,6 +382,7 @@ class BaseSplitModeSelector(ModeSelectorComponent):
 		super(BaseSplitModeSelector, self).__init__()
 		self._report_mode = callback
 		self._modes_buttons = []
+		self._set_protected_mode_index(0)
 	
 
 	def number_of_modes(self):
@@ -532,7 +538,7 @@ class DeviceNavigator(ControlSurfaceComponent):
 	
 
 	def set_nav_buttons(self, prev_button, next_button):
-		self._script.log_message('set nav: ' + str(prev_button) + ' ' + str(next_button))
+		#self._script.log_message('set nav: ' + str(prev_button) + ' ' + str(next_button))
 		identify_sender = True
 		if self._prev_button != None:
 			if self._prev_button.value_has_listener(self._nav_value):
@@ -602,7 +608,7 @@ class ScaleModeComponent(ModeSelectorComponent):
 	def __init__(self, script):
 		super(ScaleModeComponent, self).__init__()
 		self._script = script
-		self._mode_index = 0
+		self._set_protected_mode_index(0)
 	
 
 	def set_mode_buttons(self, buttons):
@@ -830,8 +836,7 @@ class Base(ControlSurface):
 		self.schedule_message(3, self._send_midi, LINKFUNCBUTTONS)
 		self.schedule_message(3, self._send_midi, DISABLECAPFADERNOTES)
 		self.schedule_message(3, self._send_midi, (191, 122, 64))
-		self.schedule_message(4, self._session._do_show_highlight)
-		self.schedule_message(5, self._layers[0])
+		self.schedule_message(3, self._layers[0])
 	
 
 	"""script initialization methods"""
@@ -884,6 +889,8 @@ class Base(ControlSurface):
 				clip_slot.set_started_value(CLIP_STARTED)
 				clip_slot.set_recording_value(CLIP_RECORDING)
 		self._session.set_mixer(self._mixer)
+		self.set_highlighting_session_component(self._session)
+		self._session._do_show_highlight()
 	
 
 	def _setup_selected_session_control(self):
@@ -1131,7 +1138,7 @@ class Base(ControlSurface):
 							self._display_chars('-', newval[0])
 					else:
 						self._offsets[cur_chan]['offset'] = offset
-						self.show_message('New root is ' + str(self._offsets[cur_chan]['offset']))
+						self.show_message('New root is Note# ' + str(self._offsets[cur_chan]['offset']) + ', ' + str(NOTENAMES[self._offsets[cur_chan]['offset']]))
 						newval = list(str(offset))
 						if len(newval)>=2:
 							self._display_chars(newval[0], newval[1])
@@ -1187,7 +1194,7 @@ class Base(ControlSurface):
 	
 
 	def _split_mode_value(self, mode):
-		self.log_message('split mode value' + str(mode))
+		#self.log_message('split mode value' + str(mode))
 		if not self.pad_held():
 			if self.shift_pressed():
 				#if self.select_pressed():
@@ -1214,7 +1221,7 @@ class Base(ControlSurface):
 			self._selected_session.deassign_all()
 			self._session.deassign_all()
 			self.set_highlighting_session_component(self._session)
-			self._selected_session._do_show_highlight()
+			self._session._do_show_highlight()
 			self._user_mode_selector.set_enabled(False)
 			self._midi_mode_selector.set_enabled(False)
 			self._split_mode_selector.set_enabled(False)
@@ -1363,13 +1370,13 @@ class Base(ControlSurface):
 					for column in range(8): 
 						for row in range(4):
 							self._scene[row].clip_slot(column).set_launch_button(self._pad[column + (row*8)])
-					self._device.set_bank_nav_buttons(self._button[4], self._button[5])
-					self._device_navigator.set_nav_buttons(self._button[7], self._button[6])
-					self._current_nav_buttons = self._button[4:8]
-					for index in range(4):
-						self._button[index+4].set_on_off_values(DEVICE_NAV, 0)
-					self._device.update()
-					self._device_navigator.update()
+				self._device.set_bank_nav_buttons(self._button[4], self._button[5])
+				self._device_navigator.set_nav_buttons(self._button[7], self._button[6])
+				self._current_nav_buttons = self._button[4:8]
+				for index in range(4):
+					self._button[index+4].set_on_off_values(DEVICE_NAV, 0)
+				self._device.update()
+				self._device_navigator.update()
 			else:
 				if not self._assign_midi_shift_layer():
 					for index in range(8):
@@ -1454,7 +1461,7 @@ class Base(ControlSurface):
 								self._pad[column + (row*8)].press_flash(0, True)
 								self._pad_CC[column + (row*8)].set_identifier((DRUMNOTES[column + (row*8)] + (self._offsets[cur_chan]['drumoffset']*4))%127)
 							else:
-								note_pos = column + (abs(3-row)*int(vertoffset/2))
+								note_pos = column + (abs(3-row)*int(vertoffset))
 								note =	offset + SCALES[scale][note_pos%scale_len] + (12*int(note_pos/scale_len))
 								self._pad[column + (row*8)].set_identifier(note%127)
 								self._pad[column + (row*8)].scale_color = KEYCOLORS[(note%12 in WHITEKEYS) + (((note_pos%scale_len)==0)*2)]
@@ -1548,7 +1555,12 @@ class Base(ControlSurface):
 	
 
 	def _assign_alternate_mappings(self, chan = 0):
-		self._send_midi(USERBUTTONMODE)
+		self._send_midi(MIDIBUTTONMODE)
+		for pad in self._touchpad:
+			pad.use_default_message()
+			pad.set_channel(chan)
+			pad.set_enabled(False)
+			pad.reset()
 		for pad in self._pad:
 			pad.use_default_message()
 			pad.set_channel(chan)
@@ -1557,11 +1569,10 @@ class Base(ControlSurface):
 			pad.release_parameter()
 			pad.set_channel(chan)
 			pad.set_enabled(False)
-		"""for pad in self._touchpad:
+		for pad in self._touchpad:
 			pad.use_default_message()
 			pad.set_channel(chan)
 			pad.set_enabled(chan is 0)
-		"""
 		for fader in self._fader[0:8]:
 			fader.use_default_message()
 			fader.set_channel(chan)
@@ -1695,7 +1706,6 @@ class Base(ControlSurface):
 				if isinstance(control, MonoButtonElement):
 					control.flash(self._timer)
 	
-
 
 	"""m4l bridge"""
 	def generate_strip_string(self, display_string):
@@ -1836,7 +1846,6 @@ class Base(ControlSurface):
 	#def _do_send_midi(self, midi_event_bytes):
 	#	self.log_message(str(midi_event_bytes))
 	#	super(Base, self)._do_send_midi(midi_event_bytes)
-	
 
 	"""device component methods and overrides"""
 

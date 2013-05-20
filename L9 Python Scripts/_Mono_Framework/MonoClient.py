@@ -9,6 +9,7 @@ from _Framework.Debug import debug_print
 from _Framework.Disconnectable import Disconnectable
 
 from MonoDeviceComponent import MonoDeviceComponent
+from ModDevices import *
 
 
 wheel_parameter = {0: 'value', 1: 'mode', 2:'green', 3:'white', 4:'custom'}
@@ -137,7 +138,7 @@ class MonoClient(NotifyingControlElement):
 		self._mod_dial = None
 		self._mod_vol = 127
 		self._mod_color = 0
-		self._device_component = MonoDeviceComponent(self)
+		self._device_component = MonoDeviceComponent(self, MOD_BANK_DICT, MOD_TYPES)
 		self._banner_state = 0
 		self._monomodular = 0
 	
@@ -200,6 +201,10 @@ class MonoClient(NotifyingControlElement):
 		self._send('toggle_mute', self._mute)
 		for host in self._active_host:
 			host.update()
+		for host in self._host._hosts:
+			if hasattr(host, '_notify_new_connection'):
+				host._notify_new_connection(device)
+			
 	
 
 	def _disconnect_client(self, reconnect = False):

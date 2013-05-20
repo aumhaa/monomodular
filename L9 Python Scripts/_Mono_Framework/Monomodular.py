@@ -120,7 +120,7 @@ class Monomodular(ControlSurface):
 	
 
 	def update_display(self):
-		ControlSurface.update_display(self)
+		super(Monomodular, self).update_display()
 		if self._monolink_is_enabled:
 			self._client[16].call_network_functions()
 	
