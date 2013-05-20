@@ -1271,16 +1271,18 @@ class Base(ControlSurface):
 				self._touchpad[index].set_on_off_values(CHAN_SELECT, 0)
 				self._mixer.channel_strip(index).set_select_button(self._touchpad[index])
 				self._mixer.channel_strip(index).set_volume_control(self._fader[index])
-			self._session.set_scene_bank_buttons(self._button[5], self._button[4])
-			self._session.set_track_bank_buttons(self._button[6], self._button[7])
+			self._session.set_scene_bank_buttons(self._button[7], self._button[4])
+			self._session.set_track_bank_buttons(self._button[5], self._button[6])
 			self._current_nav_buttons = self._button[4:8]
 			for index in range(4):
 				self._button[index+4].set_on_off_values(SESSION_NAV[shifted], 0)
 			self._session.update()
 			if not shifted:
-				for column in range(8): 
+				for column in range(7): 
 					for row in range(4):
 						self._scene[row].clip_slot(column).set_launch_button(self._pad[column + (row*8)])
+				for row in range(4):
+					self._scene[row].set_launch_button(self._pad[7 + (row*8)])
 			else:
 				self._send_midi(tuple([240, 0, 1, 97, 12, 61, 7, 7, 7, 7, 7, 7, 7, 7, 2, 247]))
 				self._session._shifted = True
@@ -1314,11 +1316,13 @@ class Base(ControlSurface):
 					self._mixer.channel_strip(index).set_select_button(self._touchpad[index])
 				if self._mixer.shifted() or not self._assign_midi_layer():
 					self._send_midi(LIVEBUTTONMODE)
-					for column in range(8): 
+					for column in range(7): 
 						for row in range(4):
 							self._scene[row].clip_slot(column).set_launch_button(self._pad[column + (row*8)])
-					self._session.set_scene_bank_buttons(self._button[5], self._button[4])
-					self._session.set_track_bank_buttons(self._button[6], self._button[7])
+					for row in range(4):
+						self._scene[row].set_launch_button(self._pad[7 + (row*8)])
+					self._session.set_scene_bank_buttons(self._button[7], self._button[4])
+					self._session.set_track_bank_buttons(self._button[5], self._button[6])
 					self._current_nav_buttons = self._button[4:8]
 					self._session.set_show_highlight(True)
 					for index in range(4):
@@ -1331,8 +1335,8 @@ class Base(ControlSurface):
 						self._mixer.channel_strip(index).set_select_button(self._touchpad[index])
 					self._send_midi(LIVEBUTTONMODE)
 					self._session._shifted = True
-					self._session.set_scene_bank_buttons(self._button[5], self._button[4])
-					self._session.set_track_bank_buttons(self._button[6], self._button[7])
+					self._session.set_scene_bank_buttons(self._button[7], self._button[4])
+					self._session.set_track_bank_buttons(self._button[5], self._button[6])
 					self._current_nav_buttons = self._button[4:8]
 					#self._session.set_show_highlight(True)
 					for index in range(4):
@@ -1372,6 +1376,8 @@ class Base(ControlSurface):
 					for column in range(8): 
 						for row in range(4):
 							self._scene[row].clip_slot(column).set_launch_button(self._pad[column + (row*8)])
+					for row in range(4):
+						self._scene[row].set_launch_button(self._pad[7 + (row*8)])
 				self._device.set_bank_nav_buttons(self._button[4], self._button[5])
 				self._device_navigator.set_nav_buttons(self._button[7], self._button[6])
 				self._current_nav_buttons = self._button[4:8]
@@ -1577,7 +1583,10 @@ class Base(ControlSurface):
 			pad.set_enabled(chan is 0)
 		for fader in self._fader[0:8]:
 			fader.use_default_message()
-			fader.set_channel(chan)
+			if chan!=12:
+				fader.set_channel(chan)
+			else:
+				fader.set_channel(0)
 			fader.set_enabled(False)
 		self.request_rebuild_midi_map()
 	
