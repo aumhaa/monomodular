@@ -1569,11 +1569,10 @@ class Base(ControlSurface):
 			pad.release_parameter()
 			pad.set_channel(chan)
 			pad.set_enabled(False)
-		"""for pad in self._touchpad:
+		for pad in self._touchpad:
 			pad.use_default_message()
 			pad.set_channel(chan)
 			pad.set_enabled(chan is 0)
-		"""
 		for fader in self._fader[0:8]:
 			fader.use_default_message()
 			fader.set_channel(chan)
