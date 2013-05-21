@@ -1,13 +1,8 @@
-# emacs-mode: -*- python-*-
 import Live
-#from MonOhmod import MonOhmod
-#from ShiftModeComponent import ShiftModeComponent
 from _Framework.ControlSurfaceComponent import ControlSurfaceComponent
-#from _Framework.ButtonElement import ButtonElement
-#from _Framework.ButtonMatrixElement import ButtonMatrixElement
-#from _Framework.ModeSelectorComponent import ModeSelectorComponent
-from FlashingButtonElement import FlashingButtonElement
 from _Tools.re import *
+
+from _Mono_Framework.MonoButtonElement import MonoButtonElement
 
 class LooperListenerComponent(ControlSurfaceComponent):
 	__module__ = __name__
@@ -41,9 +36,9 @@ class LooperListenerComponent(ControlSurfaceComponent):
 					self._looper.parameters[1].remove_value_listener(self._state_change)
 				
 	def assign_buttons(self, button, undo_button, clear_button, stop_button):
-		assert isinstance(button, None or FlashingButtonElement)
-		assert isinstance(undo_button, None or FlashingButtonElement)
-		assert isinstance(clear_button, None or FlashingButtonElement)
+		assert isinstance(button, None or MonoButtonElement)
+		assert isinstance(undo_button, None or MonoButtonElement)
+		assert isinstance(clear_button, None or MonoButtonElement)
 		#if self._button != None:
 		#	 if self._button.value_has_listener():
 		#		self._button.remove_value_listener(self._button_value)
@@ -69,11 +64,12 @@ class LooperListenerComponent(ControlSurfaceComponent):
 #		self._script.log_message('stop button value ' + str(value))
 			
 	def on_track_list_changed(self):
-		#self._script.log_message('received bump')
+		self._script.log_message('received bump')
 		self.find_looper()
 		
 
 	def find_looper(self):
+		#self._script.log_message('find_looper!')
 		key = str('Looper ' + str(self._num))
 		looper = None
 		for track in range(len(self.song().tracks)):
@@ -98,6 +94,7 @@ class LooperListenerComponent(ControlSurfaceComponent):
 	
 
 	def update(self):
+		#if hasattr(self._looper, 'name'):
 		#	self._script.log_message('looper = ' + str(self._looper.name))
 		self._state_change()
 		#else:
@@ -113,16 +110,22 @@ class LooperListenerComponent(ControlSurfaceComponent):
 			self._state = int(self._looper.parameters[1].value)
 			#self._script.log_message('state' + str(self._state))
 			if self._button != None:
+				#self._script.log_message('sending state: ' + str(self._button_values[self._state]))
+				self._button.force_next_send()
 				self._button.send_value(self._button_values[self._state])
 			if self._clear_button != None:
 				if self._state != 0 and self._state != 3:
+					self._clear_button.force_next_send()
 					self._clear_button.send_value(1)
 				else:
+					self._clear_button.force_next_send()
 					self._clear_button.send_value(0)
 			if self._stop_button != None:
 				if self._state != 0:
+					self._stop_button.force_next_send()
 					self._stop_button.send_value(5)
 				else:
+					self._stop_button.force_next_send()
 					self._stop_button.send_value(0)
 	
 	

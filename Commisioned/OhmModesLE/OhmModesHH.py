@@ -45,6 +45,8 @@ from _Generic.Devices import *
 from Ohm64_Map import *
 from APC40.APC import APC
 
+from _Mono_Framework.MonoButtonElement import MonoButtonElement
+
 """ Here we define some global variables """
 CHANNEL = 0 
 session = None 
@@ -74,28 +76,26 @@ class OhmModesHH(ControlSurface):
 
 
 	def __init__(self, c_instance):
-		ControlSurface.__init__(self, c_instance)
+		super(OhmModesHH, self).__init__(c_instance)
+		self.revision = 'HH'
+		self.flash_status = 1
+		self._backlight = 127
+		self._backlight_type = 'static'
+		self._ohm = 127
+		self._ohm_type = 'static'
+		self._pad_translations = PAD_TRANSLATION
+		self._rgb = 1
+		self._keys_octave = 5
+		self._keys_scale = 0
+		self._tempo_buttons = None
+		self._scene_indexes = [[[0,0],  [8, 0], [16, 0], [24, 0], [32, 0],  [40, 0]], 
+								[[0,0],  [8, 0], [16, 0], [24, 0], [32, 0],  [40, 0]], 
+								[[0,0],  [8, 0], [16, 0], [24, 0], [32, 0],  [40, 0]], 
+								[[0,0],  [8, 0], [16, 0], [24, 0], [32, 0],  [40, 0]], 
+								[[0,0],  [8, 0], [16, 0], [24, 0], [32, 0],  [40, 0]]]
+		self._scene_bank = 0
+		self._bank_is_on = False
 		with self.component_guard():
-			self.log_message(time.strftime("%d.%m.%Y %H:%M:%S", time.localtime()) + "--------------= OhmModesHH2 log opened =--------------") # Writes message into Live's main log file. This is a ControlSurface method.
-			#self.set_suppress_rebuild_requests(True) # Turn off rebuild MIDI map until after we're done setting up
-			self.revision = 'HH'
-			self.flash_status = 1
-			self._backlight = 127
-			self._backlight_type = 'static'
-			self._ohm = 127
-			self._ohm_type = 'static'
-			self._pad_translations = PAD_TRANSLATION
-			self._rgb = 1
-			self._keys_octave = 5
-			self._keys_scale = 0
-			self._tempo_buttons = None
-			self._scene_indexes = [[[0,0],  [8, 0], [16, 0], [24, 0], [32, 0],  [40, 0]], 
-									[[0,0],  [8, 0], [16, 0], [24, 0], [32, 0],  [40, 0]], 
-									[[0,0],  [8, 0], [16, 0], [24, 0], [32, 0],  [40, 0]], 
-									[[0,0],  [8, 0], [16, 0], [24, 0], [32, 0],  [40, 0]], 
-									[[0,0],  [8, 0], [16, 0], [24, 0], [32, 0],  [40, 0]]]
-			self._scene_bank = 0
-			self._bank_is_on = False
 			self._setup_monobridge()
 			self._setup_controls()
 			self._setup_transport_control() # Run the transport setup part of the script
@@ -117,8 +117,10 @@ class OhmModesHH(ControlSurface):
 			self.show_message('OhmModes Control Surface Loaded')
 			self._send_midi(tuple(switchxfader))
 			self.schedule_message(10, self.query_ohm, None)
-			#self.song().view.selected_scene = self.song().scenes[0]
-		
+		self.log_message(time.strftime("%d.%m.%Y %H:%M:%S", time.localtime()) + "--------------= OhmModesHH2 log opened =--------------") # Writes message into Live's main log file. This is a ControlSurface method.
+		#self.song().view.selected_scene = self.song().scenes[0]
+	
+
 	def query_ohm(self):
 		#self.log_message('querying Ohm')
 		self._send_midi(tuple(check_model))
@@ -151,24 +153,24 @@ class OhmModesHH(ControlSurface):
 			self._fader[index] = EncoderElement(MIDI_CC_TYPE, CHANNEL, OHM_FADERS[index], Live.MidiMap.MapMode.absolute)
 			self._fader[index].name = 'Fader_' + str(index), self
 		for index in range(8):
-			self._button[index] = FlashingButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, OHM_BUTTONS[index], 'Button_' + str(index), self)
+			self._button[index] = MonoButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, OHM_BUTTONS[index], 'Button_' + str(index), self)
 		for index in range(16):
 			self._dial[index] = EncoderElement(MIDI_CC_TYPE, CHANNEL, OHM_DIALS[index], Live.MidiMap.MapMode.absolute)
 			self._dial[index].name = 'Dial_' + str(index)
 		for index in range(6):
-			self._menu[index] = FlashingButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, OHM_MENU[index], 'Menu_' + str(index), self)	
+			self._menu[index] = MonoButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, OHM_MENU[index], 'Menu_' + str(index), self)	
 		self._crossfader = EncoderElement(MIDI_CC_TYPE, CHANNEL, CROSSFADER, Live.MidiMap.MapMode.absolute)
 		self._crossfader.name = "Crossfader"
-		self._livid = FlashingButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, LIVID, 'Livid_Button', self)
-		self._shift_l = FlashingButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, SHIFT_L, 'Page_Button_Left', self)
-		self._shift_r = FlashingButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, SHIFT_R, 'Page_Button_Right', self)
+		self._livid = MonoButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, LIVID, 'Livid_Button', self)
+		self._shift_l = MonoButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, SHIFT_L, 'Page_Button_Left', self)
+		self._shift_r = MonoButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, SHIFT_R, 'Page_Button_Right', self)
 		self._matrix = ButtonMatrixElement()
 		self._matrix.name = 'Matrix'
 		self._grid = [None for index in range(8)]
 		for column in range(8):
 			self._grid[column] = [None for index in range(8)]
 			for row in range(8):
-				self._grid[column][row] = FlashingButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, (column * 8) + row, 'Grid_' + str(column) + '_' + str(row), self)
+				self._grid[column][row] = MonoButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, (column * 8) + row, 'Grid_' + str(column) + '_' + str(row), self)
 		for row in range(6):
 			button_row = []
 			for column in range(7):
@@ -179,16 +181,6 @@ class OhmModesHH(ControlSurface):
 	def _setup_modes(self):
 		self._shift_mode = ShiftModeComponent(self) 
 		self._shift_mode.name = 'Shift_Mode'
-		#self._shift_mode.set_mode_toggle(self._shift_l, self._shift_r)
-		#self._select_mode = ModeSelectorComponent(self)
-		#self._select_mode.name = 'Select_Mode'
-		#self._select_mode.set_mode_toggle(self._menu[5])
-		#self._select_mode.update = self.select_mode_update(self._select_mode)
-		#self._menu[5].add_value_listener(self._select_mode)
-		#self._scale_mode = ScaleModeComponent(self)
-		#self._scale_mode.name = "Scale_Mode"
-		#self._octave_mode = OctaveModeComponent(self)
-		#self._octave_mode.name = "Octave_Mode"
 	
 
 			
@@ -693,6 +685,9 @@ class OhmModesHH(ControlSurface):
 		
 	
 	def _update_selected_device(self):
+		if len(self._looper) > 0:
+			for looper in self._looper:
+				looper.find_looper()
 		if self._device_selection_follows_track_selection is True:
 			track = self.song().view.selected_track
 			device_to_select = track.view.selected_device
@@ -770,7 +765,7 @@ class OhmModesHH(ControlSurface):
 		self._tempo_buttons = buttons
 		if buttons != None:
 			for button in buttons:
-				assert isinstance(button, FlashingButtonElement)
+				assert isinstance(button, MonoButtonElement)
 			self._tempo_buttons[0].set_on_off_values(4, 0)
 			self._tempo_buttons[0].add_value_listener(self._tempo_value, True)
 			self._tempo_buttons[1].set_on_off_values(4, 0)
