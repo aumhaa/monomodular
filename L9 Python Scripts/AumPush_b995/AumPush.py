@@ -54,11 +54,57 @@ from Push.AccentComponent import AccentComponent
 from Push.AutoArmComponent import AutoArmComponent
 #from Push.PadSensitivity import PadSensitivity
 
+from Push.NavigationNode import RackNode
 from _Mono_Framework.MonomodComponent import MonomodComponent
 from _Mono_Framework.MonoDeviceComponent import MonoDeviceComponent
 from _Mono_Framework.ModDevices import *
 
 from Push.consts import *
+
+import Live.DrumPad
+from _Framework.CompoundComponent import CompoundComponent
+from _Framework.SubjectSlot import subject_slot
+from _Framework.Util import find_if, in_range, NamedTuple, forward_property
+from _Framework.Disconnectable import disconnectable
+from _Framework.Dependency import depends, inject
+from Push.MessageBoxComponent import MessageBoxComponent
+from Push.ScrollableListComponent import ScrollableListWithTogglesComponent
+from Push.NavigationNode import make_navigation_node
+
+
+class AumPushDeviceNavigationComponent(DeviceNavigationComponent):
+
+
+	def __init__(self, script, *a, **k):
+		self._script = script
+		super(AumPushDeviceNavigationComponent, self).__init__(*a, **k)
+	
+
+	@subject_slot('selected_device')
+	def _on_selected_device_changed(self):
+		selected_device = self._selected_track.view.selected_device
+		if selected_device:
+			self._script.log_message('selected_device=' + str(selected_device.name))
+		if selected_device == None:
+			self._set_current_node(self._make_exit_node())
+			return
+		is_just_default_child_selection = False
+		if self._current_node and self._current_node.children:
+			selected = self.selected_object
+			self._script.log_message('selected=' + str(selected))
+			if isinstance(selected, Live.DrumPad.DrumPad) and find_if(lambda pad: pad.chains and pad.chains[0].devices and pad.chains[0].devices[0] == selected_device, selected.canonical_parent.drum_pads):
+				is_just_default_child_selection = True
+			if isinstance(selected, Live.Chain.Chain) and selected_device and selected_device.canonical_parent == selected and selected.devices[0] == selected_device:
+				is_just_default_child_selection = True
+		if not is_just_default_child_selection:
+			if selected_device:
+				target = selected_device.canonical_parent
+				self._script.log_message('target=' + str(target))
+				if (not self._current_node or self._current_node.object != target): 
+					node = self._make_navigation_node(target, is_entering=False)
+					self._script.log_message('node=' + str(node))
+					self._set_current_node(node)
+	
 
 
 class AumPush(Push):
@@ -97,32 +143,26 @@ class AumPush(Push):
 	def _init_device(self, *a, **k):
 		super(AumPush, self)._init_device(*a, **k)
 		self._device._current_bank_details = self._make_current_bank_details(self._device)
-
+	#	self._device_navigation._on_selected_device_changed = self._make_on_selected_device_changed(self._device_navigation)
 	
 
 	def _on_new_device_set(self):
-		self._select_note_mode()
+		self.schedule_message(1, self._select_note_mode)
 	
 
 	def _select_note_mode(self, mod_device = None):
 		track = self.song().view.selected_track
 		current_device = self._device._device
-		if not current_device is None:
-			if self._host and self._host._client:
-				for client in self._host._client:
-					#self.log_message('cur device: ' + str(current_device) + ' client: ' + str(client.device) + ' ' + str(mod_device))
-					if client.device == current_device:
-						mod_device = client.device
-						break
+		mod_device = self._is_mod(current_device)
 		drum_device = find_if(lambda d: d.can_have_drum_pads, track.devices)
 		self._step_sequencer.set_drum_group_device(drum_device)
 		if track == None or track.is_foldable or track in self.song().return_tracks or track == self.song().master_track:
 			self._note_modes.selected_mode = 'disabled'
 		elif not mod_device is None:
-			if not self._host._active_client.device is current_device:
-				self._host._select_client(self._host._client.index(client))
 			self._note_modes.selected_mode = 'disabled'
 			self._note_modes.selected_mode = 'mod'
+			if not self._host._active_client is mod_device:
+				self._host._select_client(mod_device._number)
 		elif track and track.has_audio_input:
 			self._note_modes.selected_mode = 'looperhack'
 		elif drum_device:
@@ -137,7 +177,7 @@ class AumPush(Push):
 
 	def _make_current_bank_details(self, device_component):
 		def _current_bank_details():
-			if self._is_mod(device_component.device()):
+			if not self._is_mod(device_component.device()) is None:
 				if self._host._active_client._device_component._device_parent != None:
 					bank_name = self._host._active_client._device_component._bank_name
 					bank = [param._parameter for param in self._host._active_client._device_component._params]
@@ -154,13 +194,15 @@ class AumPush(Push):
 	
 
 	def _is_mod(self, device):
-		mod_device = False
+		mod_device = None
+		if isinstance(device, Live.Device.Device):
+			if device.can_have_chains and not device.can_have_drum_pads and len(device.view.selected_chain.devices)>0:
+				device = device.view.selected_chain.devices[0]
 		if not device is None:
 			if self._host and self._host._client:
 				for client in self._host._client:
-					#self.log_message('cur device: ' + str(current_device) + ' client: ' + str(client.device))
 					if client.device == device:
-						mod_device = True
+						mod_device = client
 						break
 		return mod_device
 	
@@ -187,6 +229,11 @@ class PushMonomodComponent(MonomodComponent):
 			self._color_maps[index][127] = 67
 	
 
+	def _matrix_value(self, value, x, y, is_momentary):
+		value = int(value>0)
+		super(PushMonomodComponent, self)._matrix_value(value, x, y, is_momentary)
+	
+
 	def set_device_component(self, device_component):
 		if not device_component is self._device_component:
 			self._device_component = device_component
@@ -207,7 +254,10 @@ class PushMonomodComponent(MonomodComponent):
 
 	def select_active_client(self):
 		if not self._active_client.linked_device() is None:
-			super(PushMonomodComponent, self).select_active_client()
+			#super(PushMonomodComponent, self).select_active_client()
+			self.song().view.select_device(self._active_client.linked_device())
+			for client in self._client:
+				client._send('pop', client.is_active())
 	
 
 	def set_button_matrix(self, buttons):
