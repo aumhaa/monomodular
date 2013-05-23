@@ -1212,6 +1212,7 @@ class Base(ControlSurface):
 	
 
 	def _deassign_all(self):
+		self._send_midi(tuple([191, 122, 64]))		#turn local OFF for CapFaders
 		self._current_nav_buttons = []
 		with self.component_guard():
 			self._offset_component.deassign_all()
@@ -1426,6 +1427,7 @@ class Base(ControlSurface):
 				button.set_on_off_values(USERMODE, 0)
 			self._user_mode_selector.set_enabled(True)
 			self._assign_alternate_mappings(self._user_layer+12)
+			self._send_midi(tuple([191, 122, 72]))		#turn local ON for CapFaders
 
 	
 
