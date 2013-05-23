@@ -1,10 +1,10 @@
-# by amounra 0413 : http://www.aumhaa.com
+# by amounra 0513 : http://www.aumhaa.com
 
-from Base import Base
+from Base_LE import Base_LE
 
 def create_instance(c_instance):
     """ Creates and returns the Base script """
-    return Base(c_instance)
+    return Base_LE(c_instance)
 
 
 from _Framework.Capabilities import *
