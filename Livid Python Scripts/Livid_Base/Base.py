@@ -1010,28 +1010,18 @@ class Base(ControlSurface):
 	
 
 	def _select_update(self, held_strip = None):
-		"""if self.shift_pressed():
-			if self.select_pressed():
-				cur_track = self._mixer._selected_strip._track
-				if cur_track.has_midi_input:
-					cur_chan = cur_track.current_input_sub_routing
-					if len(cur_chan) == 0:
-						cur_chan = 'All Channels'
-					if cur_chan in CHANNELS:
-						cur_chan = (CHANNELS.index(cur_chan)%15)+1
-						self._offsets[cur_chan]['split'] = not self._offsets[cur_chan]['split'] 
-						self.log_message('split is ' + str(self._offsets[cur_chan]['split'] ))"""
+		#self.log_message('_select_update ' + str(held_strip))
 		if not self.shift_pressed() and not self.pad_held():
 			if self.select_pressed():
-				#self.schedule_message(3, self._delayed_select_update, held_strip)
-				self._shift_update(self._mode_selector._mode_index, False)
-				#self._delayed_select_update(held_strip)
+				self._delayed_select_update(held_strip)
+				#self._shift_update(self._mode_selector._mode_index, False)
 			else:
 				self._shift_update(self._mode_selector._mode_index, False)
 		
 	
 
 	def _delayed_select_update(self, held_strip = None):
+		#self.log_message('_delayed_select_update')
 		self._display_mode()
 		if self._mixer._held is held_strip:
 			with self.component_guard():
@@ -1053,9 +1043,14 @@ class Base(ControlSurface):
 					pad.use_default_message()
 					pad.set_enabled(True)
 				self._send_midi(LIVEBUTTONMODE)
-				for column in range(8): 
+				for column in range(7): 
 					for row in range(4):
 						self._scene[row].clip_slot(column).set_launch_button(self._pad[column + (row*8)])
+				for row in range(4):
+					self._scene[row].set_launch_button(self._pad[7 + (row*8)])
+					self._pad[7 + (row*8)].set_on_off_values(7, 3)
+					self._pad[7 + (row*8)].turn_off()
+				#self.log_message('assigning scene launch')
 				self._session.update()
 				self.request_rebuild_midi_map()
 			self.schedule_message(1, self._session._reassign_scenes)
@@ -1080,10 +1075,12 @@ class Base(ControlSurface):
 			else:
 				#self.log_message('mode is not shifted')
 				with self.component_guard():
-					for column in range(8): 
+					for column in range(7): 
 						for row in range(4):
 							self._pad[column + (row*8)].set_force_next_value()
 							self._scene[row].clip_slot(column).set_launch_button(self._pad[column + (row*8)])
+					for row in range(4):
+						self._scene[row].set_launch_button(self._pad[7 + (row*8)])
 				self.request_rebuild_midi_map()
 		else:
 			self._shift_update(self._mode_selector._mode_index, False)	
@@ -1212,6 +1209,7 @@ class Base(ControlSurface):
 	
 
 	def _deassign_all(self):
+		self._send_midi(tuple([191, 122, 64]))		#turn local OFF for CapFaders
 		self._current_nav_buttons = []
 		with self.component_guard():
 			self._offset_component.deassign_all()
@@ -1261,13 +1259,13 @@ class Base(ControlSurface):
 	
 
 	def _set_layer0(self, shifted = False):
+		#self.log_message('set_layer 0')
 		with self.component_guard():
 			self._display_mode()
 			self._send_midi(LIVEBUTTONMODE)
 			self._mixer.master_strip().set_volume_control(self._fader[8])
 			self._send_midi(tuple([240, 0, 1, 97, 12, 61, 7, 7, 7, 7, 7, 7, 7, 7, 2, 247]))
 			for index in range(8):
-				#self._send_midi((191, index+1, LAYERSPLASH[0]))
 				self._touchpad[index].set_on_off_values(CHAN_SELECT, 0)
 				self._mixer.channel_strip(index).set_select_button(self._touchpad[index])
 				self._mixer.channel_strip(index).set_volume_control(self._fader[index])
@@ -1285,7 +1283,6 @@ class Base(ControlSurface):
 				self._send_midi(tuple([240, 0, 1, 97, 12, 61, 7, 7, 7, 7, 7, 7, 7, 7, 2, 247]))
 				self._session._shifted = True
 				for index in range(8):
-					#self._send_midi((191, index+1, LAYERSPLASH[0]))
 					self._pad[index].set_on_off_values(TRACK_MUTE, 0)
 					self._mixer.channel_strip(index).set_mute_button(self._pad[index])
 					self._pad[index+8].set_on_off_values(TRACK_SOLO, 0)
@@ -1309,7 +1306,6 @@ class Base(ControlSurface):
 			if not shifted:
 				self._send_midi(tuple([240, 0, 1, 97, 12, 61, 5, 5, 5, 5, 4, 4, 4, 4, 2, 247]))
 				for index in range(8):
-					#self._send_midi((191, index+1, LAYERSPLASH[1]))
 					self._touchpad[index].set_on_off_values(CHAN_SELECT, 0)
 					self._mixer.channel_strip(index).set_select_button(self._touchpad[index])
 				if self._mixer.shifted() or not self._assign_midi_layer():
@@ -1340,7 +1336,6 @@ class Base(ControlSurface):
 					self._session.update()
 				self._send_midi(tuple([240, 0, 1, 97, 12, 61, 7, 7, 7, 7, 7, 7, 7, 7, 2, 247]))
 				for index in range(8):
-					#self._send_midi((191, index+1, LAYERSPLASH[0]))
 					self._mixer.channel_strip(index).set_volume_control(self._fader[index])
 					self._pad[index].set_on_off_values(TRACK_MUTE, 0)
 					self._mixer.channel_strip(index).set_mute_button(self._pad[index])
@@ -1364,7 +1359,6 @@ class Base(ControlSurface):
 			if not shifted:
 				self._send_midi(tuple([240, 0, 1, 97, 12, 61, 6, 6, 6, 6, 6, 6, 6, 6, 2, 247]))
 				for index in range(8):
-					#self._send_midi((191, index+1, LAYERSPLASH[2]))
 					self._touchpad[index].set_on_off_values(CHAN_SELECT, 0)
 					self._mixer.channel_strip(index).set_select_button(self._touchpad[index])
 				if self._mixer.shifted() or not self._assign_midi_layer():
@@ -1393,7 +1387,6 @@ class Base(ControlSurface):
 				self._device.deassign_all()
 				self._send_midi(tuple([240, 0, 1, 97, 12, 61, 7, 7, 7, 7, 7, 7, 7, 7, 2, 247]))
 				for index in range(8):
-					#self._send_midi((191, index+1, LAYERSPLASH[0]))
 					self._mixer.channel_strip(index).set_volume_control(self._fader[index])
 					self._pad[index].set_on_off_values(TRACK_MUTE, 0)
 					self._mixer.channel_strip(index).set_mute_button(self._pad[index])
@@ -1426,6 +1419,7 @@ class Base(ControlSurface):
 				button.set_on_off_values(USERMODE, 0)
 			self._user_mode_selector.set_enabled(True)
 			self._assign_alternate_mappings(self._user_layer+12)
+			self._send_midi(tuple([191, 122, 72]))		#turn local ON for CapFaders
 
 	
 
