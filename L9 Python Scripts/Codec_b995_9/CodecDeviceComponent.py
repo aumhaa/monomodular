@@ -34,7 +34,7 @@ class CodecDeviceComponent(DeviceComponent):
 	
 
 	def set_lock_to_device(self, lock, device):
-		self._script.log_message(str(lock) + ' ' + str(device))
+		#self._script.log_message(str(lock) + ' ' + str(device))
 		assert isinstance(lock, type(False))
 		if lock is True:
 			if not self.is_locked():
@@ -120,7 +120,7 @@ class CodecDeviceComponent(DeviceComponent):
 		if self._next_button != None:
 			if self._next_button.value_has_listener(self._nav_value):
 				self._next_button.remove_value_listener(self._nav_value)
-		DeviceComponent.disconnect(self)
+		super(CodecDeviceComponent, self).disconnect()
 	
 
 	def set_nav_buttons(self, prev_button, next_button):		
@@ -158,7 +158,7 @@ class CodecDeviceComponent(DeviceComponent):
 	
 
 	def update(self):
-		DeviceComponent.update(self)
+		super(CodecDeviceComponent, self).update()
 		if self.is_enabled():
 			if self._on_off_parameter() != None and self._on_off_button != None:
 				self._on_off_button.send_value(self._on_off_parameter().value > 0)

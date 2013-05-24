@@ -270,7 +270,7 @@ class MonomodModeComponent(ModeSelectorComponent):
 	def __init__(self, callback, script, *a, **k):
 		super(MonomodModeComponent, self).__init__(*a, **k)
 		assert hasattr(callback, '__call__')
-		self.__mode_index = 0
+		self._set_protected_mode_index(0)
 		self._script = script
 		self.update = callback
 	
@@ -312,7 +312,7 @@ class ShiftModeComponent(ModeSelectorComponent):
 	def __init__(self, callback, script, *a, **k):
 		super(ShiftModeComponent, self).__init__(*a, **k)
 		assert hasattr(callback, '__call__')
-		self.__mode_index = 0
+		self._set_protected_mode_index(0)
 		self._script = script
 		self.update = callback
 	
@@ -389,8 +389,8 @@ class Codec(ControlSurface):
 			self.set_local_ring_control(1)
 			self.song().view.add_selected_track_listener(self._update_selected_device)
 			self._initialize_code()
-			self._shift_mode.set_mode(0)
-			self._monomod_mode.set_mode(0)
+			#self._shift_mode.set_mode(0)
+			#self._monomod_mode.set_mode(0)
 		self.log_message('<<<<<<<<<<<<<<<<<<<<<<<<< Codec ' + str(self._monomod_version) + ' log opened >>>>>>>>>>>>>>>>>>>>>>>>>')
 		self.show_message('Codec Control Surface Loaded')
 		self.request_rebuild_midi_map()

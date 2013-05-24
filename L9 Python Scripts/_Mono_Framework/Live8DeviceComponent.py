@@ -211,7 +211,7 @@ class Live8DeviceComponent(ControlSurfaceComponent):
 				if self._bank_name != old_bank_name: #added
 					self._show_msg_callback(self._device.name + ' Bank: ' + self._bank_name) #added
 			if ((self._bank_up_button != None) and (self._bank_down_button != None)):
-				if (self.number_of_parameter_banks()) > (self._bank_index + 1):
+				if (self._number_of_parameter_banks()) > (self._bank_index + 1):
 					self._bank_up_button.turn_on()
 				else:
 					self._bank_up_button.turn_off()
@@ -332,7 +332,7 @@ class Live8DeviceComponent(ControlSurfaceComponent):
 				bank = banks[self._bank_index]
 				if self._is_banking_enabled(): #added
 					if self._device.class_name in self._device_bank_names.keys(): #added
-						self._bank_name[self._bank_index] = self._device_bank_names[self._device.class_name] #added *recheck
+						self._bank_name = str(self._device_bank_names[self._device.class_name]) #added *recheck
 			assert ((bank == None) or (len(bank) >= len(self._parameter_controls)))
 			for index in range(len(self._parameter_controls)):
 				parameter = None
