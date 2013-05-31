@@ -33,6 +33,7 @@ from _Framework.SubjectSlot import subject_slot, subject_slot_group
 from _Mono_Framework.MonoButtonElement import *
 from _Mono_Framework.MonoEncoderElement import MonoEncoderElement
 from _Mono_Framework.MonoBridgeElement import MonoBridgeElement
+from _Mono_Framework.Mod import *
 
 """to be included from Monomodular"""
 import sys
@@ -145,6 +146,8 @@ MIDI_NOTE_ON_STATUS = 144
 MIDI_NOTE_OFF_STATUS = 128
 MIDI_CC_STATUS = 176
 MIDI_PB_STATUS = 224
+
+
 
 class BlockingMonoButtonElement(MonoButtonElement):
 
@@ -392,6 +395,12 @@ class BaseSplitModeSelector(ModeSelectorComponent):
 	def _mode_value(self, value, sender):
 		if self._is_enabled:
 			super(BaseSplitModeSelector, self)._mode_value(value, sender)
+			self._report_mode(self._mode_index)
+	
+
+	def _toggle_value(self, value):
+		if self._is_enabled:
+			super(BaseSplitModeSelector, self)._toggle_value(value)
 			self._report_mode(self._mode_index)
 	
 
@@ -786,7 +795,62 @@ class ScrollingOffsetComponent(ControlSurfaceComponent):
 	
 
 
- 
+class BaseModHandler(ModHandler):
+
+
+	def __init__(self, *a, **k):
+		super(BaseModHandler, self).__init__(*a, **k)
+		self._base_grid = None
+		self._base_grid_CC = None
+		self._receive_methods = {'grid': self._receive_grid, 'base_grid': self._receive_base_grid, 'base_keys': self._receive_base_keys}
+	
+
+	def _register_addresses(self, client):
+		if not 'base_grid' in client._addresses:
+			client._addresses['base_grid'] = Grid(client.active_handlers, 'base_grid', 8, 4)
+		if not 'base_keys' in client._addresses:
+			client._addresses['base_keys'] = Array(client.active_handlers, 'base_keys', 8)
+	
+
+	def _assign_base_grid(self, grid):
+		self._base_grid = grid
+		self._base_grid_value.subject = self._base_grid
+	
+
+	def _assign_base_grid_CC(self, grid):
+		self._base_grid_CC = grid
+		self._base_grid_CC_value.subject = self._base_grid_CC
+	
+
+	@subject_slot('value')
+	def _base_grid_value(self, value, x, y, *a, **k):
+		#self.log_message('_base_grid_value ' + str(x) + str(y) + str(value))
+		if self._active_mod:
+			self._active_mod.send('base_grid', x, y, value)
+	
+
+	@subject_slot('value')
+	def _base_grid_CC_value(self, value, x, y, *a, **k):
+		#self.log_message('_base_grid_CC_value ' + str(x) + str(y) + str(value))
+		if self._active_mod:
+			self._active_mod.send('base_grid_CC', x, y, value)
+	
+
+	def _receive_base_grid(self, x, y, value):
+		#self.log_message('base_grid_in ' + str(x) + ' ' + str(y) + ' ' + str(value))
+		if not self._base_grid is None:
+			self._base_grid.send_value(x, y, value, True)
+			#button = self._base_grid.get_button(y, x)
+			#button.force_next_send()
+			#button.send_value(value)
+		#self.log_message('_receive_base_grid: %s %s %s' % x % y % value)
+	
+
+	def _receive_base_keys(self, num, value):
+		pass	
+	
+
+
 class Base(ControlSurface):
 	__module__ = __name__
 	__doc__ = " Base controller script "
@@ -794,35 +858,37 @@ class Base(ControlSurface):
 
 	def __init__(self, c_instance):
 		super(Base, self).__init__(c_instance)
-		with self.component_guard():
-			self._host_name = 'Base'
-			self._color_type = 'OhmRGB'
-			self.oscServer = None
-			self.log_message("<<<<<<<<<<<<<<<<<= Base log opened =>>>>>>>>>>>>>>>>>>>>>") 
-			self._rgb = 0
-			self._timer = 0
-			self._current_nav_buttons = []
-			self.flash_status = 1
-			self._clutch_device_selection = False
-			self._touched = 0
-			self._update_linked_device_selection = None
-			self._offsets = [{'offset':DEFAULT_OFFSET, 'vertoffset':DEFAULT_VERTOFFSET, 'drumoffset':DEFAULT_DRUMOFFSET, 'scale':DEFAULT_SCALE, 'split':DEFAULT_SPLIT} for index in range(16)]
-			self._last_selected_track = None
-			self._last_selected_track_arm = False
-			self._last_pad_stream = [0 for i in range(0, 32)]
-			self._layer = 0
-			self._user_layer = 0
-			self._layers = [self._set_layer0,
-							self._set_layer1, 
-							self._set_layer2, 
-							self._set_layer3]
+		self._host_name = 'Base'
+		self._color_type = 'OhmRGB'
+		self.monomodular = None
+		self.oscServer = None
+		self.log_message("<<<<<<<<<<<<<<<<<= Base log opened =>>>>>>>>>>>>>>>>>>>>>") 
+		self._rgb = 0
+		self._timer = 0
+		self._current_nav_buttons = []
+		self.flash_status = 1
+		self._clutch_device_selection = False
+		self._touched = 0
+		self._update_linked_device_selection = None
+		self._offsets = [{'offset':DEFAULT_OFFSET, 'vertoffset':DEFAULT_VERTOFFSET, 'drumoffset':DEFAULT_DRUMOFFSET, 'scale':DEFAULT_SCALE, 'split':DEFAULT_SPLIT} for index in range(16)]
+		self._last_selected_track = None
+		self._last_selected_track_arm = False
+		self._last_pad_stream = [0 for i in range(0, 32)]
+		self._layer = 0
+		self._user_layer = 0
+		self._layers = [self._set_layer0,
+						self._set_layer1, 
+						self._set_layer2, 
+						self._set_layer3]
 
+		with self.component_guard():
 			self._setup_monobridge()
 			if OSC_TRANSMIT:
 				self._setup_OSC_layer()
 			self._setup_controls()
 			self._setup_mixer_control()
 			self._setup_session_control()
+			self._setup_transport_control()
 			self._setup_selected_session_control()
 			self._setup_device_control()
 			self._setup_mode_select()
@@ -832,6 +898,8 @@ class Base(ControlSurface):
 			self._setup_offset_component()
 			self._setup_vertical_offset_component()
 			self._setup_scale_offset_component()
+			self._setup_mod()
+			self._device.add_device_listener(self._on_new_device_set)
 		self.schedule_message(3, self._send_midi, STREAMINGON)
 		self.schedule_message(3, self._send_midi, LINKFUNCBUTTONS)
 		self.schedule_message(3, self._send_midi, DISABLECAPFADERNOTES)
@@ -859,6 +927,11 @@ class Base(ControlSurface):
 		self._nav_buttons = ButtonMatrixElement( name = 'nav_buttons' )
 		self._nav_buttons.add_row(self._button[4:8])
 		self._on_nav_button_value.subject = self._nav_buttons
+		self._base_grid = ButtonMatrixElement()
+		self._base_grid_CC = ButtonMatrixElement()
+		for index in range(4):
+			self._base_grid.add_row(self._pad[(index*8):(index*8)+8])
+			self._base_grid_CC.add_row(self._pad_CC[(index*8):(index*8)+8])
 	
 
 	def _setup_mixer_control(self):
@@ -913,6 +986,10 @@ class Base(ControlSurface):
 			clip_slot.set_recording_value(CLIP_RECORDING)
 	
 
+	def _setup_transport_control(self):
+		self._transport = TransportComponent()
+	
+
 	def _setup_device_control(self):
 		self._device = BaseDeviceComponent()
 		self._device.name = 'Device_Component'
@@ -946,8 +1023,8 @@ class Base(ControlSurface):
 
 	def _setup_split_mode_select(self):
 		self._split_mode_selector = BaseSplitModeSelector(self._split_mode_value)
-		self._split_mode_selector.set_mode_buttons(tuple(self._touchpad[0:2]))
-		#self._split_mode_selector.set_mode_toggle(self._touchpad[0])
+		#self._split_mode_selector.set_mode_buttons(tuple(self._touchpad[0:2]))
+		self._split_mode_selector.set_mode_toggle(self._touchpad[0])
 		self._split_mode_selector.set_enabled(False)
 	
 
@@ -963,6 +1040,24 @@ class Base(ControlSurface):
 		self._scale_offset_component = ScrollingOffsetComponent(self._scale_offset_value)
 		self._scale_offset_component._minimum = 0
 		self._scale_offset_component._maximum = len(SCALES.keys())-1
+	
+
+	def _setup_mod(self):
+		if isinstance(__builtins__, dict):
+			if not 'monomodular' in __builtins__.keys():
+				self.log_message('make attr')
+				__builtins__['monomodular'] = ModRouter(self._c_instance)
+			self.monomodular = __builtins__['monomodular']
+		else:
+			if not hasattr(__builtins__, 'monomodular'):
+				self.log_message('make attr2')
+				setattr(__builtins__, 'monomodular', ModRouter(self._c_instance))
+			self.monomodular = __builtins__['monomodular']
+		if not self.monomodular.has_host():
+			self.monomodular.set_host(self)
+		self.monomodular.name = 'monomodular_switcher'
+		self.modhandler = BaseModHandler(self)
+		# self.log_message('mod is: ' + str(self.monomodular) + ' ' + str(__builtins__['monomodular']))
 	
 
 	def _setup_OSC_layer(self):
@@ -1212,6 +1307,9 @@ class Base(ControlSurface):
 		self._send_midi(tuple([191, 122, 64]))		#turn local OFF for CapFaders
 		self._current_nav_buttons = []
 		with self.component_guard():
+			self.modhandler._assign_base_grid(None)
+			self.modhandler._assign_base_grid_CC(None)
+			self._transport.set_overdub_button(None)
 			self._offset_component.deassign_all()
 			self._vertical_offset_component.deassign_all()
 			self._scale_offset_component.deassign_all()
@@ -1361,11 +1459,12 @@ class Base(ControlSurface):
 				for index in range(8):
 					self._touchpad[index].set_on_off_values(CHAN_SELECT, 0)
 					self._mixer.channel_strip(index).set_select_button(self._touchpad[index])
-				if self._mixer.shifted() or not self._assign_midi_layer():
-					self._send_midi(LIVEBUTTONMODE)
-					for column in range(8): 
-						for row in range(4):
-							self._scene[row].clip_slot(column).set_launch_button(self._pad[column + (row*8)])
+				if not self._assign_mod():
+					if self._mixer.shifted() or not self._assign_midi_layer():
+						self._send_midi(LIVEBUTTONMODE)
+						for column in range(8): 
+							for row in range(4):
+								self._scene[row].clip_slot(column).set_launch_button(self._pad[column + (row*8)])
 				self._device.set_bank_nav_buttons(self._button[4], self._button[5])
 				self._device_navigator.set_nav_buttons(self._button[7], self._button[6])
 				self._current_nav_buttons = self._button[4:8]
@@ -1521,8 +1620,11 @@ class Base(ControlSurface):
 			if cur_chan in CHANNELS:
 				cur_chan = (CHANNELS.index(cur_chan)%15)+1
 				scale = self._offsets[cur_chan]['scale']
-				for button in self._touchpad[0:2]:
+				for button in self._touchpad[0:1]:
 					button.set_on_off_values(SPLITMODE, 0)
+				for button in self._touchpad[1:2]:
+					button.set_on_off_values(OVERDUB, 0)
+				self._transport.set_overdub_button(self._touchpad[1])
 				self._split_mode_selector._mode_index = int(self._offsets[cur_chan]['split'])
 				self._split_mode_selector.set_enabled(True)
 				if not self._offsets[cur_chan]['scale'] is 'DrumPad':
@@ -1548,6 +1650,10 @@ class Base(ControlSurface):
 
 	def _arm_current_track(self, track):
 		track.arm = 1
+	
+
+	def _disarm_track(self, track):
+		track.arm = 0
 	
 
 	def _assign_alternate_mappings(self, chan = 0):
@@ -1608,6 +1714,31 @@ class Base(ControlSurface):
 				devices.append(item)
 				#self.log_message('appending ' + str(item))
 		return devices
+	
+
+	def _is_mod(self, device):
+		mod_device = None
+		if isinstance(device, Live.Device.Device):
+			if device.can_have_chains and not device.can_have_drum_pads and len(device.view.selected_chain.devices)>0:
+				device = device.view.selected_chain.devices[0]
+		if not device is None:
+			if self.monomodular and self.monomodular._mods:
+				for mod in self.monomodular._mods:
+					if mod.device == device:
+						mod_device = mod
+						break
+		return mod_device
+	
+
+	def _assign_mod(self):
+		mod = self._is_mod(self._device._device)
+		if not mod is None:
+			self._send_midi(MIDIBUTTONMODE)
+			self.modhandler._assign_base_grid(self._base_grid)
+			self.modhandler._assign_base_grid_CC(self._base_grid_CC)
+		self.modhandler.select_mod(mod)
+		return not mod is None
+			
 	
 
 	"""not currently used"""
@@ -1779,6 +1910,11 @@ class Base(ControlSurface):
 		super(Base, self).disconnect()
 	
 
+	def _on_new_device_set(self):
+		if self._layer == 2:
+			self._layers[2]()
+	
+
 	def _on_selected_track_changed(self):
 		super(Base, self)._on_selected_track_changed()
 		track = self._mixer.selected_strip()._track
@@ -1789,6 +1925,8 @@ class Base(ControlSurface):
 		#self.log_message('new track offset: ' + str(self._selected_session._track_offset))
 		self._selected_session._reassign_tracks()
 		self._selected_session._reassign_scenes()
+		if self._last_selected_track and self._last_selected_track.can_be_armed and not self._last_selected_track_arm:
+			self.schedule_message(1, self._disarm_track, self._last_selected_track)
 		if track.can_be_armed:
 			self._last_selected_track_arm = track.arm
 		if not self._last_selected_track is None and isinstance(self._last_selected_track, Live.Track.Track) and self._last_selected_track in track_list:
@@ -1827,11 +1965,12 @@ class Base(ControlSurface):
 		self._highlighting_session_component.set_highlighting_callback(self._set_session_highlight)
 	
 
+
 	"""this method includes a way to distribute MIDI received from Live that has been rerouted to different channels and ids back to its originating button"""
 	#def receive_midi(self, midi_bytes):
 	#	self.log_message(str(midi_bytes))
-	#	super(Base, self).receive_midi(midi_bytes)
-	
+	#	super(Base, self).receive_midi(midi_bytes)	
+
 	def handle_sysex(self, midi_bytes):
 		#self.log_message('sysex: ' + str(midi_bytes))
 		if len(midi_bytes) > 14:

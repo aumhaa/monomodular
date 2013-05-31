@@ -61,6 +61,7 @@ MIDIMODE = 14
 USERMODE = 13
 SCALEOFFSET = 5
 SPLITMODE = 1
+OVERDUB = 5
 
 """[non-banked, banked]"""
 SESSION_NAV = [127, 3]

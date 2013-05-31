@@ -332,7 +332,7 @@ class Live8DeviceComponent(ControlSurfaceComponent):
 				bank = banks[self._bank_index]
 				if self._is_banking_enabled(): #added
 					if self._device.class_name in self._device_bank_names.keys(): #added
-						self._bank_name = str(self._device_bank_names[self._device.class_name]) #added *recheck
+						self._bank_name = self._device_bank_names[self._device.class_name] #added *recheck
 			assert ((bank == None) or (len(bank) >= len(self._parameter_controls)))
 			for index in range(len(self._parameter_controls)):
 				parameter = None
