@@ -89,7 +89,7 @@ class Codex(Codec):
 			self._dial[index][2].set_enabled(False)
 			self._mixer2.channel_strip(index).set_volume_control(self._dial[index][3])
 			self._mixer2.channel_strip(index).set_select_button(self._column_button[index])
-			self._mixer2.channel_strip(index).set_mute_button(self._dial_button[index][3])
+			self._mixer2.channel_strip(index).set_mute_button(self._button[index][3])
 		self._mixer2.set_track_offset(TROLL_OFFSET)
 		#self._device_selector.set_mode_buttons(self._grid)
 		#if not self._shifted:
