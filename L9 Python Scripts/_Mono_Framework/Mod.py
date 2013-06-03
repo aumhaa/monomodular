@@ -270,6 +270,10 @@ class ModClient(NotifyingControlElement):
 			handler._register_addresses(self)
 	
 
+	def addresses(self):
+		return self._addresses
+	
+
 	def active_handlers(self):
 		return self._active_handlers
 	
@@ -364,10 +368,6 @@ class ModRouter(CompoundComponent):
 		return None
 	
 
-	def msg(self, message):
-		self._host.log_message(message)
-	
-
 	def set_host(self, host):
 		assert isinstance(host, ControlSurface)
 		self._host = host
@@ -378,7 +378,7 @@ class ModRouter(CompoundComponent):
 
 	def has_host(self):
 		result = False
-		if isinstance(self._host, ControlSurface):
+		if hasattr(self._host, '_task_group'):
 			result = self._host._task_group.find(self.timer)
 		return result
 	
@@ -419,3 +419,6 @@ class ModRouter(CompoundComponent):
 		pass
 	
 
+	def disconnect(self):
+		super(ModRouter, self).disconnect()
+		

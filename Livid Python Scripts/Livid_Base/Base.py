@@ -570,7 +570,19 @@ class DeviceNavigator(ControlSurfaceComponent):
 	
 
 	def update(self):
-		pass
+		track = self._mixer.selected_strip()._track
+		if track != None:
+			if not self._prev_button is None:
+				if self._device._device and len(track.devices)>0 and [t for t in track.devices].index(self._device._device)>0:
+					self._prev_button.turn_on()
+				else:
+					self._prev_button.turn_off()
+			if not self._next_button is None:
+				if self._device._device and len(track.devices)>0 and [t for t in track.devices].index(self._device._device)<(len(track.devices)-1):
+					self._next_button.turn_on()
+				else:
+					self._next_button.turn_off()
+	
 	
 
 	def _nav_value(self, value, sender):
@@ -579,12 +591,12 @@ class DeviceNavigator(ControlSurfaceComponent):
 				track = self._mixer.selected_strip()._track
 				if track != None:
 					if(sender == self._prev_button):
-						self._script.log_message('prev button')
+						#self._script.log_message('prev button')
 						device = track.devices[min(len(track.devices)-1, max(0, [item for item in track.devices].index(self._device._device)-1))]
 						self._script.set_appointed_device(device)
 						self.song().view.select_device(device)
 					elif(sender == self._next_button):
-						self._script.log_message('next button')
+						#self._script.log_message('next button')
 						device = track.devices[min(len(track.devices)-1, max(0, [item for item in track.devices].index(self._device._device)+1))]
 						self._script.set_appointed_device(device)
 						self.song().view.select_device(device)	
@@ -903,7 +915,6 @@ class Base(ControlSurface):
 			self._setup_vertical_offset_component()
 			self._setup_scale_offset_component()
 			self._setup_session_recording_component()
-			self._setup_mod()
 			self._device.add_device_listener(self._on_new_device_set)
 		self.schedule_message(3, self._send_midi, STREAMINGON)
 		self.schedule_message(3, self._send_midi, LINKFUNCBUTTONS)
@@ -1054,12 +1065,12 @@ class Base(ControlSurface):
 	def _setup_mod(self):
 		if isinstance(__builtins__, dict):
 			if not 'monomodular' in __builtins__.keys():
-				self.log_message('make attr')
+				#self.log_message('make attr')
 				__builtins__['monomodular'] = ModRouter(self._c_instance)
 			self.monomodular = __builtins__['monomodular']
 		else:
 			if not hasattr(__builtins__, 'monomodular'):
-				self.log_message('make attr2')
+				#self.log_message('make attr2')
 				setattr(__builtins__, 'monomodular', ModRouter(self._c_instance))
 			self.monomodular = __builtins__['monomodular']
 		if not self.monomodular.has_host():
@@ -1158,16 +1169,11 @@ class Base(ControlSurface):
 					self._scene[row].set_launch_button(self._pad[7 + (row*8)])
 					self._pad[7 + (row*8)].set_on_off_values(7, 3)
 					self._pad[7 + (row*8)].turn_off()
-				self._button[4].set_on_off_values(OVERDUB, 0)
-				self._button[5].set_on_off_values(NEW, 0)
-				self._button[6].set_on_off_values(RECORD, 0)
-				self._button[7].set_on_off_values(LENGTH, 0)
-				self._transport.set_overdub_button(self._button[4])
-				#self._on_new_button_value.subject = self._button[5]
-				#self.log_message('assigning scene launch')
-				self._recorder.set_record_button(self._button[6])
-				self._recorder.set_new_button(self._button[5])
-				self._recorder.set_length_button(self._button[7])
+				self._session.set_scene_bank_buttons(self._button[5], self._button[4])
+				self._session.set_track_bank_buttons(self._button[6], self._button[7])
+				self._current_nav_buttons = self._button[4:8]
+				for index in range(4):
+					self._button[index+4].set_on_off_values(SESSION_NAV[0], 0)
 				self._session.update()
 				self.request_rebuild_midi_map()
 			self.schedule_message(1, self._session._reassign_scenes)
@@ -1329,10 +1335,12 @@ class Base(ControlSurface):
 		self._send_midi(tuple([191, 122, 64]))		#turn local OFF for CapFaders
 		self._current_nav_buttons = []
 		with self.component_guard():
-			self._on_new_button_value.subject = None
 			self.modhandler._assign_base_grid(None)
 			self.modhandler._assign_base_grid_CC(None)
 			self._transport.set_overdub_button(None)
+			self._recorder.set_new_button(None)
+			self._recorder.set_record_button(None)
+			self._recorder.set_length_button(None)
 			self._offset_component.deassign_all()
 			self._vertical_offset_component.deassign_all()
 			self._scale_offset_component.deassign_all()
@@ -1436,11 +1444,20 @@ class Base(ControlSurface):
 							self._scene[row].clip_slot(column).set_launch_button(self._pad[column + (row*8)])
 					self._session.set_scene_bank_buttons(self._button[5], self._button[4])
 					self._session.set_track_bank_buttons(self._button[6], self._button[7])
-					self._current_nav_buttons = self._button[4:8]
-					self._session.set_show_highlight(True)
 					for index in range(4):
 						self._button[index+4].set_on_off_values(SESSION_NAV[shifted], 0)
+					self._current_nav_buttons = self._button[4:8]
+					self._session.set_show_highlight(True)
 					self._session.update()
+				else:
+					self._button[4].set_on_off_values(OVERDUB+6, OVERDUB)
+					self._button[5].set_on_off_values(NEW+6, NEW)
+					self._button[6].set_on_off_values(RECORD+6, RECORD)
+					self._button[7].set_on_off_values(LENGTH+6, LENGTH)
+					self._transport.set_overdub_button(self._button[4])
+					self._recorder.set_new_button(self._button[5])
+					self._recorder.set_record_button(self._button[6])
+					self._recorder.set_length_button(self._button[7])
 			else:
 				if not self._assign_midi_shift_layer():
 					for index in range(8):
@@ -1469,6 +1486,7 @@ class Base(ControlSurface):
 				self._session.set_stop_track_clip_buttons(tuple(self._pad[24:32]))
 			self._mixer.update()
 		self.request_rebuild_midi_map()
+		self.application().view.show_view('Detail/Clip')	
 	
 
 	def _set_layer2(self, shifted = False):
@@ -1482,17 +1500,18 @@ class Base(ControlSurface):
 				for index in range(8):
 					self._touchpad[index].set_on_off_values(CHAN_SELECT, 0)
 					self._mixer.channel_strip(index).set_select_button(self._touchpad[index])
-				if not self._assign_mod():
-					if self._mixer.shifted() or not self._assign_midi_layer():
-						self._send_midi(LIVEBUTTONMODE)
-						for column in range(8): 
-							for row in range(4):
-								self._scene[row].clip_slot(column).set_launch_button(self._pad[column + (row*8)])
+				#if not self._assign_mod():
+				if self._mixer.shifted() or not self._assign_midi_layer():
+					self._send_midi(LIVEBUTTONMODE)
+					for column in range(8): 
+						for row in range(4):
+							self._scene[row].clip_slot(column).set_launch_button(self._pad[column + (row*8)])
 				self._device.set_bank_nav_buttons(self._button[4], self._button[5])
 				self._device_navigator.set_nav_buttons(self._button[7], self._button[6])
 				self._current_nav_buttons = self._button[4:8]
-				for index in range(4):
-					self._button[index+4].set_on_off_values(DEVICE_NAV, 0)
+				for index in range(2):
+					self._button[index+4].set_on_off_values(BANK_NAV, 0)
+					self._button[index+6].set_on_off_values(DEVICE_NAV, 0)
 				self._device.update()
 				self._device_navigator.update()
 			else:
@@ -1523,6 +1542,7 @@ class Base(ControlSurface):
 			#self._device_navigator.set_nav_buttons(self._button[7], self._button[6])
 			self._mixer.update()
 		self.request_rebuild_midi_map()
+		self.application().view.show_view('Detail/DeviceChain')
 	
 
 	def _set_layer3(self, shifted = False):
@@ -1566,6 +1586,8 @@ class Base(ControlSurface):
 					#self.log_message('auto found: ' + str(scale))
 				if scale is 'Session':
 					is_midi = False
+				elif scale is 'Mod':
+					is_midi = True
 				elif scale in SPLIT_SCALES or split:
 					self._send_midi(SPLITBUTTONMODE)
 					scale_len = len(SCALES[scale])
@@ -1708,12 +1730,15 @@ class Base(ControlSurface):
 	def _detect_instrument_type(self, track):
 		scale = DEFAULT_AUTO_SCALE
 		#for device in self._get_devices(track):
-		for device in track.devices:
-			if isinstance(device, Live.Device.Device):
-				#self.log_message('device: ' + str(device.class_name))
-				if device.class_name == 'DrumGroupDevice':
-					scale = 'DrumPad'
-					break
+		if self._assign_mod():
+			scale = 'Mod'
+		else:
+			for device in track.devices:
+				if isinstance(device, Live.Device.Device):
+					#self.log_message('device: ' + str(device.class_name))
+					if device.class_name == 'DrumGroupDevice':
+						scale = 'DrumPad'
+						break
 		return scale
 	
 
@@ -2024,7 +2049,8 @@ class Base(ControlSurface):
 	
 
 	def connect_script_instances(self, instanciated_scripts):
-		pass
+		with self.component_guard():
+			self._setup_mod()
 	
 
 	"""some cheap overrides"""
