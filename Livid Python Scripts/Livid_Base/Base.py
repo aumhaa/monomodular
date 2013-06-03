@@ -40,6 +40,10 @@ import sys
 import _Mono_Framework.modRemixNet as RemixNet
 import _Mono_Framework.modOSC
 
+from Push.SessionRecordingComponent import *
+from Push.ClipCreator import ClipCreator
+from Push.ViewControlComponent import ViewControlComponent
+
 DIRS = [47, 48, 50, 49]
 _NOTENAMES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B']
 NOTENAMES = [(_NOTENAMES[index%12] + ' ' + str(int(index/12))) for index in range(128)]
@@ -898,6 +902,7 @@ class Base(ControlSurface):
 			self._setup_offset_component()
 			self._setup_vertical_offset_component()
 			self._setup_scale_offset_component()
+			self._setup_session_recording_component()
 			self._setup_mod()
 			self._device.add_device_listener(self._on_new_device_set)
 		self.schedule_message(3, self._send_midi, STREAMINGON)
@@ -1042,6 +1047,10 @@ class Base(ControlSurface):
 		self._scale_offset_component._maximum = len(SCALES.keys())-1
 	
 
+	def _setup_session_recording_component(self):
+		self._recorder = SessionRecordingComponent(ClipCreator(), ViewControlComponent())
+	
+
 	def _setup_mod(self):
 		if isinstance(__builtins__, dict):
 			if not 'monomodular' in __builtins__.keys():
@@ -1120,6 +1129,8 @@ class Base(ControlSurface):
 		self._display_mode()
 		if self._mixer._held is held_strip:
 			with self.component_guard():
+				self._session.set_scene_bank_buttons(None, None)
+				self._session.set_track_bank_buttons(None, None)
 				for pad in self._touchpad:
 					pad.set_on_off_values(127, 0)
 					pad.release_parameter()
@@ -1137,6 +1148,8 @@ class Base(ControlSurface):
 					pad.release_parameter()
 					pad.use_default_message()
 					pad.set_enabled(True)
+				for button in self._button[4:8]:
+					button.release_parameter()
 				self._send_midi(LIVEBUTTONMODE)
 				for column in range(7): 
 					for row in range(4):
@@ -1145,7 +1158,16 @@ class Base(ControlSurface):
 					self._scene[row].set_launch_button(self._pad[7 + (row*8)])
 					self._pad[7 + (row*8)].set_on_off_values(7, 3)
 					self._pad[7 + (row*8)].turn_off()
+				self._button[4].set_on_off_values(OVERDUB, 0)
+				self._button[5].set_on_off_values(NEW, 0)
+				self._button[6].set_on_off_values(RECORD, 0)
+				self._button[7].set_on_off_values(LENGTH, 0)
+				self._transport.set_overdub_button(self._button[4])
+				#self._on_new_button_value.subject = self._button[5]
 				#self.log_message('assigning scene launch')
+				self._recorder.set_record_button(self._button[6])
+				self._recorder.set_new_button(self._button[5])
+				self._recorder.set_length_button(self._button[7])
 				self._session.update()
 				self.request_rebuild_midi_map()
 			self.schedule_message(1, self._session._reassign_scenes)
@@ -1307,6 +1329,7 @@ class Base(ControlSurface):
 		self._send_midi(tuple([191, 122, 64]))		#turn local OFF for CapFaders
 		self._current_nav_buttons = []
 		with self.component_guard():
+			self._on_new_button_value.subject = None
 			self.modhandler._assign_base_grid(None)
 			self.modhandler._assign_base_grid_CC(None)
 			self._transport.set_overdub_button(None)
@@ -1808,6 +1831,52 @@ class Base(ControlSurface):
 		self._last_pad_stream = decoded
 		for index in range(len(decoded)):
 			self._stream_pads[index].press_flash(decoded[index])
+	
+
+	@subject_slot('value')
+	def _on_duplicate_button_value(self, value):
+		self.log_message('duplicate button value: ' + str(value))
+		track = self._mixer.selected_strip()._track
+		#track_index = [t for t in self._mixer.tracks_to_use()].index(self._mixer.selected_strip()._track)
+		#self._session.selected_scene.clip_slot(track_index)._do_duplicate_clipslot()
+		if not value is 0 and not track is None:
+			try:
+				track.duplicate_clip_slot([s for s in self.song().scenes].index(self.song().view.selected_scene))
+				#self._session.selected_scene.clip_slot(track_index)._do_duplicate_clipslot()
+			except:
+				self.log_message('couldnt duplicate')
+				self.log_message('because: ' + str([s for s in self.song().scenes].index(self.song().view.selected_scene)))
+	
+
+	@subject_slot('value')
+	def _on_new_button_value(self, value):
+		self.log_message('new button value: ' +str(value))
+		song = self.song()
+		view = song.view
+		try:
+			selected_track = view.selected_track
+			selected_scene_index = list(song.scenes).index(view.selected_scene)
+			selected_track.stop_all_clips(False)
+			self._jump_to_next_slot(selected_track, selected_scene_index)
+		except:
+			self.log_message('couldnt create new')
+			#self._view_selected_clip_detail()
+	
+
+	def _jump_to_next_slot(self, track, start_index):
+		song = self.song()
+		new_scene_index = self._next_empty_slot(track, start_index)
+		song.view.selected_scene = song.scenes[new_scene_index]
+	
+
+	def _next_empty_slot(self, track, scene_index):
+		song = self.song()
+		scene_count = len(song.scenes)
+		while track.clip_slots[scene_index].has_clip:
+			scene_index += 1
+			if scene_index == scene_count:
+				song.create_scene(scene_count)
+		return scene_index
 	
 
 	@subject_slot('value')
