@@ -89,7 +89,7 @@ class Grid(object):
 	def __init__(self, active_handlers, name, width, height):
 		self._active_handlers = active_handlers
 		self._name = name
-		self._cell = [[StoredElement(active_handlers, _name = self._name + '_' + str(x) + '_' + str(y), _x = x, _y = y) for y in range(height)] for x in range(width)]
+		self._cell = [[StoredElement(active_handlers, _name = self._name + '_' + str(x) + '_' + str(y), _x = x, _y = y, _id = -1, ) for y in range(height)] for x in range(width)]
 	
 
 	def restore(self):
@@ -101,6 +101,10 @@ class Grid(object):
 	def update_element(self, element):
 		for handler in self._active_handlers():
 			handler.receive_address(self._name, element._x, element._y, element._value)
+	
+
+	def id(self, id):
+		pass
 	
 
 	def value(self, x, y, value):
@@ -377,6 +381,7 @@ class ModRouter(CompoundComponent):
 	
 
 	def has_host(self):
+		from _Framework.ControlSurface import ControlSurface
 		result = False
 		if hasattr(self._host, '_task_group'):
 			result = self._host._task_group.find(self.timer)
@@ -421,4 +426,5 @@ class ModRouter(CompoundComponent):
 
 	def disconnect(self):
 		super(ModRouter, self).disconnect()
-		
+		del __builtins__['monomodular']
+	

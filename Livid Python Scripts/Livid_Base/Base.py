@@ -818,7 +818,8 @@ class BaseModHandler(ModHandler):
 		super(BaseModHandler, self).__init__(*a, **k)
 		self._base_grid = None
 		self._base_grid_CC = None
-		self._receive_methods = {'grid': self._receive_grid, 'base_grid': self._receive_base_grid, 'base_keys': self._receive_base_keys}
+		self._receive_methods = {'grid': self._receive_grid, 'base_grid': self._receive_base_grid, 'base_keys': self._receive_base_keys, 'base_faders': self._receive_base_faders}
+		self._shifted = False
 	
 
 	def _register_addresses(self, client):
@@ -826,30 +827,8 @@ class BaseModHandler(ModHandler):
 			client._addresses['base_grid'] = Grid(client.active_handlers, 'base_grid', 8, 4)
 		if not 'base_keys' in client._addresses:
 			client._addresses['base_keys'] = Array(client.active_handlers, 'base_keys', 8)
-	
-
-	def _assign_base_grid(self, grid):
-		self._base_grid = grid
-		self._base_grid_value.subject = self._base_grid
-	
-
-	def _assign_base_grid_CC(self, grid):
-		self._base_grid_CC = grid
-		self._base_grid_CC_value.subject = self._base_grid_CC
-	
-
-	@subject_slot('value')
-	def _base_grid_value(self, value, x, y, *a, **k):
-		#self.log_message('_base_grid_value ' + str(x) + str(y) + str(value))
-		if self._active_mod:
-			self._active_mod.send('base_grid', x, y, value)
-	
-
-	@subject_slot('value')
-	def _base_grid_CC_value(self, value, x, y, *a, **k):
-		#self.log_message('_base_grid_CC_value ' + str(x) + str(y) + str(value))
-		if self._active_mod:
-			self._active_mod.send('base_grid_CC', x, y, value)
+		if not 'base_faders' in client._addresses:
+			client._addresses['base_faders'] = Array(client.active_handlers, 'base_faders', 8)
 	
 
 	def _receive_base_grid(self, x, y, value):
@@ -864,6 +843,43 @@ class BaseModHandler(ModHandler):
 
 	def _receive_base_keys(self, num, value):
 		pass	
+	
+
+	def _receive_base_faders(self, num, value):
+		pass
+	
+
+	def _assign_base_grid(self, grid):
+		self._base_grid = grid
+		self._base_grid_value.subject = self._base_grid
+	
+
+	def _assign_base_grid_CC(self, grid):
+		self._base_grid_CC = grid
+		self._base_grid_CC_value.subject = self._base_grid_CC
+	
+
+	def _assign_base_shift_buttons(self, button):
+		pass
+	
+
+	@subject_slot('value')
+	def _base_shift_value(self, value):
+		pass
+	
+
+	@subject_slot('value')
+	def _base_grid_value(self, value, x, y, *a, **k):
+		#self.log_message('_base_grid_value ' + str(x) + str(y) + str(value))
+		if self._active_mod:
+			self._active_mod.send('base_grid', x, y, value)
+	
+
+	@subject_slot('value')
+	def _base_grid_CC_value(self, value, x, y, *a, **k):
+		#self.log_message('_base_grid_CC_value ' + str(x) + str(y) + str(value))
+		if self._active_mod:
+			self._active_mod.send('base_grid_CC', x, y, value)
 	
 
 
@@ -1066,12 +1082,12 @@ class Base(ControlSurface):
 		if isinstance(__builtins__, dict):
 			if not 'monomodular' in __builtins__.keys():
 				#self.log_message('make attr')
-				__builtins__['monomodular'] = ModRouter(self._c_instance)
+				__builtins__['monomodular'] = ModRouter()
 			self.monomodular = __builtins__['monomodular']
 		else:
 			if not hasattr(__builtins__, 'monomodular'):
 				#self.log_message('make attr2')
-				setattr(__builtins__, 'monomodular', ModRouter(self._c_instance))
+				setattr(__builtins__, 'monomodular', ModRouter())
 			self.monomodular = __builtins__['monomodular']
 		if not self.monomodular.has_host():
 			self.monomodular.set_host(self)
