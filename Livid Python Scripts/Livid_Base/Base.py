@@ -1,4 +1,4 @@
-# by amounra 0413 : http://www.aumhaa.com
+# by amounra 0613 : http://www.aumhaa.com
 
 from __future__ import with_statement
 import Live
@@ -117,7 +117,8 @@ _base_translations =	{'0': 0,
 						'-': 42}
 						
 
-
+FADER_COLORS = [96, 124, 108, 120, 116, 100, 104, 112]
+#FADER_COLORS = [0, 4, 8, 12, 16, 20, 24, 28]
 DEFAULT_MIDI_ASSIGNMENTS = {'mode':'chromatic', 'offset':36, 'vertoffset':12, 'scale':'Chromatic', 'drumoffset':0, 'split':False}
 LAYERSPLASH = [63, 69, 70, 65]
 USERBUTTONMODE = (240, 0, 1, 97, 12, 66, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 247)
@@ -152,7 +153,6 @@ MIDI_CC_STATUS = 176
 MIDI_PB_STATUS = 224
 
 
-
 class BlockingMonoButtonElement(MonoButtonElement):
 
 
@@ -171,12 +171,6 @@ class BlockingMonoButtonElement(MonoButtonElement):
 		elif ((self._msg_channel != self._original_channel) or (self._msg_identifier != self._original_identifier)):
 			self._install_translation(self._msg_type, self._original_identifier, self._original_channel, self._msg_identifier, self._msg_channel)
 			#self._install_original_forwarding(self)"""
-	
-
-
-	#def receive_value(self, value):
-	#	#self._script.log_message('receive value ' + str(self.message_identifier) + ' ' + str(value))
-	#	InputControlElement.receive_value(self, value)
 	
 
 	def press_flash(self, value, force = False):
@@ -811,6 +805,33 @@ class ScrollingOffsetComponent(ControlSurfaceComponent):
 	
 
 
+class BaseFaderArray(Array):
+
+
+	def __init__(self, active_handlers, name, size):
+		self._active_handlers = active_handlers
+		self._name = name
+		self._cell = [StoredElement(self._name + '_' + str(num), _num = num, _mode = 1, _value = 7) for num in range(size)]
+	
+
+	def value(self, num, value = 0):
+		element = self._cell[num]
+		element._value = value % 8
+		self.update_element(element)
+	
+
+	def mode(self, num, mode = 0):
+		element = self._cell[num]
+		element._mode = mode % 4
+		self.update_element(element)
+	
+
+	def update_element(self, element):	
+		for handler in self._active_handlers():
+			handler.receive_address(self._name, element._num, (FADER_COLORS[element._value]) + element._mode )
+	
+
+
 class BaseModHandler(ModHandler):
 
 
@@ -818,35 +839,38 @@ class BaseModHandler(ModHandler):
 		super(BaseModHandler, self).__init__(*a, **k)
 		self._base_grid = None
 		self._base_grid_CC = None
-		self._receive_methods = {'grid': self._receive_grid, 'base_grid': self._receive_base_grid, 'base_keys': self._receive_base_keys, 'base_faders': self._receive_base_faders}
+		self._keys = None
+		self._fader_color_override = False
+		self._receive_methods = {'grid': self._receive_grid, 'base_grid': self._receive_base_grid, 'key': self._receive_key, 'base_fader': self._receive_base_fader}
 		self._shifted = False
 	
 
 	def _register_addresses(self, client):
 		if not 'base_grid' in client._addresses:
 			client._addresses['base_grid'] = Grid(client.active_handlers, 'base_grid', 8, 4)
-		if not 'base_keys' in client._addresses:
-			client._addresses['base_keys'] = Array(client.active_handlers, 'base_keys', 8)
-		if not 'base_faders' in client._addresses:
-			client._addresses['base_faders'] = Array(client.active_handlers, 'base_faders', 8)
+		if not 'key' in client._addresses:
+			client._addresses['key'] = Array(client.active_handlers, 'key', 8)
+		if not 'base_fader' in client._addresses:
+			client._addresses['base_fader'] = BaseFaderArray(client.active_handlers, 'base_fader', 8)
 	
 
 	def _receive_base_grid(self, x, y, value):
-		#self.log_message('base_grid_in ' + str(x) + ' ' + str(y) + ' ' + str(value))
+		self.log_message('_receive_base_grid: %s %s %s' % (x, y, value))
 		if not self._base_grid is None:
 			self._base_grid.send_value(x, y, value, True)
-			#button = self._base_grid.get_button(y, x)
-			#button.force_next_send()
-			#button.send_value(value)
-		#self.log_message('_receive_base_grid: %s %s %s' % x % y % value)
+
 	
 
-	def _receive_base_keys(self, num, value):
-		pass	
+	def _receive_key(self, x, value):
+		self.log_message('_receive_key: %s %s' % (x, value))
+		if not self._keys is None:
+			self._keys.send_value(x, 0, value, True)
 	
 
-	def _receive_base_faders(self, num, value):
-		pass
+	def _receive_base_fader(self, num, value):
+		self.log_message('_receive_base_fader: %s %s' % (num, value))
+		if self._fader_color_override:
+			self._script._send_midi((191, num+10, value))
 	
 
 	def _assign_base_grid(self, grid):
@@ -859,13 +883,15 @@ class BaseModHandler(ModHandler):
 		self._base_grid_CC_value.subject = self._base_grid_CC
 	
 
-	def _assign_base_shift_buttons(self, button):
-		pass
+	def _assign_keys(self, keys):
+		self._keys = keys
+		self._keys_value.subject = self._keys
 	
 
 	@subject_slot('value')
-	def _base_shift_value(self, value):
-		pass
+	def _keys_value(self, value, x, y, *a, **k):
+		if self._active_mod:
+			self._active_mod.send('key', x, value)
 	
 
 	@subject_slot('value')
@@ -961,9 +987,13 @@ class Base(ControlSurface):
 		self._on_nav_button_value.subject = self._nav_buttons
 		self._base_grid = ButtonMatrixElement()
 		self._base_grid_CC = ButtonMatrixElement()
+		self._keys = ButtonMatrixElement()
+		self._keys_display = ButtonMatrixElement()
 		for index in range(4):
 			self._base_grid.add_row(self._pad[(index*8):(index*8)+8])
 			self._base_grid_CC.add_row(self._pad_CC[(index*8):(index*8)+8])
+		self._keys.add_row(self._touchpad[0:8])
+		self._keys_display.add_row(self._runner[0:8])
 	
 
 	def _setup_mixer_control(self):
@@ -1348,9 +1378,15 @@ class Base(ControlSurface):
 	
 
 	def _deassign_all(self):
+		self.modhandler._fader_color_override = False
+		self._send_midi(tuple([240, 0, 1, 97, 12, 50, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 247]))
 		self._send_midi(tuple([191, 122, 64]))		#turn local OFF for CapFaders
+		#for index in range(8):
+		#	self._send_midi(tuple([191, index+10, 125]))
+		#self._send_midi(tuple([191, 18, 105]))
 		self._current_nav_buttons = []
 		with self.component_guard():
+			self.modhandler._assign_keys(None)
 			self.modhandler._assign_base_grid(None)
 			self.modhandler._assign_base_grid_CC(None)
 			self._transport.set_overdub_button(None)
@@ -1399,6 +1435,9 @@ class Base(ControlSurface):
 				fader.use_default_message()
 				fader.send_value(0, True)
 				fader.set_enabled(True)
+			for runner in self._runner:
+				runner.release_parameter()
+				runner.reset(True)
 				#fader.force_next_send()
 		#self.request_rebuild_midi_map()
 	
@@ -1410,6 +1449,8 @@ class Base(ControlSurface):
 			self._send_midi(LIVEBUTTONMODE)
 			self._mixer.master_strip().set_volume_control(self._fader[8])
 			self._send_midi(tuple([240, 0, 1, 97, 12, 61, 7, 7, 7, 7, 7, 7, 7, 7, 2, 247]))
+			#for index in range(8):
+			#	self._send_midi(tuple([191, index+10, 125]))
 			for index in range(8):
 				self._touchpad[index].set_on_off_values(CHAN_SELECT, 0)
 				self._mixer.channel_strip(index).set_select_button(self._touchpad[index])
@@ -1426,6 +1467,8 @@ class Base(ControlSurface):
 						self._scene[row].clip_slot(column).set_launch_button(self._pad[column + (row*8)])
 			else:
 				self._send_midi(tuple([240, 0, 1, 97, 12, 61, 7, 7, 7, 7, 7, 7, 7, 7, 2, 247]))
+				#for index in range(8):
+				#	self._send_midi(tuple([191, index+10, 125]))
 				self._session._shifted = True
 				for index in range(8):
 					self._pad[index].set_on_off_values(TRACK_MUTE, 0)
@@ -1450,6 +1493,9 @@ class Base(ControlSurface):
 			self._mixer.master_strip().set_volume_control(self._fader[8])
 			if not shifted:
 				self._send_midi(tuple([240, 0, 1, 97, 12, 61, 5, 5, 5, 5, 4, 4, 4, 4, 2, 247]))
+				#for index in range(4):
+				#	self._send_midi(tuple([191, index+10, 89]))
+				#	self._send_midi(tuple([191, index+14, 85]))
 				for index in range(8):
 					self._touchpad[index].set_on_off_values(CHAN_SELECT, 0)
 					self._mixer.channel_strip(index).set_select_button(self._touchpad[index])
@@ -1488,7 +1534,9 @@ class Base(ControlSurface):
 					for index in range(4):
 						self._button[index+4].set_on_off_values(SESSION_NAV[shifted], 0)
 					self._session.update()
-				self._send_midi(tuple([240, 0, 1, 97, 12, 61, 7, 7, 7, 7, 7, 7, 7, 7, 2, 247]))
+				#self._send_midi(tuple([240, 0, 1, 97, 12, 61, 7, 7, 7, 7, 7, 7, 7, 7, 2, 247]))
+				for index in range(8):
+					self._send_midi(tuple([191, index+10, 125]))
 				for index in range(8):
 					self._mixer.channel_strip(index).set_volume_control(self._fader[index])
 					self._pad[index].set_on_off_values(TRACK_MUTE, 0)
@@ -1513,6 +1561,8 @@ class Base(ControlSurface):
 			self._mixer.master_strip().set_volume_control(self._fader[8])
 			if not shifted:
 				self._send_midi(tuple([240, 0, 1, 97, 12, 61, 6, 6, 6, 6, 6, 6, 6, 6, 2, 247]))
+				#for index in range(8):
+				#	self._send_midi(tuple([191, index+10, 80]))
 				for index in range(8):
 					self._touchpad[index].set_on_off_values(CHAN_SELECT, 0)
 					self._mixer.channel_strip(index).set_select_button(self._touchpad[index])
@@ -1543,6 +1593,8 @@ class Base(ControlSurface):
 					#self._device_navigator.update()
 				self._device.deassign_all()
 				self._send_midi(tuple([240, 0, 1, 97, 12, 61, 7, 7, 7, 7, 7, 7, 7, 7, 2, 247]))
+				#for index in range(8):
+				#	self._send_midi(tuple([191, index+10, 125]))
 				for index in range(8):
 					self._mixer.channel_strip(index).set_volume_control(self._fader[index])
 					self._pad[index].set_on_off_values(TRACK_MUTE, 0)
@@ -1562,7 +1614,6 @@ class Base(ControlSurface):
 	
 
 	def _set_layer3(self, shifted = False):
-		self._send_midi(tuple([240, 0, 1, 97, 12, 61, 1, 1, 1, 1, 1, 1, 1, 1, 2, 247]))
 		with self.component_guard():
 			for pad in self._pad:
 				pad.send_value(0, True)
@@ -1577,6 +1628,9 @@ class Base(ControlSurface):
 				button.set_on_off_values(USERMODE, 0)
 			self._user_mode_selector.set_enabled(True)
 			self._assign_alternate_mappings(self._user_layer+12)
+			self._send_midi(tuple([240, 0, 1, 97, 12, 61, 1, 1, 1, 1, 1, 1, 1, 1, 2, 247]))
+			#for index in range(8):
+			#	self._send_midi(tuple([191, index+10, 100]))
 			self._send_midi(tuple([191, 122, 72]))		#turn local ON for CapFaders
 
 	
@@ -1681,31 +1735,39 @@ class Base(ControlSurface):
 			if cur_chan in CHANNELS:
 				cur_chan = (CHANNELS.index(cur_chan)%15)+1
 				scale = self._offsets[cur_chan]['scale']
-				for button in self._touchpad[0:1]:
-					button.set_on_off_values(SPLITMODE, 0)
-				for button in self._touchpad[1:2]:
-					button.set_on_off_values(OVERDUB, 0)
-				self._transport.set_overdub_button(self._touchpad[1])
-				self._split_mode_selector._mode_index = int(self._offsets[cur_chan]['split'])
-				self._split_mode_selector.set_enabled(True)
-				if not self._offsets[cur_chan]['scale'] is 'DrumPad':
-					for button in self._touchpad[2:4]:
-						button.set_on_off_values(VERTOFFSET, 0)
-					self._vertical_offset_component._offset = self._offsets[cur_chan]['vertoffset']		
-					self._vertical_offset_component.set_offset_change_buttons(self._touchpad[3], self._touchpad[2])
-				for button in self._touchpad[4:6]:
-					button.set_on_off_values(SCALEOFFSET, 0)
-				self._scale_offset_component._offset = SCALENAMES.index(self._offsets[cur_chan]['scale'])
-				self._scale_offset_component.set_offset_change_buttons(self._touchpad[5], self._touchpad[4])
-				for button in self._touchpad[6:8]:
-					button.set_on_off_values(OFFSET, 0)
 				if scale is 'Auto':
 					scale = self._detect_instrument_type(cur_track)
-				if scale is 'DrumPad':
-					self._offset_component._offset = self._offsets[cur_chan]['drumoffset']
+					#self.log_message('auto found: ' + str(scale))
+				if scale is 'Session':
+					is_midi = False
+				elif scale is 'Mod':
+					is_midi = True
 				else:
-					self._offset_component._offset = self._offsets[cur_chan]['offset']		
-				self._offset_component.set_offset_change_buttons(self._touchpad[7], self._touchpad[6])
+					for button in self._touchpad[0:1]:
+						button.set_on_off_values(SPLITMODE, 0)
+					for button in self._touchpad[1:2]:
+						button.set_on_off_values(OVERDUB, 0)
+					self._transport.set_overdub_button(self._touchpad[1])
+					self._split_mode_selector._mode_index = int(self._offsets[cur_chan]['split'])
+					self._split_mode_selector.set_enabled(True)
+					if not self._offsets[cur_chan]['scale'] is 'DrumPad':
+						for button in self._touchpad[2:4]:
+							button.set_on_off_values(VERTOFFSET, 0)
+						self._vertical_offset_component._offset = self._offsets[cur_chan]['vertoffset']		
+						self._vertical_offset_component.set_offset_change_buttons(self._touchpad[3], self._touchpad[2])
+					for button in self._touchpad[4:6]:
+						button.set_on_off_values(SCALEOFFSET, 0)
+					self._scale_offset_component._offset = SCALENAMES.index(self._offsets[cur_chan]['scale'])
+					self._scale_offset_component.set_offset_change_buttons(self._touchpad[5], self._touchpad[4])
+					for button in self._touchpad[6:8]:
+						button.set_on_off_values(OFFSET, 0)
+					if scale is 'Auto':
+						scale = self._detect_instrument_type(cur_track)
+					if scale is 'DrumPad':
+						self._offset_component._offset = self._offsets[cur_chan]['drumoffset']
+					else:
+						self._offset_component._offset = self._offsets[cur_chan]['offset']		
+					self._offset_component.set_offset_change_buttons(self._touchpad[7], self._touchpad[6])
 		return is_midi
 	
 
@@ -1800,6 +1862,12 @@ class Base(ControlSurface):
 			self._send_midi(MIDIBUTTONMODE)
 			self.modhandler._assign_base_grid(self._base_grid)
 			self.modhandler._assign_base_grid_CC(self._base_grid_CC)
+			if self.shift_pressed():
+				self.modhandler._assign_keys(self._keys)
+			else:
+				self.modhandler._assign_keys(self._keys_display)
+				if self._layer == 2:
+					self.modhandler._fader_color_override = True
 		self.modhandler.select_mod(mod)
 		return not mod is None
 			
@@ -2021,8 +2089,8 @@ class Base(ControlSurface):
 	
 
 	def _on_new_device_set(self):
-		if self._layer == 2:
-			self._layers[2]()
+		if self._layer in [1, 2]:
+			self._shift_update(self._layer, self.shift_pressed())
 	
 
 	def _on_selected_track_changed(self):

@@ -1,9 +1,11 @@
 autowatch = 1;
 
+outlets = 2;
+
 var finder;
 
 var script = this;
-var DEBUG = 1;
+var DEBUG = true;
 var MONOMODULAR=new RegExp(/(monomodular)/);
 var FUNCTION = new RegExp(/(function)/);
 var PROPERTY = new RegExp(/(property)/);
@@ -11,6 +13,7 @@ var WS = new RegExp('');
 var modFunctions = [];
 var modAddresses = [];
 var this_device_id = 0;
+var stored_messages = [];
 
 function init()
 {
@@ -76,6 +79,7 @@ function init()
 					post('making func:', modAddresses[address], '\n');
 					script[modAddresses[address]] = make_receive_func(modAddresses[address]);
 				}
+				send_stored_messages();
 				return;
 			}
 		}
@@ -95,7 +99,18 @@ function make_receive_func(address)
 
 function anything()
 {
-	post('anything', messagename, arguments, '\n');
+	var args = arrayfromargs(arguments);
+	post('anything', messagename, args, '\n');
+	if(finder == null)
+	{
+		if(DEBUG){post('adding to stack:', messagename, args, '\n');}
+		if(stored_messages.length>500)
+		{
+			stored_messages.shift();
+		}
+		stored_messages.push([messagename, args]);
+		if(DEBUG){post('added:', stored_messages[0], '\n');}
+	}
 }
 
 function list_functions()
@@ -116,3 +131,18 @@ function callback(args)
 	}
 }
 
+function send_stored_messages()
+{
+	if(DEBUG){post('send_stored_messages()');}
+	for(index in stored_messages)
+	{
+		if(DEBUG){post('sending stored message:', stored_messages[index], '\n');}
+		if(stored_messages[index][0] in script)
+		{
+			if(DEBUG){post('found function in script.\n');}
+			script[stored_messages[index][0]].apply(this, (stored_messages[index][1]));
+		}
+	}
+}
+
+post('new');
