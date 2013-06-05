@@ -832,6 +832,38 @@ class BaseFaderArray(Array):
 	
 
 
+class BaseGrid(Grid):
+
+
+	def __init__(self, active_handlers, name, width, height):
+		self._active_handlers = active_handlers
+		self._name = name
+		self._cell = [[StoredElement(active_handlers, _name = self._name + '_' + str(x) + '_' + str(y), _x = x, _y = y, _id = -1, _channel = -1 ) for y in range(height)] for x in range(width)]
+	
+
+	def restore(self):
+		for column in self._cell:
+			for element in column:
+				self.update_element(element)
+				for handler in self._active_handlers():
+					handler.receive_address(self._name, element._x, element._y, element, True)
+	
+
+	def identifier(self, x, y, identifier = -1):
+		element = self._cell[x][y]
+		element._id = min(127, max(-1, identifier))
+		for handler in self._active_handlers():
+			handler.receive_address(self._name, element._x, element._y, element, True)
+	
+
+	def channel(self, x, y, channel = -1):
+		element = self._cell[x][y]
+		element._channel = min(15, max(-1, channel))
+		for handler in self._active_handlers():
+			handler.receive_address(self._name, element._x, element._y, element, True)
+	
+
+
 class BaseModHandler(ModHandler):
 
 
@@ -847,18 +879,33 @@ class BaseModHandler(ModHandler):
 
 	def _register_addresses(self, client):
 		if not 'base_grid' in client._addresses:
-			client._addresses['base_grid'] = Grid(client.active_handlers, 'base_grid', 8, 4)
+			client._addresses['base_grid'] = BaseGrid(client.active_handlers, 'base_grid', 8, 4)
 		if not 'key' in client._addresses:
 			client._addresses['key'] = Array(client.active_handlers, 'key', 8)
 		if not 'base_fader' in client._addresses:
 			client._addresses['base_fader'] = BaseFaderArray(client.active_handlers, 'base_fader', 8)
 	
 
-	def _receive_base_grid(self, x, y, value):
-		self.log_message('_receive_base_grid: %s %s %s' % (x, y, value))
+	def _receive_base_grid(self, x, y, value, is_id = False):
+		self.log_message('_receive_base_grid: %s %s %s %s' % (x, y, value, is_id))
 		if not self._base_grid is None:
-			self._base_grid.send_value(x, y, value, True)
-
+			if is_id:
+				button = self._base_grid.get_button(x, y)
+				if value._id is -1 and value._channel is -1:
+					button.use_default_message()
+					button.set_enabled(True)
+				else:
+					identifier = value._id
+					if identifier < 0:
+						identifier = button._original_identifier
+					channel = value._channel
+					if channel < 0:
+						channel = button._original_channel
+					button.set_identifier(identifier)
+					button.set_channel(channel)
+					button.set_enabled(False)
+			else:
+				self._base_grid.send_value(x, y, value, True)
 	
 
 	def _receive_key(self, x, value):
