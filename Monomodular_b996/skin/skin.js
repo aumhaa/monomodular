@@ -5,7 +5,7 @@ outlets = 2;
 
 var script = this;
 var DEBUG = true;
-var FORCELOAD = true;
+var FORCELOAD = false;
 var assignment_gui;
 var keys_gui;
 var assignments = [];
@@ -33,11 +33,6 @@ function make_fsr(x, y)
 	new_fsr._y = y;
 	new_fsr._group = 0;
 	return new_fsr;
-}
-
-function blah()
-{
-	post('blah');
 }
 
 function init()

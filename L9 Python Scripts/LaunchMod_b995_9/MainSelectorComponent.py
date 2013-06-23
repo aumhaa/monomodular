@@ -7,13 +7,14 @@ from _Framework.ChannelStripComponent import ChannelStripComponent
 from _Framework.SceneComponent import SceneComponent
 from _Framework.SessionZoomingComponent import SessionZoomingComponent
 
-#from _Mono_Framework.MonoButtonElement import MonoButtonElement as FlashingButtonElement
 
 from ConfigurableButtonElement import ConfigurableButtonElement
 from SpecialSessionComponent import SpecialSessionComponent
 from SubSelectorComponent import *
 
 from _Mono_Framework.MonoButtonElement import MonoButtonElement
+
+START_IN_MOD = False
 
 class MainSelectorComponent(ModeSelectorComponent):
 	""" Class that reassigns the button on the launchpad to different functions """
@@ -57,6 +58,8 @@ class MainSelectorComponent(ModeSelectorComponent):
 		self._init_session()
 		self._all_buttons = tuple(self._all_buttons)
 		self.set_modes_buttons(top_buttons[4:])
+		if START_IN_MOD is True:
+			self._set_protected_mode_index(4)
 
 	def disconnect(self):
 		for button in self._modes_buttons:
@@ -137,6 +140,9 @@ class MainSelectorComponent(ModeSelectorComponent):
 			self._config_button.send_value(1)
 			release_buttons = self._mode_index == 1
 			if (self._mode_index < 4):
+				self._script._suppress_session_highlight = False
+				self._session.set_show_highlight(True)
+				#self._script.set_highlighting_session_component(self.session_component())
 				self._script._host._set_key_buttons(None)
 				self._script._host.set_enabled(False)
 				self._script._host._set_button_matrix(None)
@@ -161,6 +167,9 @@ class MainSelectorComponent(ModeSelectorComponent):
 					self._setup_session(not as_active, as_enabled)
 					self._setup_mixer(as_active)
 			elif (self._mode_index == 4):
+				#self._script.set_highlighting_session_component(None)
+				self._session.set_show_highlight(False)
+				self._script._suppress_session_highlight = True
 				self._setup_session((not as_active), (not as_enabled))
 				self._setup_mixer((not as_active))
 				self._setup_user(release_buttons)
