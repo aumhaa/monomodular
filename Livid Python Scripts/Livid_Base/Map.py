@@ -47,6 +47,9 @@ COLOR_MAP = [2, 64, 4, 8, 16, 127, 32]
 """This variable determines whether or not the script automatically arms an instruments track for recording when it is selected"""
 AUTO_ARM_SELECTED = True
 
+"""This variable determines whether the octave shift for the note offset controls work as momentary or toggle"""
+OFFSET_SHIFT_IS_MOMENTARY = False
+
 """The following variables contain color values for different operational mode indicators"""
 """[blackkey, whitekey]"""
 KEYCOLORS = [7, 3, 4, 5]
@@ -70,6 +73,9 @@ LENGTH = 3
 SESSION_NAV = [127, 3]
 DEVICE_NAV = 5
 BANK_NAV = 4
+CHAIN_NAV = 11
+DEVICE_LAYER = 12
+
 
 TRACK_MUTE = 2
 TRACK_ARM = 5

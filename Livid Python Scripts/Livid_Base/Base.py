@@ -1,8 +1,20 @@
 # by amounra 0613 : http://www.aumhaa.com
 
+
+
+
 from __future__ import with_statement
 import Live
 import math
+import sys
+
+#import Base
+#reload(Base)
+
+#for key in sys.modules.keys():
+#	if key is 'Livid_Base':
+#		sys.modules[key] = Base
+
 
 """ _Framework files """
 from _Framework.ButtonElement import ButtonElement # Class representing a button a the controller
@@ -43,6 +55,9 @@ import _Mono_Framework.modOSC
 from Push.SessionRecordingComponent import *
 from Push.ClipCreator import ClipCreator
 from Push.ViewControlComponent import ViewControlComponent
+from Push.DrumGroupComponent import DrumGroupComponent
+
+DEBUG = False
 
 DIRS = [47, 48, 50, 49]
 _NOTENAMES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B']
@@ -130,7 +145,7 @@ STREAMINGOFF = (240, 0, 1, 97, 12, 62, 0, 247)
 LINKFUNCBUTTONS = (240, 0, 1, 97, 12, 68, 1, 247)
 #DISABLECAPFADERNOTES = (240, 0, 1, 97, 12, 69, 1, 247)
 DISABLECAPFADERNOTES = (240, 0, 1, 97, 12, 60, 0, 0, 0, 0, 0, 0, 0, 0, 0, 247)
-
+QUERYSURFACE = (240, 126, 127, 6, 1, 247)
 
 CHANNELS = ['Ch. 2', 'Ch. 3', 'Ch. 4', 'Ch. 5', 'Ch. 6', 'Ch. 7', 'Ch. 8', 'Ch. 9', 'Ch. 10', 'Ch. 11', 'Ch. 12', 'Ch. 13', 'Ch. 14', 'Ch. 15', 'Ch. 16', 'All Channels']
 MODES = ['chromatic', 'drumpad', 'scale', 'user']
@@ -152,6 +167,64 @@ MIDI_NOTE_OFF_STATUS = 128
 MIDI_CC_STATUS = 176
 MIDI_PB_STATUS = 224
 
+_Q = Live.Song.Quantization
+LAUNCH_QUANTIZATION = (_Q.q_quarter,
+ _Q.q_half,
+ _Q.q_bar,
+ _Q.q_2_bars,
+ _Q.q_4_bars,
+ _Q.q_8_bars,
+ _Q.q_8_bars,
+ _Q.q_8_bars)
+
+
+class BaseSessionRecordingComponent(SessionRecordingComponent):
+	def __init__(self, *a, **k):
+		super(BaseSessionRecordingComponent, self).__init__(*a, **k)
+		self._length_value = 1
+		self._length_buttons = []
+
+	def _get_selected_length(self):
+		song = self.song()
+		length = 2.0 ** (self._length_value + 2)
+		quant = LAUNCH_QUANTIZATION[(self._length_value + 2)]
+		#if self._length_value > 1:
+		length = length * song.signature_numerator / song.signature_denominator
+		return (length, quant)
+	
+
+	def set_length_buttons(self, buttons):
+		if buttons != self._length_buttons:
+			for button in self._length_buttons:
+				if button.value_has_listener(self._on_length_button):
+					button.remove_value_listener(self._on_length_button)
+			if buttons == None:
+				buttons = []
+			self._length_buttons = buttons
+			for button in self._length_buttons:
+				button.add_value_listener(self._on_length_button, True)
+			self.update_length_buttons()
+	
+
+	def _on_length_button(self, value, sender):
+		if value > 0:
+			self._length_value = self._length_buttons.index(sender)
+			self.update_length_buttons()
+		
+		
+	def update(self, *a, **k):
+		super(BaseSessionRecordingComponent, self).update(*a, **k)
+		if self.is_enabled():
+			self.update_length_buttons()
+	
+
+	def update_length_buttons(self):
+		for button in self._length_buttons:
+			if self._length_buttons.index(button) == self._length_value:
+				button.turn_on()
+			else:
+				button.turn_off()
+	
 
 class BlockingMonoButtonElement(MonoButtonElement):
 
@@ -534,6 +607,10 @@ class DeviceNavigator(ControlSurfaceComponent):
 		super(DeviceNavigator, self).__init__()
 		self._prev_button = None
 		self._next_button = None
+		self._enter_button = None
+		self._exit_button = None
+		self._chain_prev_button = None
+		self._chain_next_button = None
 		self._device = device_component
 		self._mixer = mixer
 		self._script = script
@@ -542,6 +619,8 @@ class DeviceNavigator(ControlSurfaceComponent):
 
 	def deassign_all(self):
 		self.set_nav_buttons(None, None)
+		self.set_layer_buttons(None, None)
+		self.set_chain_nav_buttons(None, None)
 	
 
 	def set_nav_buttons(self, prev_button, next_button):
@@ -563,37 +642,146 @@ class DeviceNavigator(ControlSurfaceComponent):
 		return None
 	
 
+	def set_chain_nav_buttons(self, chain_prev_button, chain_next_button):
+		#self._script.log_message('set nav: ' + str(prev_button) + ' ' + str(next_button))
+		identify_sender = True
+		if self._chain_prev_button != None:
+			if self._chain_prev_button.value_has_listener(self._chain_nav_value):
+				self._chain_prev_button.remove_value_listener(self._chain_nav_value)
+		self._chain_prev_button = chain_prev_button
+		if self._chain_prev_button != None:
+			self._chain_prev_button.add_value_listener(self._chain_nav_value, identify_sender)
+		if self._chain_next_button != None:
+			if self._chain_next_button.value_has_listener(self._chain_nav_value):
+				self._chain_next_button.remove_value_listener(self._chain_nav_value)
+		self._chain_next_button = chain_next_button
+		if self._chain_next_button != None:
+			self._chain_next_button.add_value_listener(self._chain_nav_value, identify_sender)
+		self.update()
+		return None
+	
+
+	def set_layer_buttons(self, enter_button, exit_button):
+		#self._script.log_message('set nav: ' + str(prev_button) + ' ' + str(next_button))
+		identify_sender = True
+		if self._enter_button != None:
+			if self._enter_button.value_has_listener(self._enter_value):
+				self._enter_button.remove_value_listener(self._enter_value)
+		self._enter_button = enter_button
+		if self._enter_button != None:
+			self._enter_button.add_value_listener(self._enter_value)
+		if self._exit_button != None:
+			if self._exit_button.value_has_listener(self._exit_value):
+				self._exit_button.remove_value_listener(self._exit_value)
+		self._exit_button = exit_button
+		if self._exit_button != None:
+			self._exit_button.add_value_listener(self._exit_value)
+		self.update()
+		return None
+	
+
 	def update(self):
 		track = self._mixer.selected_strip()._track
+		if self._device._device and isinstance(self._device._device.canonical_parent, Live.Chain.Chain):
+			track = self._device._device.canonical_parent
 		if track != None:
 			if not self._prev_button is None:
-				if self._device._device and len(track.devices)>0 and [t for t in track.devices].index(self._device._device)>0:
+				if self._device._device and len(track.devices)>0 and self._device._device in track.devices and [t for t in track.devices].index(self._device._device)>0:
 					self._prev_button.turn_on()
 				else:
 					self._prev_button.turn_off()
 			if not self._next_button is None:
-				if self._device._device and len(track.devices)>0 and [t for t in track.devices].index(self._device._device)<(len(track.devices)-1):
+				if self._device._device and len(track.devices)>0 and self._device._device in track.devices and [t for t in track.devices].index(self._device._device)<(len(track.devices)-1):
 					self._next_button.turn_on()
 				else:
 					self._next_button.turn_off()
-	
+			if not self._chain_prev_button is None:
+				if self._device._device and isinstance(self._device._device.canonical_parent, Live.Chain.Chain):
+					parent_chain = self._device._device.canonical_parent
+					parent = parent_chain.canonical_parent
+					if len(parent.chains)>0 and parent_chain in parent.chains and [c for c in parent.chains].index(parent_chain)>0:
+						self._chain_prev_button.turn_on()
+					else:
+						self._chain_prev_button.turn_off()
+			if not self._chain_next_button is None:
+				if self._device._device and isinstance(self._device._device.canonical_parent, Live.Chain.Chain):
+					parent_chain = self._device._device.canonical_parent
+					parent = parent_chain.canonical_parent
+					if len(parent.chains)>0 and parent_chain in parent.chains and [c for c in parent.chains].index(parent_chain)<(len(parent.chains)-1):
+						self._chain_next_button.turn_on()
+					else:
+						self._chain_next_button.turn_off()
+			if not self._enter_button is None:
+				if self._device._device and self._device._device.can_have_chains and len(self._device._device.chains):
+					self._enter_button.turn_on()
+				else:
+					self._enter_button.turn_off()
+			if not self._exit_button is None:
+				if self._device._device and self._device._device.canonical_parent and isinstance(self._device._device.canonical_parent, Live.Chain.Chain):
+					self._exit_button.turn_on()
+				else:
+					self._exit_button.turn_off()
 	
 
 	def _nav_value(self, value, sender):
 		if self.is_enabled():
 			if ((not sender.is_momentary()) or (value != 0)):
 				track = self._mixer.selected_strip()._track
+				if self._device._device and isinstance(self._device._device.canonical_parent, Live.Chain.Chain):
+					track = self._device._device.canonical_parent
 				if track != None:
 					if(sender == self._prev_button):
 						#self._script.log_message('prev button')
-						device = track.devices[min(len(track.devices)-1, max(0, [item for item in track.devices].index(self._device._device)-1))]
-						self._script.set_appointed_device(device)
-						self.song().view.select_device(device)
+						if self._device._device and self._device._device in track.devices:
+							device = track.devices[min(len(track.devices)-1, max(0, [item for item in track.devices].index(self._device._device)-1))]
+							self._script.set_appointed_device(device)
+							self.song().view.select_device(device)
 					elif(sender == self._next_button):
-						#self._script.log_message('next button')
-						device = track.devices[min(len(track.devices)-1, max(0, [item for item in track.devices].index(self._device._device)+1))]
-						self._script.set_appointed_device(device)
-						self.song().view.select_device(device)	
+						if self._device._device and self._device._device in track.devices:
+							#self._script.log_message('next button')
+							device = track.devices[min(len(track.devices)-1, max(0, [item for item in track.devices].index(self._device._device)+1))]
+							self._script.set_appointed_device(device)
+							self.song().view.select_device(device)	
+	
+
+	def _chain_nav_value(self, value, sender):
+		if self.is_enabled():
+			if ((not sender.is_momentary()) or (value != 0)):
+				track = self._mixer.selected_strip()._track
+				if track != None:
+					if(sender == self._chain_prev_button):
+						#self._script.log_message('prev button')
+						if self._device._device and isinstance(self._device._device.canonical_parent, Live.Chain.Chain):
+							parent_chain = self._device._device.canonical_parent
+							parent = parent_chain.canonical_parent
+							device = parent.chains[min(len(parent.chains)-1, max(0, [item for item in parent.chains].index(parent_chain)-1))].devices[0]
+							self._script.set_appointed_device(device)
+							self.song().view.select_device(device)
+					elif(sender == self._chain_next_button):
+						if self._device._device and isinstance(self._device._device.canonical_parent, Live.Chain.Chain):
+							parent_chain = self._device._device.canonical_parent
+							parent = parent_chain.canonical_parent
+							device = parent.chains[min(len(parent.chains)-1, max(0, [item for item in parent.chains].index(parent_chain)+1))].devices[0]
+							self._script.set_appointed_device(device)
+							self.song().view.select_device(device)
+	
+
+	def _enter_value(self, value):
+		#self._script.log_message('enter: ' + str(value) + ' ; ' + str(self._device._device.can_have_chains) + ' ' + str(len(self._device._device.chains)))
+		if value:
+			if self._device._device and self._device._device.can_have_chains and len(self._device._device.chains):
+				device = self._device._device.chains[0].devices[0]
+				self._script.set_appointed_device(device)
+				self.song().view.select_device(device)
+	
+
+	def _exit_value(self, value):
+		#self._script.log_message('exit: ' + str(value) + ' ; ' + str(self._device._device.canonical_parent) + ' ' + str(isinstance(self._device._device.canonical_parent, Live.Chain.Chain)))
+		if value:
+			if self._device._device and self._device._device.canonical_parent and isinstance(self._device._device.canonical_parent, Live.Chain.Chain):
+				device = self._device._device.canonical_parent.canonical_parent
+				self._script.set_appointed_device(device)
+				self.song().view.select_device(device)
 	
 
 	def disconnect(self):
@@ -682,10 +870,14 @@ class ScrollingOffsetComponent(ControlSurfaceComponent):
 		self._report_change = callback
 		self._maximum = 127
 		self._minimum = 0
+		self._shifted = False
+		self._shifted_value = 11
 		self._scroll_up_ticks_delay = -1
 		self._scroll_down_ticks_delay = -1	
 		self._scroll_up_button = None
 		self._scroll_down_button = None
+		self._shift_button = None
+		self._shift_is_momentary = True
 		self._register_timer_callback(self._on_timer)
 	
 
@@ -737,7 +929,7 @@ class ScrollingOffsetComponent(ControlSurfaceComponent):
 				else:
 					self._scroll_up_ticks_delay = -1
 			if ((not self._is_scrolling()) and ((value is not 0) or (not button_is_momentary))):
-				self._offset = max(self._minimum, min(self._maximum, self._offset +1))
+				self._offset = max(self._minimum, min(self._maximum, self._offset + (1 + (self._shifted * self._shifted_value))))
 				self.update()
 				self._report_change(self._offset)
 	
@@ -753,9 +945,30 @@ class ScrollingOffsetComponent(ControlSurfaceComponent):
 				else:
 					self._scroll_down_ticks_delay = -1
 			if ((not self._is_scrolling()) and ((value is not 0) or (not button_is_momentary))):
-				self._offset = max(self._minimum, min(self._maximum, self._offset -1))
+				self._offset = max(self._minimum, min(self._maximum, self._offset - (1 + (self._shifted * self._shifted_value))))
 				self.update()
 				self._report_change(self._offset)
+	
+
+	def set_shift_button(self, shift_button):
+		if self._shift_button != None:
+			if self._shift_button.value_has_listener(self._shift_value):
+				self._shift_button.remove_value_listener(self._shift_value)
+		self._shift_button = shift_button
+		if self._shift_button != None:
+			self._shift_button.add_value_listener(self._shift_value)
+			self.update()
+	
+
+	def _shift_value(self, value):
+		if self._shift_is_momentary:
+			self._shifted = (value > 0)
+			self.update()
+		else:
+			if value > 0:
+				self._shifted = not self._shifted
+				self.update()
+		
 	
 
 	def _on_timer(self):
@@ -796,11 +1009,17 @@ class ScrollingOffsetComponent(ControlSurfaceComponent):
 			if (self._offset < self._maximum):
 				self._scroll_up_button.turn_on(True)
 			else:
-				self._scroll_up_button.turn_off(True)		
+				self._scroll_up_button.turn_off(True)	
+		if (self._shift_button != None):
+			if (self._shifted):
+				self._shift_button.turn_on(True)
+			else:
+				self._shift_button.turn_off(True)
 	
 
 	def deassign_all(self):
 		self.set_offset_change_buttons(None, None)
+		self.set_shift_button(None)
 		self.on_enabled_changed()
 	
 
@@ -963,6 +1182,7 @@ class Base(ControlSurface):
 
 	def __init__(self, c_instance):
 		super(Base, self).__init__(c_instance)
+		self._connected = False
 		self._host_name = 'Base'
 		self._color_type = 'OhmRGB'
 		self.monomodular = None
@@ -1004,15 +1224,27 @@ class Base(ControlSurface):
 			self._setup_vertical_offset_component()
 			self._setup_scale_offset_component()
 			self._setup_session_recording_component()
+			self._setup_drumgroup()
 			self._device.add_device_listener(self._on_new_device_set)
-		self.schedule_message(3, self._send_midi, STREAMINGON)
-		self.schedule_message(3, self._send_midi, LINKFUNCBUTTONS)
-		self.schedule_message(3, self._send_midi, DISABLECAPFADERNOTES)
-		self.schedule_message(3, self._send_midi, (191, 122, 64))
-		self.schedule_message(3, self._layers[0])
+		self.schedule_message(3, self._check_connection)
 	
 
 	"""script initialization methods"""
+	def _initialize_hardware(self):
+		self._send_midi(STREAMINGON)
+		self._send_midi(LINKFUNCBUTTONS)
+		self._send_midi(DISABLECAPFADERNOTES)
+		self._send_midi((191, 122, 64))
+		self._layers[0]()
+		#self.schedule_message(100, self._check_connection)
+	
+
+	def _check_connection(self):
+		if not self._connected:
+			self._send_midi(QUERYSURFACE)
+			self.schedule_message(100, self._check_connection)
+	
+
 	def _setup_monobridge(self):
 		self._monobridge = MonoBridgeElement(self)
 		self._monobridge.name = 'MonoBridge'
@@ -1041,6 +1273,9 @@ class Base(ControlSurface):
 			self._base_grid_CC.add_row(self._pad_CC[(index*8):(index*8)+8])
 		self._keys.add_row(self._touchpad[0:8])
 		self._keys_display.add_row(self._runner[0:8])
+		self._drumpad_grid = ButtonMatrixElement()
+		for index in range(4):
+			self._drumpad_grid.add_row(self._pad[(index*8):(index*8)+4])
 	
 
 	def _setup_mixer_control(self):
@@ -1139,6 +1374,8 @@ class Base(ControlSurface):
 
 	def _setup_offset_component(self):
 		self._offset_component = ScrollingOffsetComponent(self._offset_value)
+		self._offset_component._shifted_value = 11
+		self._shift_is_momentary = OFFSET_SHIFT_IS_MOMENTARY
 	
 
 	def _setup_vertical_offset_component(self):
@@ -1152,7 +1389,11 @@ class Base(ControlSurface):
 	
 
 	def _setup_session_recording_component(self):
-		self._recorder = SessionRecordingComponent(ClipCreator(), ViewControlComponent())
+		self._recorder = BaseSessionRecordingComponent(ClipCreator(), ViewControlComponent())
+	
+
+	def _setup_drumgroup(self):
+		self._drumgroup = DrumGroupComponent()
 	
 
 	def _setup_mod(self):
@@ -1433,6 +1674,7 @@ class Base(ControlSurface):
 		#self._send_midi(tuple([191, 18, 105]))
 		self._current_nav_buttons = []
 		with self.component_guard():
+			self._drumgroup.set_drum_matrix(None)
 			self.modhandler._assign_keys(None)
 			self.modhandler._assign_base_grid(None)
 			self.modhandler._assign_base_grid_CC(None)
@@ -1440,6 +1682,7 @@ class Base(ControlSurface):
 			self._recorder.set_new_button(None)
 			self._recorder.set_record_button(None)
 			self._recorder.set_length_button(None)
+			self._recorder.set_length_buttons(None)
 			self._offset_component.deassign_all()
 			self._vertical_offset_component.deassign_all()
 			self._scale_offset_component.deassign_all()
@@ -1582,6 +1825,12 @@ class Base(ControlSurface):
 						self._button[index+4].set_on_off_values(SESSION_NAV[shifted], 0)
 					self._session.update()
 				#self._send_midi(tuple([240, 0, 1, 97, 12, 61, 7, 7, 7, 7, 7, 7, 7, 7, 2, 247]))
+				else:
+					self._button[4].set_on_off_values(24, 0)
+					self._offset_component.set_shift_button(self._button[4])
+					for button in self._button[5:8]:
+						button.set_on_off_values(16, 15)
+					self._recorder.set_length_buttons(self._button[5:8])
 				for index in range(8):
 					self._send_midi(tuple([191, index+10, 125]))
 				for index in range(8):
@@ -1653,8 +1902,14 @@ class Base(ControlSurface):
 					self._pad[index+24].set_on_off_values(TRACK_STOP, TRACK_STOP)
 					self._pad[index+24].send_value(TRACK_STOP)
 				self._session.set_stop_track_clip_buttons(tuple(self._pad[24:32]))
-			#self._device.set_bank_nav_buttons(self._button[4], self._button[5])
-			#self._device_navigator.set_nav_buttons(self._button[7], self._button[6])
+				self._device_navigator.set_layer_buttons(self._button[7], self._button[6])
+				self._device_navigator.set_chain_nav_buttons(self._button[4], self._button[5])
+				self._current_nav_buttons = self._button[4:8]
+				for index in range(2):
+					self._button[index+4].set_on_off_values(CHAIN_NAV, 0)
+					self._button[index+6].set_on_off_values(DEVICE_LAYER, 0)
+				self._device.update()
+				self._device_navigator.update()
 			self._mixer.update()
 		self.request_rebuild_midi_map()
 		self.application().view.show_view('Detail/DeviceChain')
@@ -1712,11 +1967,13 @@ class Base(ControlSurface):
 						for column in range(4):
 							if scale is 'DrumPad':
 								self._pad[column + (row*8)].set_identifier((DRUMNOTES[column + (row*8)] + (self._offsets[cur_chan]['drumoffset']*4))%127)
-								self._pad[column + (row*8)].scale_color = DRUMCOLORS[column<4]
+								self._pad[column + (row*8)].scale_color = DRUMCOLORS[0]
 								#self._pad[column + (row*8)].send_value(DRUMCOLORS[column<4], True)
 								self._pad[column + (row*8)].display_press = True
 								self._pad[column + (row*8)].press_flash(0, True)
 								self._pad_CC[column + (row*8)].set_identifier((DRUMNOTES[column + (row*8)] + (self._offsets[cur_chan]['drumoffset']*4))%127)
+								#self._drumgroup.set_drum_matrix(self._drumpad_grid)
+								self._offset_component._shifted_value = 3
 							else:
 								note_pos = column + (abs(3-row)*int(vertoffset))
 								note =	offset + SCALES[scale][note_pos%scale_len] + (12*int(note_pos/scale_len))
@@ -1726,6 +1983,7 @@ class Base(ControlSurface):
 								self._pad[column + (row*8)].display_press = True
 								self._pad[column + (row*8)].press_flash(0, True)
 								self._pad_CC[column + (row*8)].set_identifier(note%127)
+								self._offset_component._shifted_value = 11
 							self._pad[column + (row*8)].set_enabled(False)
 							self._pad[column + (row*8)].set_channel(cur_chan)
 							self._pad_CC[column + (row*8)].set_enabled(False)
@@ -1747,6 +2005,7 @@ class Base(ControlSurface):
 								self._pad[column + (row*8)].display_press = True
 								self._pad[column + (row*8)].press_flash(0, True)
 								self._pad_CC[column + (row*8)].set_identifier((DRUMNOTES[column + (row*8)] + (self._offsets[cur_chan]['drumoffset']*4))%127)
+								self._offset_component._shifted_value = 3
 							else:
 								note_pos = column + (abs(3-row)*vertoffset)
 								note =	offset + SCALES[scale][note_pos%scale_len] + (12*int(note_pos/scale_len))
@@ -1756,6 +2015,7 @@ class Base(ControlSurface):
 								self._pad[column + (row*8)].display_press = True
 								self._pad[column + (row*8)].press_flash(0, True)
 								self._pad_CC[column + (row*8)].set_identifier(note%127)
+								self._offset_component._shifted_value = 11
 							self._pad[column + (row*8)].set_enabled(False)
 							self._pad[column + (row*8)].set_channel(cur_chan)
 							self._pad_CC[column + (row*8)].set_enabled(False)
@@ -2133,9 +2393,13 @@ class Base(ControlSurface):
 		self.oscServer = None
 		self.log_message("--------------= Base log closed =--------------")
 		super(Base, self).disconnect()
+		if DEBUG:
+			if sys.modules.has_key('Livid_Base'):
+				del sys.modules['Livid_Base']
 	
 
 	def _on_new_device_set(self):
+		#self.log_message('on new device set')
 		if self._layer in [1, 2]:
 			self._shift_update(self._layer, self.shift_pressed())
 	
@@ -2202,6 +2466,11 @@ class Base(ControlSurface):
 		if len(midi_bytes) > 14:
 			if midi_bytes[:6] == tuple([240, 0, 1, 97, 12, 64]):
 				self._register_pad_pressed(midi_bytes[6:14])
+			elif midi_bytes[3:10] == tuple([6, 2, 0, 1, 97, 1, 0]):
+				if not self._connected:
+					self._connected = True
+					self._initialize_hardware()
+
 	
 
 	#def _do_send_midi(self, midi_event_bytes):
