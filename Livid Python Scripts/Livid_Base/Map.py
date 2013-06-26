@@ -47,6 +47,9 @@ COLOR_MAP = [2, 64, 4, 8, 16, 127, 32]
 """This variable determines whether or not the script automatically arms an instruments track for recording when it is selected"""
 AUTO_ARM_SELECTED = True
 
+"""This variable determines whether the octave shift for the note offset controls work as momentary or toggle"""
+OFFSET_SHIFT_IS_MOMENTARY = False
+
 """The following variables contain color values for different operational mode indicators"""
 """[blackkey, whitekey]"""
 KEYCOLORS = [7, 3, 4, 5]
@@ -61,10 +64,18 @@ MIDIMODE = 14
 USERMODE = 13
 SCALEOFFSET = 5
 SPLITMODE = 1
+OVERDUB = 5
+RECORD = 6
+NEW = 2
+LENGTH = 3
 
 """[non-banked, banked]"""
 SESSION_NAV = [127, 3]
-DEVICE_NAV = 4
+DEVICE_NAV = 5
+BANK_NAV = 4
+CHAIN_NAV = 11
+DEVICE_LAYER = 12
+
 
 TRACK_MUTE = 2
 TRACK_ARM = 5
@@ -91,7 +102,8 @@ SCALENOTES = [36, 38, 40, 41, 43, 45, 47, 48, 24, 26, 28, 29, 31, 33, 35, 36, 12
 WHITEKEYS = [0, 2, 4, 5, 7, 9, 11, 12]
 
 """These are the scales we have available.  You can freely add your own scales to this """
-SCALES = 	{'Session':[0,1,2,3,4,5,6,7,8,9,10,11],
+SCALES = 	{'Mod':[0,1,2,3,4,5,6,7,8,9,10,11],
+			'Session':[0,1,2,3,4,5,6,7,8,9,10,11],
 			'Auto':[0,1,2,3,4,5,6,7,8,9,10,11],
 			'Chromatic':[0,1,2,3,4,5,6,7,8,9,10,11],
 			'DrumPad':[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],
@@ -132,7 +144,7 @@ SCALES = 	{'Session':[0,1,2,3,4,5,6,7,8,9,10,11],
 			'Spanish':[0,1,3,4,5,6,8,10]
 			}
 
-SCALEABBREVS = {'Session':'-S','Auto':'-A','Chromatic':'12','DrumPad':'-D','Major':'M-','Minor':'m-','Dorian':'II','Mixolydian':'V',
+SCALEABBREVS = {'Mod':'E3', 'Session':'-S','Auto':'-A','Chromatic':'12','DrumPad':'-D','Major':'M-','Minor':'m-','Dorian':'II','Mixolydian':'V',
 			'Lydian':'IV','Phrygian':'IH','Locrian':'VH','Diminished':'d-','Whole-half':'Wh','Whole Tone':'WT','Minor Blues':'mB',
 			'Minor Pentatonic':'mP','Major Pentatonic':'MP','Harmonic Minor':'mH','Melodic Minor':'mM','Dominant Sus':'D+','Super Locrian':'SL',
 			'Neopolitan Minor':'mN','Neopolitan Major':'MN','Enigmatic Minor':'mE','Enigmatic':'ME','Composite':'Cp','Bebop Locrian':'lB',
