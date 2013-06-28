@@ -50,6 +50,9 @@ AUTO_ARM_SELECTED = True
 """This variable determines whether the octave shift for the note offset controls work as momentary or toggle"""
 OFFSET_SHIFT_IS_MOMENTARY = False
 
+"""You can change the orientation of the Up, Down, Left, and Right buttons (where applicable) by changing the array.  The values correspond to the buttons from top to bottom."""
+UDLR = [0, 1, 2, 3]
+
 """The following variables contain color values for different operational mode indicators"""
 """[blackkey, whitekey]"""
 KEYCOLORS = [7, 3, 4, 5]

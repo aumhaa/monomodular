@@ -134,7 +134,6 @@ class Monomodular(ControlSurface):
 		#	client.disconnect()
 		super(Monomodular, self).disconnect()
 		self._hosts = []
-		return None
 	
 
 	def connect_script_instances(self, instanciated_scripts):

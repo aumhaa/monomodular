@@ -8,9 +8,9 @@ from _Framework.NotifyingControlElement import NotifyingControlElement
 from _Framework.Util import in_range
 from _Framework.Debug import debug_print
 from _Framework.Disconnectable import Disconnectable
+from _Framework.InputControlElement import InputSignal
 
-
-class InputSignal(Signal):
+class ModInputSignal(Signal):
 	"""
 	Special signal type that makes sure that interaction with input
 	works properly. Special input control elements that define
@@ -18,7 +18,7 @@ class InputSignal(Signal):
 	"""
 
 	def __init__(self, sender = None, *a, **k):
-		super(InputSignal, self).__init__(sender=sender, *a, **k)
+		super(ModInputSignal, self).__init__(sender=sender, *a, **k)
 		self._input_control = sender
 
 	@contextlib.contextmanager
@@ -31,17 +31,30 @@ class InputSignal(Signal):
 		if diff_count > 0 and listener_count == diff_count or diff_count < 0 and listener_count == 0:
 			self._input_control._request_rebuild()
 
+	@contextlib.contextmanager
+	def _listeners_update(self):
+		try:
+			control = self._input_control
+			old_count = self.count
+			old_wants_forwarding = control.script_wants_forwarding()
+			yield
+		finally:
+			diff_count = self.count - old_count
+			control._input_signal_listener_count += diff_count
+			if old_wants_forwarding != control.script_wants_forwarding():
+				self._input_control._request_rebuild()
+
 	def connect(self, *a, **k):
 		with self._listeners_update():
-			super(InputSignal, self).connect(*a, **k)
+			super(ModInputSignal, self).connect(*a, **k)
 
 	def disconnect(self, *a, **k):
 		with self._listeners_update():
-			super(InputSignal, self).disconnect(*a, **k)
+			super(ModInputSignal, self).disconnect(*a, **k)
 
 	def disconnect_all(self, *a, **k):
 		with self._listeners_update():
-			super(InputSignal, self).disconnect_all(*a, **k)
+			super(ModInputSignal, self).disconnect_all(*a, **k)
 	
 
 
@@ -53,17 +66,26 @@ class MonoBridgeElement(NotifyingControlElement):
 	_input_signal_listener_count = 0
 
 	def __init__(self, script, *a, **k):
-		super(MonoBridgeElement, self).__init__(script, *a, **k)
+		super(MonoBridgeElement, self).__init__(*a, **k)
 		self._script = script
 		
-	def refresh_state(self):
+	def refresh_state(self, *a, **k):
+		#self._script.schedule_message(2, self._script.update)
+		#self._script.log_message('refresh_state')
 		self._script.refresh_state()
+	
 
 	def _send(self, args1 = None, args2 = None, args3 = None, args4 = None):
 		#self._button_value(args1, args2, args3, args4)
-		self.notify_value(args1, args2, args3, args4)
+		self.notify_value(args1, args2, args3)
+	
+
+	def script_wants_forwarding(self):
+		return True
 	
 
 	def reset(self):
 		pass
+	
+
 

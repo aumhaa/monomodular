@@ -15,6 +15,7 @@ from _Framework.NotifyingControlElement import NotifyingControlElement
 from _Framework.Util import in_range
 from _Framework.Debug import debug_print
 from _Framework.Disconnectable import Disconnectable
+from _Framework.InputControlElement import InputSignal
 
 
 def hascontrol(handler, control):
@@ -89,7 +90,7 @@ class Grid(object):
 	def __init__(self, active_handlers, name, width, height):
 		self._active_handlers = active_handlers
 		self._name = name
-		self._cell = [[StoredElement(active_handlers, _name = self._name + '_' + str(x) + '_' + str(y), _x = x, _y = y, _id = -1, ) for y in range(height)] for x in range(width)]
+		self._cell = [[StoredElement(active_handlers, _name = self._name + '_' + str(x) + '_' + str(y), _x = x, _y = y ) for y in range(height)] for x in range(width)]
 	
 
 	def restore(self):
@@ -101,10 +102,6 @@ class Grid(object):
 	def update_element(self, element):
 		for handler in self._active_handlers():
 			handler.receive_address(self._name, element._x, element._y, element._value)
-	
-
-	def id(self, id):
-		pass
 	
 
 	def value(self, x, y, value):
@@ -258,7 +255,7 @@ class ModHandler(CompoundComponent):
 class ModClient(NotifyingControlElement):
 
 
-	__subject_events__ = (SubjectEvent(name='value', signal=SpecialInputSignal, override=True),)
+	__subject_events__ = (SubjectEvent(name='value', signal=InputSignal, override=True),)
 	_input_signal_listener_count = 0
 
 	def __init__(self, parent, device, name, *a, **k):
@@ -359,6 +356,9 @@ class ModClient(NotifyingControlElement):
 		return self.device
 	
 
+	def script_wants_forwarding(self):
+		return True
+	
 
 
 class ModRouter(CompoundComponent):

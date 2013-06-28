@@ -7,7 +7,7 @@ from _Framework.NotifyingControlElement import NotifyingControlElement
 from _Framework.Util import in_range
 from _Framework.Debug import debug_print
 from _Framework.Disconnectable import Disconnectable
-
+from _Framework.InputControlElement import InputSignal
 from MonoDeviceComponent import MonoDeviceComponent
 from ModDevices import *
 
@@ -62,38 +62,6 @@ LOGO = [[], [], [], [], [], [], [], [],
 		[], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []]
 
 
-class InputSignal(Signal):
-	"""
-	Special signal type that makes sure that interaction with input
-	works properly. Special input control elements that define
-	value-dependent properties should use this kind of signal.
-	"""
-
-	def __init__(self, sender = None, *a, **k):
-		super(InputSignal, self).__init__(sender=sender, *a, **k)
-		self._input_control = sender
-
-	@contextlib.contextmanager
-	def _listeners_update(self):
-		old_count = self.count
-		yield
-		diff_count = self.count - old_count
-		self._input_control._input_signal_listener_count += diff_count
-		listener_count = self._input_control._input_signal_listener_count
-		#if diff_count > 0 and listener_count == diff_count or diff_count < 0 and listener_count == 0:
-		#	self._input_control._request_rebuild()
-
-	def connect(self, *a, **k):
-		with self._listeners_update():
-			super(InputSignal, self).connect(*a, **k)
-
-	def disconnect(self, *a, **k):
-		with self._listeners_update():
-			super(InputSignal, self).disconnect(*a, **k)
-
-	def disconnect_all(self, *a, **k):
-		with self._listeners_update():
-			super(InputSignal, self).disconnect_all(*a, **k)
 
 
 class MonoClient(NotifyingControlElement):
@@ -162,6 +130,10 @@ class MonoClient(NotifyingControlElement):
 				self._host.schedule_message(1, self._banner)
 			else:
 				self._banner_state = 0		
+	
+
+	def script_wants_forwarding(self):
+		return True
 	
 
 	def is_connected(self):
