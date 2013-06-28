@@ -1845,11 +1845,12 @@ class Base(ControlSurface):
 					for button in self._button[5:8]:
 						button.set_on_off_values(16, 15)
 					self._recorder.set_length_buttons(self._button[5:8])
+				for index in range(8):
+					self._send_midi(tuple([191, index+10, 125]))
+				for index in range(8):
+					self._mixer.channel_strip(index).set_volume_control(self._fader[index])
 				if not self.pad_held():
 					for index in range(8):
-						self._send_midi(tuple([191, index+10, 125]))
-					for index in range(8):
-						self._mixer.channel_strip(index).set_volume_control(self._fader[index])
 						self._pad[index].set_on_off_values(TRACK_MUTE, 0)
 						self._mixer.channel_strip(index).set_mute_button(self._pad[index])
 						self._pad[index+8].set_on_off_values(TRACK_SOLO, 0)
@@ -1909,9 +1910,10 @@ class Base(ControlSurface):
 				self._send_midi(tuple([240, 0, 1, 97, 12, 61, 7, 7, 7, 7, 7, 7, 7, 7, 2, 247]))
 				#for index in range(8):
 				#	self._send_midi(tuple([191, index+10, 125]))
+				for index in range(8):
+					self._mixer.channel_strip(index).set_volume_control(self._fader[index])
 				if not self.pad_held():
 					for index in range(8):
-						self._mixer.channel_strip(index).set_volume_control(self._fader[index])
 						self._pad[index].set_on_off_values(TRACK_MUTE, 0)
 						self._mixer.channel_strip(index).set_mute_button(self._pad[index])
 						self._pad[index+8].set_on_off_values(TRACK_SOLO, 0)

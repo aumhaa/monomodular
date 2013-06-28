@@ -11,7 +11,7 @@ setinletassist(4, 'clock');
 setinletassist(5, 'jit.displays');
 setoutletassist(0, 'dump output');
 
-DEBUG = 0;
+DEBUG = 1;
 
 var patch_type = jsarguments[1];
 var unique = jsarguments[2];
@@ -65,6 +65,11 @@ var CODEC = {colors:[0, 1, 0, 1], regexp: new RegExp(/(Codec)/), n: 'Codec',
 						'Dial_0_1', 'Dial_1_1', 'Dial_2_1', 'Dial_3_1', 'Dial_4_1', 'Dial_5_1', 'Dial_6_1', 'Dial_7_1', 
 						'Dial_0_2', 'Dial_1_2', 'Dial_2_2', 'Dial_3_2', 'Dial_4_2', 'Dial_5_2', 'Dial_6_2', 'Dial_7_2',
 						'Dial_0_3', 'Dial_1_3', 'Dial_2_3', 'Dial_3_3', 'Dial_4_3', 'Dial_5_3', 'Dial_6_3', 'Dial_7_3']};
+var CODEX = {colors:[0, 1, 0, 1], regexp: new RegExp(/(Codex)/), n: 'Codex', 
+				names:['Dial_0_0', 'Dial_1_0', 'Dial_2_0', 'Dial_3_0', 'Dial_4_0', 'Dial_5_0', 'Dial_6_0', 'Dial_7_0',
+						'Dial_0_1', 'Dial_1_1', 'Dial_2_1', 'Dial_3_1', 'Dial_4_1', 'Dial_5_1', 'Dial_6_1', 'Dial_7_1', 
+						'Dial_0_2', 'Dial_1_2', 'Dial_2_2', 'Dial_3_2', 'Dial_4_2', 'Dial_5_2', 'Dial_6_2', 'Dial_7_2',
+						'Dial_0_3', 'Dial_1_3', 'Dial_2_3', 'Dial_3_3', 'Dial_4_3', 'Dial_5_3', 'Dial_6_3', 'Dial_7_3']};
 var BLOCKMOD = {colors:[1, 1, 0, 1], regexp: new RegExp(/(BlockMod)/), n: 'BlockMod', 
 				names:['None', 'None', 'None', 'None', 'None', 'None', 'None', 'None',
 						'None', 'None', 'None', 'None', 'None', 'None', 'None', 'None', 
@@ -95,13 +100,18 @@ var OHMMODES = {colors:[.9, .9, .9, 1], regexp: new RegExp(/(OhmModes)/), n: 'Oh
 						'Dial_4', 'Dial_5', 'Dial_6', 'Dial_7', 'None', 'None', 'None', 'None', 
 						'Dial_8', 'Dial_9', 'Dial_10', 'Dial_11', 'Dial_12', 'Dial_13', 'Dial_14', 'Dial_15',
 						'Fader_0', 'Fader_1', 'Fader_2', 'Fader_3', 'Fader_4', 'Fader_5', 'Fader_6', 'Fader_7']};
-var BASE = {colors:[.7, .7, 0, 1], regexp: new RegExp(/(Base)/), n: 'Base', 
+var BASE = {colors:[1, 0, 0, 1], regexp: new RegExp(/(Base)/), n: 'Base', 
 				names:['Device_Chain', 'None', 'None', 'None', 'None', 'None', 'None', 'Fader_8',
 						'Device_Name', 'None', 'None', 'None', 'None', 'None', 'None', 'None',
 						'Device_Bank', 'None', 'None', 'None', 'None', 'None', 'None', 'None',
 						'Fader_0', 'Fader_1', 'Fader_2', 'Fader_3', 'Fader_4', 'Fader_5', 'Fader_6', 'Fader_7']};
+var AUMTROLL = {colors:[.5, .7, 1, 1], regexp: new RegExp(/(AumTroll)/), n: 'AumTroll', 
+				names:['Dial_Left_0', 'Dial_Left_1', 'Dial_Left_2', 'Dial_Left_3', 'Dial_Right_0', 'Dial_Right_1', 'Dial_Right_2', 'Dial_Right_3',
+						'Dial_Left_4', 'Dial_Left_5', 'Dial_Left_6', 'Dial_Left_7', 'Dial_Right_4', 'Dial_Right_5', 'Dial_Right_6', 'Dial_Right_7', 
+						'None', 'None', 'Encoder_0', 'Encoder_1', 'Encoder_2', 'Encoder_3', 'None', 'None',
+						'Encoder_4', 'Encoder_5', 'Encoder_6', 'Encoder_7', 'Encoder_8', 'Encoder_9', 'Encoder_10', 'Encoder_11']};
 
-var Supported_Surfaces = [MONOHM, CODEC, BLOCKMOD, CNTRLR, AUMPC20, AUMPC40, OHMMODES, BASE];
+var Supported_Surfaces = [MONOHM, CODEC, BLOCKMOD, CNTRLR, AUMTROLL, AUMPC20, AUMPC40, OHMMODES, BASE, CODEX];
 
 ////Setup////
 
