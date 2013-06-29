@@ -1864,7 +1864,8 @@ class Base(ControlSurface):
 					self._assign_midi_layer()
 			self._mixer.update()
 		self.request_rebuild_midi_map()
-		self.application().view.show_view('Detail/Clip')	
+		if SWITCH_VIEWS_ON_MODE_CHANGE:
+			self.application().view.show_view('Detail/Clip')	
 	
 
 	def _set_layer2(self, shifted = False):
@@ -1936,7 +1937,8 @@ class Base(ControlSurface):
 				self._device_navigator.update()
 			self._mixer.update()
 		self.request_rebuild_midi_map()
-		self.application().view.show_view('Detail/DeviceChain')
+		if SWITCH_VIEWS_ON_MODE_CHANGE:
+			self.application().view.show_view('Detail/DeviceChain')
 	
 
 	def _set_layer3(self, shifted = False):

@@ -11,7 +11,7 @@ setinletassist(4, 'clock');
 setinletassist(5, 'jit.displays');
 setoutletassist(0, 'dump output');
 
-DEBUG = 1;
+DEBUG = 0;
 
 var patch_type = jsarguments[1];
 var unique = jsarguments[2];
