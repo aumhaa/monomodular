@@ -376,6 +376,7 @@ class AumTroll(Cntrlr):
 
 	def __init__(self, *a, **k):
 		self._monohm = None
+		self._aumpush = None
 		self._shifted = False
 		self._suppress_next_mod_display = False
 		self._monomod_version = 'b995'
@@ -388,7 +389,7 @@ class AumTroll(Cntrlr):
 		with self.component_guard():
 			self._setup_alt_device_control()
 			self._setup_alt_mixer()
-			self._setup_alt_device_control()
+			#self._setup_alt_device_control()
 		#self.schedule_message(3, self._session._do_show_highlight)
 	
 
@@ -526,7 +527,7 @@ class AumTroll(Cntrlr):
 		self._host._assign_mod_dials()
 
 		"""here we assign the left side of our mixer's buttons on the lower 32 keys"""
-		if self._monohm is None:
+		if self._monohm is None and self._aumpush is None:
 			for index in range(4):															#we set up a recursive loop to assign all four of our track channel strips' controls
 				self._button[index].set_on_value(SOLO[self._rgb])							#set the solo color from the Map.py
 				self._mixer.channel_strip(index).set_solo_button(self._button[index])		#assign the solo buttons to our mixer channel strips
@@ -578,13 +579,37 @@ class AumTroll(Cntrlr):
 			self._session.set_enabled(True)													#enable the Session Component
 			self._session_zoom.set_enabled(True)											#enable the Session Zoom
 
-		else:
+		elif self._monohm:
 			for index in range(8):
 				self._mixer2.channel_strip(index).set_volume_control(self._fader[index])
 			self._mixer2.set_track_offset(TROLL_OFFSET)
 			self._device_selector.set_mode_buttons(self._grid)
 			if not self._shifted:
 				self._assign_monomodular_controls()
+			else:
+				self._assign_shifted_controls()
+			self._device1.set_parameter_controls(tuple([self._knobs[index] for index in range(8)]))
+			self._device2.set_parameter_controls(tuple([self._knobs[index+12] for index in range(8)]))
+			self._device1.set_enabled(True)
+			self._device2.set_enabled(True)
+			self._find_devices()
+			self._device1.update()
+			self._device2.update()
+
+		elif self._aumpush:
+			for index in range(8):
+				self._mixer2.channel_strip(index).set_volume_control(self._fader[index])
+			self._mixer2.set_track_offset(TROLL_OFFSET)
+			self._device_selector.set_mode_buttons(self._grid)
+			if not self._shifted:
+				for index in range(4):
+					self._button[index].set_on_off_values(SELECT[self._rgb], 1)
+					self._mixer2.channel_strip(index).set_select_button(self._button[index])
+					self._button[index+12].set_on_off_values(SELECT[self._rgb], 1)
+					self._mixer2.channel_strip(index+4).set_select_button(self._button[index+12])
+				for index in range(8):
+					self._button[index].set_on_off_values(SELECT_ALT[self._rgb], 1)
+					self._mixer3.channel_strip(index).set_select_button(self._button[index+4])
 			else:
 				self._assign_shifted_controls()
 			self._device1.set_parameter_controls(tuple([self._knobs[index] for index in range(8)]))
@@ -761,7 +786,18 @@ class AumTroll(Cntrlr):
 
 	"""used to connect different control_surfaces so that they can communicate"""
 	def connect_script_instances(self, instanciated_scripts):
-		if MONOHM_LINK is True:
+		if AUMPUSH_LINK is True:
+			link = False
+			for s in instanciated_scripts:
+				#self.log_message('script check' + str(s))
+				if link == False:
+					#self.log_message(str(type(s)))
+					if '_cntrlr_version' in dir(s):
+						if s._cntrlr_version == self._monomod_version and self._host_name == 'AumPush':
+							link = True
+							with self.component_guard():
+								self._connect_aumpush(s)
+		elif MONOHM_LINK is True:
 			link = False
 			for s in instanciated_scripts:
 				#self.log_message('script check' + str(s))
@@ -772,6 +808,7 @@ class AumTroll(Cntrlr):
 							link = True
 							with self.component_guard():
 								self._connect_monohm(s)
+
 	
 
 	"""device component methods and overrides"""
@@ -887,6 +924,13 @@ class AumTroll(Cntrlr):
 		
 	
 
+	"""this is called by connect_script_instances() when a AumPush script is found to be installed"""
+	def _connect_aumpush(self, aumpush):
+		self.log_message('_connect_aumpush')
+		self._aumpush = aumpush
+		self._aumpush._cntrlr = self
+	
+
 	"""these two secondary DeviceComponents are only set up if the MONOHM_LINK flag in .Map is turned on"""
 	def _setup_alt_device_control(self):
 		self._device1 = DeviceComponent()
@@ -919,11 +963,17 @@ class AumTroll(Cntrlr):
 		is_momentary = True
 		self._num_tracks = (8) #A mixer is one-dimensional
 		self._mixer2 = MixerComponent(8, 0, False, False)
-		self._mixer2.name = 'Mixer'
+		self._mixer2.name = 'Mixer_2'
 		self._mixer2.set_track_offset(4) #Sets start point for mixer strip (offset from left)
 		for index in range(8):
-			self._mixer2.channel_strip(index).name = 'Mixer_ChannelStrip_' + str(index)
+			self._mixer2.channel_strip(index).name = 'Mixer_2_ChannelStrip_' + str(index)
 			self._mixer2.channel_strip(index)._invert_mute_feedback = True
+		self._mixer3 = MixerComponent(8, 0, False, False)
+		self._mixer3.name = 'Mixer_3'
+		self._mixer3.set_track_offset(4) #Sets start point for mixer strip (offset from left)
+		for index in range(8):
+			self._mixer3.channel_strip(index).name = 'Mixer_3_ChannelStrip_' + str(index)
+			self._mixer3.channel_strip(index)._invert_mute_feedback = True
 	
 
 	"""this method is used instead of an unbound method so that another script (MonOhm) can have access to the CNTRLR's methods"""
