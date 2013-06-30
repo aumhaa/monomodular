@@ -112,7 +112,8 @@ class AumPush(Push):
 
 	def __init__(self, c_instance):
 		self._monomod_version = 'b995'
-		self._host_name = 'MonOhm'
+		self._cntrlr_version = 'b995'
+		self._host_name = 'AumPush'
 		self._color_type = 'Push'
 		self.hosts = []
 		super(AumPush, self).__init__(c_instance)

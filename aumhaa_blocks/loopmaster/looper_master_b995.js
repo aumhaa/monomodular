@@ -6,6 +6,8 @@ outlets = 2;
 const DEBUG = 0;
 
 const MONOPEDAL=new RegExp(/(MonOhm)/);
+const AUMTROLL = new RegExp(/(AumTroll)/);
+const MONOHM = new RegExp(/(MonOhm)/);
 const wiki_page_addy = 'http://www.aumhaa.com/wiki/index.php?title=LoopMaster';
 ////this section is necessary for basic operations
 undefined = (function(){var u; return u;})();	 ///required to return an actual 'undefined', in case its variable name gets reassigned
@@ -183,7 +185,8 @@ function connect()
 		for(var i= 0;i<6;i++)
 		{
 			surface.goto('control_surfaces', i);
-			if(MONOPEDAL.test(surface.type)==1)
+			//post('type:', surface.type);
+			if((MONOPEDAL.test(surface.type))||(AUMTROLL.test(surface.type)))
 			{
 				connected = true;
 				assign_api(i);
@@ -257,11 +260,12 @@ function cb_pedals(args)
 
 function cb_new_pedals(args)
 {
+	if(DEBUG){post('pedal', args, '\n');}
 	if((args[0]=='value')&&(args[1]==127)&&(this.last<127))
 	{
 		this.last = 127;
 		hold += this.hold;
-		//post('pedal', this.num, this.last, 'hold', hold, '\n');
+		post('pedal', this.num, this.last, 'hold', hold, '\n');
 		if(this.num<3)
 		{
 			switch(hold)

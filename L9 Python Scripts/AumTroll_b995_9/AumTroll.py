@@ -28,6 +28,7 @@ from _Framework.SliderElement import SliderElement # Class representing a slider
 from _Framework.TrackEQComponent import TrackEQComponent # Class representing a track's EQ, it attaches to the last EQ device in the track
 from _Framework.TrackFilterComponent import TrackFilterComponent # Class representing a track's filter, attaches to the last filter in the track
 from _Framework.TransportComponent import TransportComponent # Class encapsulating all functions in Live's transport section
+from _Framework.SubjectSlot import subject_slot, subject_slot_group
 
 """Imports from the Monomodular Framework"""
 from _Mono_Framework.CodecEncoderElement import CodecEncoderElement
@@ -72,6 +73,56 @@ ALT_DEVICE_BANKS = {'EndCoders':ENDCODER_BANKS}
 INITIAL_SCROLLING_DELAY = 5
 INTERVAL_SCROLLING_DELAY = 1
 
+class LoopPedalButtonElement(EncoderElement):
+
+
+	def __init__(self, *a, **k):
+		self._last = 0
+		super(LoopPedalButtonElement, self).__init__(*a, **k)
+	
+
+	def receive_value(self, value):
+		self._verify_value(value)
+		value = int(value > 120)*127
+		self._last_sent_message = None
+		if value != self._last:
+			self.notify_value(value)
+			self._last = value
+			if self._report_input:
+				is_input = True
+				self._report_value(value, is_input)
+	
+
+class LoopPedalExpressionElement(EncoderElement):
+
+
+	def __init__(self, script, *a, **k):
+		self._last = 0
+		self._script = script
+		super(LoopPedalExpressionElement, self).__init__(*a, **k)
+	
+
+	def receive_value(self, value):
+		self._verify_value(value)
+		if (value > self._last and (value - self._last) < 10) or (value < self._last and (self._last - value) < 10):
+			self.notify_value(value)
+			self._last = value
+			if self._report_input:
+				is_input = True
+				self._report_value(value, is_input)
+		else:
+			orig_value = value
+			value += int((value - self._last) > 0)*5
+			self.notify_value(value)
+			self._script.schedule_message(1, self.update_value, [orig_value, value])
+			self._last = value
+	
+
+	def update_value(self, values):
+		if values[1] is self._last:
+			self.receive_value(values[0])
+			
+		
 
 class AumTrollMonoDevice(MonoDeviceComponent):
 
@@ -378,6 +429,7 @@ class AumTroll(Cntrlr):
 		self._monohm = None
 		self._aumpush = None
 		self._shifted = False
+		self._use_pedal = True
 		self._suppress_next_mod_display = False
 		self._monomod_version = 'b995'
 		self._codec_version = 'b995'
@@ -389,6 +441,7 @@ class AumTroll(Cntrlr):
 		with self.component_guard():
 			self._setup_alt_device_control()
 			self._setup_alt_mixer()
+			self._setup_pedal()
 			#self._setup_alt_device_control()
 		#self.schedule_message(3, self._session._do_show_highlight)
 	
@@ -441,6 +494,12 @@ class AumTroll(Cntrlr):
 		for index in range(8):
 			self._mixer2.channel_strip(index).set_select_button(None)
 			self._mixer2.channel_strip(index).set_volume_control(None)
+		for index in range(4):
+			self._mixer3.channel_strip(index).set_select_button(None)
+			self._mixer3.channel_strip(index).set_volume_control(None)
+		if self._aumpush:
+			self._aumpush._host._set_bank_buttons(None)
+		self._on_shift_button_value.subject = None
 
 
 		"""THIS SECTION IS MISSING FROM THE ORIGINAL SCRIPT AND NEEDS TO BE FIXED...THE ASSIGNMENTS WERE MADE AT __init__"""
@@ -597,21 +656,37 @@ class AumTroll(Cntrlr):
 			self._device2.update()
 
 		elif self._aumpush:
-			for index in range(8):
-				self._mixer2.channel_strip(index).set_volume_control(self._fader[index])
+			for index in range(4):
+				self._mixer.channel_strip(index).set_volume_control(self._fader[index])
+				self._mixer3.channel_strip(index).set_volume_control(self._fader[index+4])
 			self._mixer2.set_track_offset(TROLL_OFFSET)
-			self._device_selector.set_mode_buttons(self._grid)
+			self._device_selector.set_mode_buttons(self._grid[:15])
+			self._on_shift_button_value.subject = self._grid[15]
+			self._aumpush._host._set_bank_buttons(tuple(self._button[16:32]))
+			for index in range(4):
+				self._button[index].set_on_off_values(SELECT[self._rgb], 1)
+				self._mixer.channel_strip(index).set_select_button(self._button[index])
+				self._button[index+12].set_on_off_values(SELECT[self._rgb], 1)
+				self._mixer3.channel_strip(index).set_select_button(self._button[index+12])
+			for index in range(8):
+				self._button[index+4].set_on_off_values(SELECT[self._rgb], (5, 6)[int(index>3)])
+				self._mixer2.channel_strip(index).set_select_button(self._button[index+4])
+			for index in range(4):
+				self._mixer2.channel_strip(index).set_volume_control(self._knobs[index+8])
+				self._mixer2.channel_strip(index+4).set_volume_control(self._knobs[index+20])
+				self._send_reset.set_buttons(tuple(self._encoder_button[4:8]))
+			for index in range(4):
+				self._mixer3.return_strip(index).set_volume_control(self._encoder[index+4])
+				self._encoder_button[index+4].send_value(127, True)
 			if not self._shifted:
+				self._mixer.selected_strip().set_send_controls(self._encoder[8:12])
 				for index in range(4):
-					self._button[index].set_on_off_values(SELECT[self._rgb], 1)
-					self._mixer2.channel_strip(index).set_select_button(self._button[index])
-					self._button[index+12].set_on_off_values(SELECT[self._rgb], 1)
-					self._mixer2.channel_strip(index+4).set_select_button(self._button[index+12])
-				for index in range(8):
-					self._button[index].set_on_off_values(SELECT_ALT[self._rgb], 1)
-					self._mixer3.channel_strip(index).set_select_button(self._button[index+4])
+					self._encoder_button[index+8].send_value(3, True)
 			else:
-				self._assign_shifted_controls()
+				self._mixer.return_strip(0).set_send_controls(tuple([None, self._encoder[8]]))
+				self._mixer.return_strip(1).set_send_controls(tuple([self._encoder[9], None]))
+				self._encoder_button[8].send_value(5, True)
+				self._encoder_button[9].send_value(5, True)
 			self._device1.set_parameter_controls(tuple([self._knobs[index] for index in range(8)]))
 			self._device2.set_parameter_controls(tuple([self._knobs[index+12] for index in range(8)]))
 			self._device1.set_enabled(True)
@@ -620,23 +695,25 @@ class AumTroll(Cntrlr):
 			self._device1.update()
 			self._device2.update()
 
-		"""this section assigns the encoders and encoder buttons"""
-		self._device.set_parameter_controls(tuple([self._encoder[index+4] for index in range(8)]))			#assign the encoders from the device component controls - we are doing this here b
-		self._encoder_button[7].set_on_value(DEVICE_LOCK[self._rgb])					#set the on color for the Device lock encoder button
-		self._device.set_lock_button(self._encoder_button[7])							#assign encoder button 7 to the device lock control
-		self._encoder_button[4].set_on_value(DEVICE_ON[self._rgb])						#set the on color for the Device on/off encoder button 
-		self._device.set_on_off_button(self._encoder_button[4])							#assing encoder button 4 to the device on/off control
-		for index in range(2):															#setup a recursion to generate indexes so that we can reference the correct controls to assing to the device_navigator functions
-			self._encoder_button[index + 8].set_on_value(DEVICE_NAV[self._rgb])			#assign the on color for the device navigator
-			self._encoder_button[index + 10].set_on_value(DEVICE_BANK[self._rgb])		#assign the on color for the device bank controls
-		self._device_navigator.set_device_nav_buttons(self._encoder_button[10], self._encoder_button[11]) 	#set the device navigators controls to encoder buttons 10 and 11
-		self._device.set_bank_nav_buttons(self._encoder_button[8], self._encoder_button[9]) 	#set the device components bank nav controls to encoder buttons 8 and 9
 
-		"""now we turn on and update some of the components we've just made assignments to"""
-		self._device.set_enabled(True)													#enable the Device Component
-		self._device_navigator.set_enabled(True)										#enable the Device Navigator
-		self._device.update()															#tell the Device component to update its assingments so that it will detect the currently selected device parameters and display them on the encoder rings
-	
+		"""this section assigns the encoders and encoder buttons"""
+		if not self._aumpush:
+			self._device.set_parameter_controls(tuple([self._encoder[index+4] for index in range(8)]))			#assign the encoders from the device component controls - we are doing this here b
+			self._encoder_button[7].set_on_value(DEVICE_LOCK[self._rgb])					#set the on color for the Device lock encoder button
+			self._device.set_lock_button(self._encoder_button[7])							#assign encoder button 7 to the device lock control
+			self._encoder_button[4].set_on_value(DEVICE_ON[self._rgb])						#set the on color for the Device on/off encoder button 
+			self._device.set_on_off_button(self._encoder_button[4])							#assing encoder button 4 to the device on/off control
+			for index in range(2):															#setup a recursion to generate indexes so that we can reference the correct controls to assing to the device_navigator functions
+				self._encoder_button[index + 8].set_on_value(DEVICE_NAV[self._rgb])			#assign the on color for the device navigator
+				self._encoder_button[index + 10].set_on_value(DEVICE_BANK[self._rgb])		#assign the on color for the device bank controls
+				self._device_navigator.set_device_nav_buttons(self._encoder_button[10], self._encoder_button[11]) 	#set the device navigators controls to encoder buttons 10 and 11
+			self._device.set_bank_nav_buttons(self._encoder_button[8], self._encoder_button[9]) 	#set the device components bank nav controls to encoder buttons 8 and 9
+
+			"""now we turn on and update some of the components we've just made assignments to"""
+			self._device.set_enabled(True)													#enable the Device Component
+			self._device_navigator.set_enabled(True)										#enable the Device Navigator
+			self._device.update()															#tell the Device component to update its assingments so that it will detect the currently selected device parameters and display them on the encoder rings
+
 
 	"""this assigns the CNTRLR's controls on for 4th empty modSlot"""
 	"""these assignments mirror the main section; commenting is restricted to the differences"""
@@ -793,10 +870,11 @@ class AumTroll(Cntrlr):
 				if link == False:
 					#self.log_message(str(type(s)))
 					if '_cntrlr_version' in dir(s):
-						if s._cntrlr_version == self._monomod_version and self._host_name == 'AumPush':
+						if s._cntrlr_version == self._monomod_version and s._host_name == 'AumPush':
 							link = True
 							with self.component_guard():
 								self._connect_aumpush(s)
+							break
 		elif MONOHM_LINK is True:
 			link = False
 			for s in instanciated_scripts:
@@ -808,6 +886,7 @@ class AumTroll(Cntrlr):
 							link = True
 							with self.component_guard():
 								self._connect_monohm(s)
+							break
 
 	
 
@@ -926,9 +1005,12 @@ class AumTroll(Cntrlr):
 
 	"""this is called by connect_script_instances() when a AumPush script is found to be installed"""
 	def _connect_aumpush(self, aumpush):
-		self.log_message('_connect_aumpush')
+		self.log_message('AumTroll connecting to AumPush...')
 		self._aumpush = aumpush
 		self._aumpush._cntrlr = self
+		with self.component_guard():
+			self.deassign_live_controls()
+			self.schedule_message(3, self.assign_live_controls)
 	
 
 	"""these two secondary DeviceComponents are only set up if the MONOHM_LINK flag in .Map is turned on"""
@@ -968,12 +1050,26 @@ class AumTroll(Cntrlr):
 		for index in range(8):
 			self._mixer2.channel_strip(index).name = 'Mixer_2_ChannelStrip_' + str(index)
 			self._mixer2.channel_strip(index)._invert_mute_feedback = True
-		self._mixer3 = MixerComponent(8, 0, False, False)
+		self._mixer3 = MixerComponent(4, 4, False, False)
 		self._mixer3.name = 'Mixer_3'
-		self._mixer3.set_track_offset(4) #Sets start point for mixer strip (offset from left)
-		for index in range(8):
+		self._mixer3.set_track_offset(12) #Sets start point for mixer strip (offset from left)
+		for index in range(4):
 			self._mixer3.channel_strip(index).name = 'Mixer_3_ChannelStrip_' + str(index)
 			self._mixer3.channel_strip(index)._invert_mute_feedback = True
+
+
+	
+
+	def _setup_pedal(self):
+		self._pedal = [None for index in range(8)]
+		if self._use_pedal is True:
+			for index in range(7):
+				self._pedal[index] = LoopPedalButtonElement(MIDI_CC_TYPE, 0, 33+index, Live.MidiMap.MapMode.absolute)
+				self._pedal[index].name = 'Pedal_'+str(index)
+				self._pedal[index]._report = False
+			self._pedal[7] = LoopPedalExpressionElement(self, MIDI_CC_TYPE, 0, 40, Live.MidiMap.MapMode.absolute)
+			self._pedal[7].name = 'Pedal_'+str(7)
+			self._pedal[7]._report = False
 	
 
 	"""this method is used instead of an unbound method so that another script (MonOhm) can have access to the CNTRLR's methods"""
@@ -1029,6 +1125,20 @@ class AumTroll(Cntrlr):
 
 	def _assign_mod_dials(self):
 		pass
+	
+
+	@subject_slot('value')
+	def _on_shift_button_value(self, value):
+		shifted = value > 0
+		if not self._shifted is shifted:
+			self._shifted = shifted
+			self.deassign_live_controls()
+			self.assign_live_controls()
+			if self._shifted and self._on_shift_button_value.subject:
+				self._on_shift_button_value.subject.send_value(7, True)
+	
+
+		
 	
 
 #	a
