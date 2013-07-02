@@ -301,12 +301,12 @@ class BaseMixerComponent(MixerComponent):
 		self.set_select_buttons(None, None)
 		self.set_prehear_volume_control(None)
 		self.set_crossfader_control(None)
-		for component in self._sub_components:
+		for component in self._channel_strips:
 			if isinstance(component, ChannelStripComponent):
 				component.set_pan_control(None)
 				component.set_volume_control(None)
 				component.set_select_button(None)
-				if not component is self._master_strip:
+				if component._track and not component._track is self.song().master_track:
 					component.set_mute_button(None)
 					component.set_send_controls(None)
 					component.set_solo_button(None)
@@ -2469,7 +2469,8 @@ class Base(ControlSurface):
 		track_list = []
 		for t in self._mixer.tracks_to_use():
 			track_list.append(t)
-		self._selected_session._track_offset = track_list.index(track)
+		if track in track_list:
+			self._selected_session._track_offset = track_list.index(track)
 		#self.log_message('new track offset: ' + str(self._selected_session._track_offset))
 		self._selected_session._reassign_tracks()
 		self._selected_session._reassign_scenes()
