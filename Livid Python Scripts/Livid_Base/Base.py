@@ -1349,7 +1349,6 @@ class Base(ControlSurface):
 	def _setup_device_control(self):
 		self._device = BaseDeviceComponent(self)
 		self._device.name = 'Device_Component'
-		self._device.update = self._device_update(self._device)
 		self.set_device_component(self._device)
 		self._device_navigator = DeviceNavigator(self._device, self._mixer, self)
 		self._device_navigator.name = 'Device_Navigator'
@@ -2530,28 +2529,7 @@ class Base(ControlSurface):
 				if not self._connected:
 					self._connected = True
 					self._initialize_hardware()
-
 	
 
-	#def _do_send_midi(self, midi_event_bytes):
-	#	self.log_message(str(midi_event_bytes))
-	#	super(Base, self)._do_send_midi(midi_event_bytes)
-
-	"""device component methods and overrides"""
-
-	"""this closure replaces the default DeviceComponent update() method without requiring us to build an override class"""
-	"""it calls the _update_selected_device method of this script in addition to its normal routine"""
-	"""it also ensures a rebuilt midi_map; for some reason the Abe's pulled that part out of the post 8.22 scripts, and under certain circumstances"""
-	"""things don't work as expected anymore."""
-	def _device_update(self, device):
-		def _update():
-			#for client in self._client:
-			#	if (device._device != None) and (client.device == device._device):
-			#		device._bank_index = max(client._device_component._cntrl_offset, device._bank_index)
-			BaseDeviceComponent.update(device)
-			self.request_rebuild_midi_map()
-		return _update
-		
-	
 
 #	a
