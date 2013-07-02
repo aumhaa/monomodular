@@ -237,7 +237,7 @@ class ModHandler(CompoundComponent):
 	
 
 	def receive_address(self, address_name, *a, **k):
-		self.log_message('receive_address ' + str(address_name) + str(a))
+		#self.log_message('receive_address ' + str(address_name) + str(a))
 		if address_name in self._receive_methods.keys():
 			self._receive_methods[address_name](*a, **k)
 	
@@ -283,7 +283,7 @@ class ModClient(NotifyingControlElement):
 		if address_name in self._addresses.keys():
 			address = self._addresses[address_name]
 			value_list = unpack_values(values)
-			self.log_message('address: ' + str(address) + ' value_list: ' + str(value_list))
+			#self.log_message('address: ' + str(address) + ' value_list: ' + str(value_list))
 			try:
 				getattr(address, method)(*value_list)
 			except:

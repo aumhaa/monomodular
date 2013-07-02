@@ -1114,7 +1114,7 @@ class BaseModHandler(ModHandler):
 	
 
 	def _receive_base_grid(self, x, y, value, is_id = False):
-		self.log_message('_receive_base_grid: %s %s %s %s' % (x, y, value, is_id))
+		#self.log_message('_receive_base_grid: %s %s %s %s' % (x, y, value, is_id))
 		if not self._base_grid is None:
 			if is_id:
 				button = self._base_grid.get_button(x, y)
