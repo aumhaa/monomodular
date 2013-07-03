@@ -70,6 +70,108 @@ from _Framework.Dependency import depends, inject
 from Push.MessageBoxComponent import MessageBoxComponent
 from Push.ScrollableListComponent import ScrollableListWithTogglesComponent
 from Push.NavigationNode import make_navigation_node
+from Push.MelodicComponent import MelodicPattern
+from Push.SpecialMixerComponent import SpecialMixerComponent
+from Push.SpecialChanStripComponent import SpecialChanStripComponent
+
+
+CHANNEL_TEXT = ['Ch. 1', 'Ch. 2', 'Ch. 3', 'Ch. 4', 'Ch. 5', 'Ch. 6', 'Ch. 7', 'Ch. 8']
+
+class AumPushSpecialMixerComponent(SpecialMixerComponent):
+
+
+	def _create_strip(self):
+		return AumPushSpecialChanStripComponent()
+	
+
+
+class AumPushSpecialChanStripComponent(SpecialChanStripComponent):
+
+
+	def _arm_value(self, value):
+		assert(not self._arm_button != None)
+		assert(value in range(128))
+		if self.is_enabled():
+			if self._track != None and self._track.can_be_armed:
+				arm_exclusive = self.song().exclusive_arm != self._shift_pressed
+				new_value = not self._track.arm
+				respect_multi_selection = self._track.is_part_of_selection
+				for track in self.song().tracks:
+					if track.can_be_armed:
+						if track == self._track or respect_multi_selection and track.is_part_of_selection:
+							track.arm = new_value
+						#elif arm_exclusive and track.arm:
+						#	track.arm = False
+	
+
+	def _select_value(self, value):
+		if self.is_enabled() and self._track and value:
+			if self._duplicate_button and self._duplicate_button.is_pressed():
+				self._do_duplicate_track(self._track)
+			elif self._delete_button and self._delete_button.is_pressed():
+				self._do_delete_track(self._track)
+			elif self._shift_pressed:
+				if self._track.can_be_armed:
+					self._track.arm = not self._track.arm
+			else:
+				if self._track.can_be_armed and self.song().view.selected_track == self._track:
+					self._track.arm = not self._track.arm
+				else:
+					super(SpecialChanStripComponent, self)._select_value(value)
+				#if self._track.can_be_armed and (self._track.implicit_arm or self._track.arm):
+				#	for track in self.song().tracks:
+				#		if track.can_be_armed and track != self._track:
+				#			track.arm = False
+
+			if self._selector_button and self._selector_button.is_pressed():
+				self._do_select_track(self._track)
+				if not self._shift_pressed:
+					if self._track.is_foldable and self._select_button.is_momentary():
+						self._fold_task.restart()
+					else:
+						self._fold_task.kill()
+	
+
+
+class AumPushInstrumentComponent(InstrumentComponent):
+
+
+	def _override_channel(self):
+		return -1
+	
+
+	def _setup_instrument_mode(self, interval):
+		if self.is_enabled() and self._matrix:
+			for button, _ in self._matrix.iterbuttons():
+				if button:
+					button.use_default_message()
+					button.force_next_send()
+
+			pattern = self._get_pattern(interval)
+			max_j = self._matrix.width() - 1
+			for button, (i, j) in self._matrix.iterbuttons():
+				if button:
+					note_info = pattern.note(i, max_j - j)
+					if note_info.index != None:
+						button.set_on_off_values(note_info.color, 'Instrument.NoteOff')
+						button.turn_on()
+						button.set_enabled(False)
+						override_channel = self._override_channel() 
+						if override_channel > -1:
+							button.set_channel(override_channel)
+						else:
+							button.set_channel(note_info.channel)
+						button.set_identifier(note_info.index)
+					else:
+						button.set_channel(NON_FEEDBACK_CHANNEL)
+						button.set_light(note_info.color)
+						button.set_enabled(True)
+	
+
+	def on_selected_track_changed(self, *a, **k):
+		super(AumPushInstrumentComponent, self).on_selected_track_changed(*a, **k)
+		self.update()
+	
 
 
 class AumPushDeviceNavigationComponent(DeviceNavigationComponent):
@@ -116,12 +218,48 @@ class AumPush(Push):
 		self._host_name = 'AumPush'
 		self._color_type = 'Push'
 		self.hosts = []
+		self._auto_arm_calls = 0
 		super(AumPush, self).__init__(c_instance)
 		with self.component_guard():
 			self._device._alt_pressed = False
 			self._host.set_device_component(self._device)
 			self._device.add_device_listener(self._on_new_device_set)
+			self.set_feedback_channels(FEEDBACK_CHANNELS)
 		self.log_message('<<<<<<<<<<<<<<<<<<<<<<<< AumPush ' + str(self._monomod_version) + ' log opened >>>>>>>>>>>>>>>>>>>>>>>>') 
+	
+
+	def _init_instrument(self):
+		self._instrument = AumPushInstrumentComponent(name='Instrument_Component')
+		self._instrument.set_enabled(False)
+		self._instrument.layer = Layer(matrix=self._matrix, touch_strip=self._touch_strip_control, scales_toggle_button=self._scale_presets_button, presets_toggle_button=self._shift_button, octave_up_button=self._octave_up_button, octave_down_button=self._octave_down_button)
+		self._instrument.scales_layer = Layer(top_display_line=self._display_line3, bottom_display_line=self._display_line4, top_buttons=self._select_buttons, bottom_buttons=self._track_state_buttons, encoder_touch_buttons=self._global_param_touch_buttons, _notification=self._notification.use_single_line(1))
+		self._instrument.scales_layer.priority = MODAL_DIALOG_PRIORITY
+		self._instrument._scales.presets_layer = Layer(top_display_line=self._display_line3, bottom_display_line=self._display_line4, top_buttons=self._select_buttons, bottom_buttons=self._track_state_buttons)
+		self._instrument._scales.presets_layer.priority = DIALOG_PRIORITY
+		self._instrument._scales.scales_info_layer = Layer(info_line=self._display_line1, blank_line=self._display_line2)
+		self._instrument._scales.scales_info_layer.priority = MODAL_DIALOG_PRIORITY
+		self._instrument._override_channel = self._get_current_instrument_channel
+	
+
+	def _get_current_instrument_channel(self):
+		#self.log_message('_get_current_instrument_channel channel')
+		cur_track = self._mixer._selected_strip._track
+		if cur_track.has_midi_input:
+			cur_chan = cur_track.current_input_sub_routing
+			if len(cur_chan) == 0:
+				self.set_feedback_channels(FEEDBACK_CHANNELS)
+				return -1
+			elif cur_chan in CHANNEL_TEXT:
+				self.log_message('retrieved channel:' + str(cur_chan))
+				chan = CHANNEL_TEXT.index(cur_chan)
+				self.set_feedback_channels([chan])
+				return chan
+			else:
+				self.set_feedback_channels(FEEDBACK_CHANNELS)
+				return -1
+		else:
+			self.set_feedback_channels(FEEDBACK_CHANNELS)
+			return -1
 	
 
 	def _setup_mod(self):
@@ -145,6 +283,31 @@ class AumPush(Push):
 		super(AumPush, self)._init_device(*a, **k)
 		self._device._current_bank_details = self._make_current_bank_details(self._device)
 	#	self._device_navigation._on_selected_device_changed = self._make_on_selected_device_changed(self._device_navigation)
+	
+
+	def _init_mixer(self):
+		self._mixer = AumPushSpecialMixerComponent(self._matrix.width())
+		self._mixer.set_enabled(False)
+		self._mixer.name = 'Mixer'
+		self._mixer_layer = Layer(track_names_display=self._display_line4, track_select_buttons=self._select_buttons)
+		self._mixer_pan_send_layer = Layer(track_names_display=self._display_line4, track_select_buttons=self._select_buttons, pan_send_toggle=self._pan_send_mix_mode_button, pan_send_controls=self._global_param_controls, pan_send_touch_buttons=self._global_param_touch_buttons, pan_send_names_display=self._display_line1, pan_send_graphics_display=self._display_line2, pan_send_alt_display=self._display_line3)
+		self._mixer_volume_layer = Layer(track_names_display=self._display_line4, track_select_buttons=self._select_buttons, volume_controls=self._global_param_controls, volume_touch_buttons=self._global_param_touch_buttons, volume_names_display=self._display_line1, volume_graphics_display=self._display_line2, volume_alt_display=self._display_line3)
+		self._mixer_track_layer = Layer(track_names_display=self._display_line4, track_select_buttons=self._select_buttons, selected_controls=self._global_param_controls, track_mix_touch_buttons=self._global_param_touch_buttons, selected_names_display=self._display_line1, selected_graphics_display=self._display_line2, track_mix_alt_display=self._display_line3)
+		self._mixer_solo_layer = Layer(solo_buttons=self._track_state_buttons)
+		self._mixer_mute_layer = Layer(mute_buttons=self._track_state_buttons)
+		self._mixer.layer = self._mixer_layer
+		for track in xrange(self._matrix.width()):
+			strip = self._mixer.channel_strip(track)
+			strip.name = 'Channel_Strip_' + str(track)
+			strip.set_invert_mute_feedback(True)
+			strip._do_select_track = self._selector.on_select_track
+			strip.layer = Layer(shift_button=self._shift_button, delete_button=self._delete_button, duplicate_button=self._duplicate_button, selector_button=self._select_button)
+
+		self._mixer.selected_strip().name = 'Selected_Channel_strip'
+		self._mixer.master_strip().name = 'Master_Channel_strip'
+		self._mixer.master_strip()._do_select_track = self._selector.on_select_track
+		self._mixer.master_strip().layer = Layer(volume_control=self._master_volume_control, cue_volume_control=ComboElement((self._shift_button,), self._master_volume_control), select_button=self._master_select_button, selector_button=self._select_button)
+		self._mixer.set_enabled(True)
 	
 
 	def _on_new_device_set(self):
@@ -208,6 +371,58 @@ class AumPush(Push):
 		return mod_device
 	
 
+
+
+
+	"""
+	def _init_mixer(self):
+		super(AumPush, self)._init_mixer()
+		#for channelstrip in self._mixer._channel_strips:
+			self.log_message('adding new arm method for ' + str(channelstrip))
+			channelstrip._arm_value = self._make_channel_strip_arm_value(channelstrip)
+	"""
+
+	def _make_channel_strip_arm_value(self, channelstrip):
+		def _arm_value(channelstrip, value):
+			assert(not channelstrip._arm_button != None)
+			assert(value in range(128))
+			self.log_message('channelstrip arm value')
+			if channelstrip.is_enabled():
+				if channelstrip._track != None and channelstrip._track.can_be_armed:
+					arm_exclusive = channelstrip.song().exclusive_arm != channelstrip._shift_pressed
+					new_value = not channelstrip._track.arm
+					respect_multi_selection = channelstrip._track.is_part_of_selection
+					for track in channelstrip.song().tracks:
+						if track.can_be_armed:
+							if track == channelstrip._track or respect_multi_selection and track.is_part_of_selection:
+								track.arm = new_value
+								self.log_message('armed track')
+							#elif arm_exclusive and track.arm:
+							#	track.arm = False
+		return _arm_value
+		
+	
+
+	def receive_midi(self, midi_bytes):
+		self.log_message('midi in: ' + str(midi_bytes))
+		super(AumPush, self).receive_midi(midi_bytes)
+
+	
+
+	def _do_receive_midi(self, midi_bytes):
+		self.log_message('do midi in: ' + str(midi_bytes))
+		super(AumPush, self)._do_receive_midi(midi_bytes)
+	
+
+	def _send_midi(self, midi_event_bytes, optimized = True):
+		self.log_message('send_midi: ' + str(midi_event_bytes))
+		super(AumPush, self)._send_midi(midi_event_bytes, optimized)
+	
+
+	def _do_send_midi(self, midi_event_bytes):
+		self.log_message('do_send midi: ' + str(midi_event_bytes))
+		super(AumPush, self)._do_send_midi(midi_event_bytes)
+	
 
 
 class PushMonomodComponent(MonomodComponent):
@@ -333,7 +548,7 @@ class PushMonomodComponent(MonomodComponent):
 		self._nav_buttons = buttons
 		if buttons != None:
 			assert len(buttons) == 4	
-			self._nav_buttons[0].add_value_listener(self._nav_up_value)	
+			self._nav_buttons[0].add_value_listener(self._nav_up_value) 
 			self._nav_buttons[1].add_value_listener(self._nav_down_value)	
 			self._nav_buttons[2].add_value_listener(self._nav_left_value)
 			self._nav_buttons[3].add_value_listener(self._nav_right_value)	
