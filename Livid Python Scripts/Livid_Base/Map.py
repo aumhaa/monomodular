@@ -3,7 +3,6 @@
 Base_Map.py
 
 Created by amounra on 2012-12-30.
-Copyright (c) 2010 __artisia__. All rights reserved.
 
 This file allows the reassignment of the controls from their default arrangement.  The order is from left to right; 
 Buttons are Note #'s and Faders/Rotaries are Controller #'s
@@ -52,6 +51,19 @@ OFFSET_SHIFT_IS_MOMENTARY = False
 
 """You can change the orientation of the Up, Down, Left, and Right buttons (where applicable) by changing the array.  The values correspond to the buttons from top to bottom."""
 UDLR = [0, 1, 2, 3]
+
+"""The values in this array determine the choices for what length of clip is created when "Fixed Length" is turned on:
+0 = 1 Beat
+1 = 2 Beat
+3 = 1 Bar
+4 = 2 Bars
+5 = 4 Bars
+6 = 8 Bars
+7 = 16 Bars
+8 = 32 Bars
+"""
+
+LENGTH_VALUES = [2, 3, 4]
 
 """Setting this flag to True will cause Live's detail view to switch to the appropriate one (i.e. Clip vs. Device) when the mode updates"""
 SWITCH_VIEWS_ON_MODE_CHANGE = False

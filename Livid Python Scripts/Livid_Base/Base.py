@@ -179,8 +179,8 @@ class BaseSessionRecordingComponent(SessionRecordingComponent):
 
 	def _get_selected_length(self):
 		song = self.song()
-		length = 2.0 ** (self._length_value + 2)
-		quant = LAUNCH_QUANTIZATION[(self._length_value + 2)]
+		length = 2.0 ** (LENGTH_VALUES[self._length_value])
+		quant = LAUNCH_QUANTIZATION[(LENGTH_VALUES[self._length_value])]
 		#if self._length_value > 1:
 		length = length * song.signature_numerator / song.signature_denominator
 		return (length, quant)
