@@ -55,12 +55,12 @@ UDLR = [0, 1, 2, 3]
 """The values in this array determine the choices for what length of clip is created when "Fixed Length" is turned on:
 0 = 1 Beat
 1 = 2 Beat
-3 = 1 Bar
-4 = 2 Bars
-5 = 4 Bars
-6 = 8 Bars
-7 = 16 Bars
-8 = 32 Bars
+2 = 1 Bar
+3 = 2 Bars
+4 = 4 Bars
+5 = 8 Bars
+6 = 16 Bars
+7 = 32 Bars
 """
 
 LENGTH_VALUES = [2, 3, 4]
