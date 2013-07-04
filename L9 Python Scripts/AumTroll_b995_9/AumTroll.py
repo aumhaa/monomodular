@@ -50,6 +50,7 @@ from CNTRLR_9.Cntrlr import Cntrlr
 #from ModDevices import *
 from Map import *
 
+from _Tools.re import *
 
 switchxfader = (240, 00, 01, 97, 02, 15, 01, 247)
 switchxfaderrgb = (240, 00, 01, 97, 07, 15, 01, 247)
@@ -497,9 +498,11 @@ class AumTroll(Cntrlr):
 		for index in range(4):
 			self._mixer3.channel_strip(index).set_select_button(None)
 			self._mixer3.channel_strip(index).set_volume_control(None)
+			self._mixer3.return_strip(index).set_volume_control(None)
 		if self._aumpush:
 			self._aumpush._host._set_bank_buttons(None)
 		self._on_shift_button_value.subject = None
+		self._mixer.set_crossfader_control(None)
 
 
 		"""THIS SECTION IS MISSING FROM THE ORIGINAL SCRIPT AND NEEDS TO BE FIXED...THE ASSIGNMENTS WERE MADE AT __init__"""
@@ -685,8 +688,11 @@ class AumTroll(Cntrlr):
 			else:
 				self._mixer.return_strip(0).set_send_controls(tuple([None, self._encoder[8]]))
 				self._mixer.return_strip(1).set_send_controls(tuple([self._encoder[9], None]))
+				self._mixer.set_crossfader_control(self._encoder[11])
 				self._encoder_button[8].send_value(5, True)
 				self._encoder_button[9].send_value(5, True)
+				self._encoder_button[11].send_value(1, True)
+
 			self._device1.set_parameter_controls(tuple([self._knobs[index] for index in range(8)]))
 			self._device2.set_parameter_controls(tuple([self._knobs[index+12] for index in range(8)]))
 			self._device1.set_enabled(True)
@@ -1011,6 +1017,44 @@ class AumTroll(Cntrlr):
 		with self.component_guard():
 			self.deassign_live_controls()
 			self.schedule_message(3, self.assign_live_controls)
+		self._device_selector.update = self._make_device_selector_update(self._device_selector)
+	
+
+	def _make_device_selector_update(self, selector):
+		def update():
+			key = str('p'+ str(selector._mode_index + 1) + ' ')
+			preset = None
+			for track in range(len(self.song().tracks)):
+				for device in range(len(self.song().tracks[track].devices)):
+					if(match(key, str(self.song().tracks[track].devices[device].name)) != None):
+						preset = self.song().tracks[track].devices[device]
+			for return_track in range(len(self.song().return_tracks)):
+				for device in range(len(self.song().return_tracks[return_track].devices)):
+					if(match(key, str(self.song().return_tracks[return_track].devices[device].name)) != None):
+						preset = self.song().return_tracks[return_track].devices[device]
+			for device in range(len(self.song().master_track.devices)):
+				if(match(key, str(self.song().master_track.devices[device].name)) != None):
+					preset = self.song().master_track.devices[device]	
+			if(preset != None):
+				self.set_appointed_device(preset)
+				self.song().view.select_device(preset)
+				selector._last_preset = selector._mode_index
+				for button in selector._modes_buttons:
+					if selector._modes_buttons.index(button) == selector._mode_index:
+						button.turn_on()
+					else:
+						button.turn_off()
+		return update
+		
+	
+
+	def display_active_client(self):
+		if(not self._device._device is None):
+			self.log_message('selecting....')
+			self.song().view.select_device(self._device._device)
+			if ((not self.application().view.is_view_visible('Detail')) or (not self.application().view.is_view_visible('Detail/DeviceChain'))):
+				self.application().view.show_view('Detail')
+				self.application().view.show_view('Detail/DeviceChain')
 	
 
 	"""these two secondary DeviceComponents are only set up if the MONOHM_LINK flag in .Map is turned on"""
@@ -1138,7 +1182,6 @@ class AumTroll(Cntrlr):
 				self._on_shift_button_value.subject.send_value(7, True)
 	
 
-		
-	
+
 
 #	a
