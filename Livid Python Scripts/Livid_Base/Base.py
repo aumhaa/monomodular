@@ -219,7 +219,6 @@ class BaseSessionRecordingComponent(SessionRecordingComponent):
 				button.turn_off()
 	
 
-
 class BlockingMonoButtonElement(MonoButtonElement):
 
 
@@ -301,18 +300,17 @@ class BaseMixerComponent(MixerComponent):
 		self.set_select_buttons(None, None)
 		self.set_prehear_volume_control(None)
 		self.set_crossfader_control(None)
-		for component in self._channel_strips:
+		for component in [self._channel_strips + self._return_strips]:
 			if isinstance(component, ChannelStripComponent):
 				component.set_pan_control(None)
 				component.set_volume_control(None)
 				component.set_select_button(None)
-				if component._track and not component._track is self.song().master_track:
-					component.set_mute_button(None)
-					component.set_send_controls(None)
-					component.set_solo_button(None)
-					component.set_arm_button(None)
-					component.set_shift_button(None)
-					component.set_crossfade_toggle(None)
+				component.set_mute_button(None)
+				component.set_send_controls(None)
+				component.set_solo_button(None)
+				component.set_arm_button(None)
+				component.set_shift_button(None)
+				component.set_crossfade_toggle(None)
 	
 
 
@@ -1299,6 +1297,9 @@ class Base(ControlSurface):
 		for index in range(8):
 			self._mixer.channel_strip(index)._invert_mute_feedback = True
 			self._mixer.channel_strip(index).name = 'Mixer_ChannelStrip_' + str(index)
+		for index in range(4):
+			self._mixer.return_strip(index).name = 'Mixer_ReturnStrip_' + str(index)
+		self._mixer.selected_strip().name = 'Mixer_SelectedStrip'
 		self.song().view.selected_track = self._mixer.channel_strip(0)._track 
 	
 
@@ -1861,6 +1862,7 @@ class Base(ControlSurface):
 					self._session.set_stop_track_clip_buttons(tuple(self._pad[24:32]))
 				else:
 					self._assign_midi_layer()
+			self._mixer._reassign_tracks()
 			self._mixer.update()
 		self.request_rebuild_midi_map()
 		if SWITCH_VIEWS_ON_MODE_CHANGE:
