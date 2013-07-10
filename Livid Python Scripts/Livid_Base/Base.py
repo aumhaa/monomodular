@@ -133,8 +133,8 @@ SPLITBUTTONMODE = (240, 0, 1, 97, 12, 66, 3, 3, 3, 3, 5, 5, 5, 5, 3, 3, 3, 3, 5,
 STREAMINGON = (240, 0, 1, 97, 12, 62, 127, 247)
 STREAMINGOFF = (240, 0, 1, 97, 12, 62, 0, 247)
 LINKFUNCBUTTONS = (240, 0, 1, 97, 12, 68, 1, 247)
-#DISABLECAPFADERNOTES = (240, 0, 1, 97, 12, 69, 1, 247)
-DISABLECAPFADERNOTES = (240, 0, 1, 97, 12, 60, 0, 0, 0, 0, 0, 0, 0, 0, 0, 247)
+DISABLECAPFADERNOTES = (240, 0, 1, 97, 12, 69, 1, 247)
+#DISABLECAPFADERNOTES = (240, 0, 1, 97, 12, 60, 0, 0, 0, 0, 0, 0, 0, 0, 0, 247)
 QUERYSURFACE = (240, 126, 127, 6, 1, 247)
 
 CHANNELS = ['Ch. 2', 'Ch. 3', 'Ch. 4', 'Ch. 5', 'Ch. 6', 'Ch. 7', 'Ch. 8', 'Ch. 9', 'Ch. 10', 'Ch. 11', 'Ch. 12', 'Ch. 13', 'Ch. 14', 'Ch. 15', 'Ch. 16', 'All Channels']
