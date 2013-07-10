@@ -219,6 +219,7 @@ class BaseSessionRecordingComponent(SessionRecordingComponent):
 				button.turn_off()
 	
 
+
 class BlockingMonoButtonElement(MonoButtonElement):
 
 
@@ -300,17 +301,19 @@ class BaseMixerComponent(MixerComponent):
 		self.set_select_buttons(None, None)
 		self.set_prehear_volume_control(None)
 		self.set_crossfader_control(None)
-		for component in [self._channel_strips + self._return_strips]:
+		for component in self._sub_components:
 			if isinstance(component, ChannelStripComponent):
 				component.set_pan_control(None)
 				component.set_volume_control(None)
 				component.set_select_button(None)
-				component.set_mute_button(None)
-				component.set_send_controls(None)
-				component.set_solo_button(None)
-				component.set_arm_button(None)
-				component.set_shift_button(None)
-				component.set_crossfade_toggle(None)
+ 				if component in self._channel_strips or component in self._return_strips:
+					component.set_mute_button(None)
+					component.set_send_controls(None)
+					component.set_solo_button(None)
+					component.set_shift_button(None)
+					component.set_crossfade_toggle(None)
+					if component in self._channel_strips:
+						component.set_arm_button(None)
 	
 
 
@@ -1350,6 +1353,7 @@ class Base(ControlSurface):
 	def _setup_device_control(self):
 		self._device = BaseDeviceComponent(self)
 		self._device.name = 'Device_Component'
+		self._device.update = self._device_update(self._device)
 		self.set_device_component(self._device)
 		self._device_navigator = DeviceNavigator(self._device, self._mixer, self)
 		self._device_navigator.name = 'Device_Navigator'
@@ -1784,7 +1788,7 @@ class Base(ControlSurface):
 					self._pad[index+24].set_on_off_values(TRACK_STOP, TRACK_STOP)
 					self._pad[index+24].send_value(TRACK_STOP)
 				self._session.set_stop_track_clip_buttons(tuple(self._pad[24:32]))
-			self._mixer._reassign_tracks()
+			#self._mixer._reassign_tracks()
 			self._mixer.update()
 		self.request_rebuild_midi_map()
 	
@@ -1863,11 +1867,11 @@ class Base(ControlSurface):
 					self._session.set_stop_track_clip_buttons(tuple(self._pad[24:32]))
 				else:
 					self._assign_midi_layer()
-			self._mixer._reassign_tracks()
+			#self._mixer._reassign_tracks()
 			self._mixer.update()
 		self.request_rebuild_midi_map()
-		if SWITCH_VIEWS_ON_MODE_CHANGE:
-			self.application().view.show_view('Detail/Clip')	
+		#if SWITCH_VIEWS_ON_MODE_CHANGE:
+		#	self.application().view.show_view('Detail/Clip')	
 	
 
 	def _set_layer2(self, shifted = False):
@@ -1937,11 +1941,11 @@ class Base(ControlSurface):
 				self._rt_button.set_on_off_values(DEVICE_LAYER, 0)
 				self._device.update()
 				self._device_navigator.update()
-			self._mixer._reassign_tracks()
+			#self._mixer._reassign_tracks()
 			self._mixer.update()
 		self.request_rebuild_midi_map()
-		if SWITCH_VIEWS_ON_MODE_CHANGE:
-			self.application().view.show_view('Detail/DeviceChain')
+		#if SWITCH_VIEWS_ON_MODE_CHANGE:
+		#	self.application().view.show_view('Detail/DeviceChain')
 	
 
 	def _set_layer3(self, shifted = False):
@@ -2536,5 +2540,26 @@ class Base(ControlSurface):
 					self._initialize_hardware()
 	
 
+
+	#def _do_send_midi(self, midi_event_bytes):
+	#	self.log_message(str(midi_event_bytes))
+	#	super(Base, self)._do_send_midi(midi_event_bytes)
+
+	"""device component methods and overrides"""
+
+	"""this closure replaces the default DeviceComponent update() method without requiring us to build an override class"""
+	"""it calls the _update_selected_device method of this script in addition to its normal routine"""
+	"""it also ensures a rebuilt midi_map; for some reason the Abe's pulled that part out of the post 8.22 scripts, and under certain circumstances"""
+	"""things don't work as expected anymore."""
+	def _device_update(self, device):
+		def _update():
+			#for client in self._client:
+			#	if (device._device != None) and (client.device == device._device):
+			#		device._bank_index = max(client._device_component._cntrl_offset, device._bank_index)
+			BaseDeviceComponent.update(device)
+			self.request_rebuild_midi_map()
+		return _update
+		
+	
 
 #	a
