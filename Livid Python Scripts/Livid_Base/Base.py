@@ -1784,6 +1784,7 @@ class Base(ControlSurface):
 					self._pad[index+24].set_on_off_values(TRACK_STOP, TRACK_STOP)
 					self._pad[index+24].send_value(TRACK_STOP)
 				self._session.set_stop_track_clip_buttons(tuple(self._pad[24:32]))
+			self._mixer._reassign_tracks()
 			self._mixer.update()
 		self.request_rebuild_midi_map()
 	
@@ -1936,6 +1937,7 @@ class Base(ControlSurface):
 				self._rt_button.set_on_off_values(DEVICE_LAYER, 0)
 				self._device.update()
 				self._device_navigator.update()
+			self._mixer._reassign_tracks()
 			self._mixer.update()
 		self.request_rebuild_midi_map()
 		if SWITCH_VIEWS_ON_MODE_CHANGE:
