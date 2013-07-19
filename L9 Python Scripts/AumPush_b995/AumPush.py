@@ -74,6 +74,7 @@ from Push.MelodicComponent import MelodicPattern
 from Push.SpecialMixerComponent import SpecialMixerComponent
 from Push.SpecialChanStripComponent import SpecialChanStripComponent
 
+from MonoScaleComponent import MonoScaleComponent
 
 CHANNEL_TEXT = ['Ch. 1', 'Ch. 2', 'Ch. 3', 'Ch. 4', 'Ch. 5', 'Ch. 6', 'Ch. 7', 'Ch. 8']
 
@@ -225,6 +226,7 @@ class AumPush(Push):
 			self._host.set_device_component(self._device)
 			self._device.add_device_listener(self._on_new_device_set)
 			self.set_feedback_channels(FEEDBACK_CHANNELS)
+			self._hack_stepseq()
 		self.log_message('<<<<<<<<<<<<<<<<<<<<<<<< AumPush ' + str(self._monomod_version) + ' log opened >>>>>>>>>>>>>>>>>>>>>>>>') 
 	
 
@@ -250,7 +252,6 @@ class AumPush(Push):
 				self.set_feedback_channels(FEEDBACK_CHANNELS)
 				return -1
 			elif cur_chan in CHANNEL_TEXT:
-				self.log_message('retrieved channel:' + str(cur_chan))
 				chan = CHANNEL_TEXT.index(cur_chan)
 				self.set_feedback_channels([chan])
 				return chan
@@ -260,6 +261,13 @@ class AumPush(Push):
 		else:
 			self.set_feedback_channels(FEEDBACK_CHANNELS)
 			return -1
+	
+
+	def _setup_monoscale(self):
+		self._monoscale = MonoScaleComponent(self)
+		self._monoscale.name = 'MonoScaleComponent'
+		self._monoscale.layer = Layer( button_matrix = self._matrix, shift_button = self._shift_button, alt_button = self._select_button)
+		self._monoscale.layer.priority = 4
 	
 
 	def _setup_mod(self):
@@ -274,9 +282,11 @@ class AumPush(Push):
 
 	def _init_matrix_modes(self):
 		super(AumPush, self)._init_matrix_modes()
+		self._setup_monoscale()
 		self._setup_mod()
 		self._note_modes.add_mode('mod', self._host)
 		self._note_modes.add_mode('looperhack', self._audio_loop)
+		self._note_modes.add_mode('monoscale', self._monoscale)
 	
 
 	def _init_device(self, *a, **k):
@@ -310,6 +320,27 @@ class AumPush(Push):
 		self._mixer.set_enabled(True)
 	
 
+	def _hack_stepseq(self):
+		self._step_sequencer._drum_group._update_control_from_script = self._make_update_control_from_script(self._step_sequencer._drum_group)
+	
+
+	def _make_update_control_from_script(self, drum_group):
+		def _update_control_from_script(): 
+			takeover_drums = drum_group._takeover_drums or drum_group._selected_pads
+			profile = 'default' if takeover_drums else 'drums'
+			if drum_group._drum_matrix:
+				for button, _ in drum_group._drum_matrix.iterbuttons():
+					if button:
+						translation_channel = self._get_current_instrument_channel()
+						if translation_channel < 0:
+							translation_channel = PAD_FEEDBACK_CHANNEL
+						button.set_channel(translation_channel)
+						button.set_enabled(takeover_drums and (translation_channel is PAD_FEEDBACK_CHANNEL))
+						button.sensitivity_profile = profile
+		return _update_control_from_script
+		
+	
+
 	def _on_new_device_set(self):
 		self.schedule_message(1, self._select_note_mode)
 	
@@ -319,6 +350,9 @@ class AumPush(Push):
 		current_device = self._device._device
 		mod_device = self._is_mod(current_device)
 		drum_device = find_if(lambda d: d.can_have_drum_pads, track.devices)
+		channelized = False
+		if track.has_midi_input and track.current_input_sub_routing in ['Ch. 2', 'Ch. 3', 'Ch. 4', 'Ch. 5', 'Ch. 6', 'Ch. 7', 'Ch. 8', 'Ch. 9', 'Ch. 10', 'Ch. 11', 'Ch. 12', 'Ch. 13', 'Ch. 14', 'Ch. 15', 'Ch. 16']:
+			channelized = True
 		self._step_sequencer.set_drum_group_device(drum_device)
 		if track == None or track.is_foldable or track in self.song().return_tracks or track == self.song().master_track:
 			self._note_modes.selected_mode = 'disabled'
@@ -329,6 +363,8 @@ class AumPush(Push):
 				self._host._select_client(mod_device._number)
 		elif track and track.has_audio_input:
 			self._note_modes.selected_mode = 'looperhack'
+		elif channelized:
+			self._note_modes.selected_mode = 'monoscale'
 		elif drum_device:
 			self._note_modes.selected_mode = 'sequencer'
 		else:
@@ -371,10 +407,17 @@ class AumPush(Push):
 		return mod_device
 	
 
-
+	def update(self):
+		self._on_session_record_changed()
+		self._on_note_repeat_mode_changed(self._note_repeat.selected_mode)
+		if self._get_current_instrument_channel() < 0:
+			self.set_feedback_channels(FEEDBACK_CHANNELS)
+		self._update_calibration()
+		super(Push, self).update()
 
 
 	"""
+
 	def _init_mixer(self):
 		super(AumPush, self)._init_mixer()
 		#for channelstrip in self._mixer._channel_strips:
@@ -383,7 +426,7 @@ class AumPush(Push):
 	"""
 
 	def _make_channel_strip_arm_value(self, channelstrip):
-		def _arm_value(channelstrip, value):
+		def _arm_value(value):
 			assert(not channelstrip._arm_button != None)
 			assert(value in range(128))
 			self.log_message('channelstrip arm value')
@@ -403,6 +446,7 @@ class AumPush(Push):
 		
 	
 
+	"""
 	def receive_midi(self, midi_bytes):
 		self.log_message('midi in: ' + str(midi_bytes))
 		super(AumPush, self).receive_midi(midi_bytes)
@@ -423,6 +467,8 @@ class AumPush(Push):
 		self.log_message('do_send midi: ' + str(midi_event_bytes))
 		super(AumPush, self)._do_send_midi(midi_event_bytes)
 	
+	"""
+
 
 
 class PushMonomodComponent(MonomodComponent):
