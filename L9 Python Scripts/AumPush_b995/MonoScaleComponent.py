@@ -4,6 +4,9 @@ MonoScaleComponent.py
 Created by amounra on 2013-07-18.
 Copyright (c) 2013 __aumhaa__. All rights reserved.
 """
+
+import Live
+
 from _Framework.ControlSurfaceComponent import ControlSurfaceComponent
 from _Framework.ModeSelectorComponent import ModeSelectorComponent
 from _Framework.SubjectSlot import subject_slot, subject_slot_group
@@ -309,11 +312,14 @@ class MonoScaleComponent(ControlSurfaceComponent):
 	
 
 	def set_button_matrix(self, matrix):
-		self._matrix_value.subject = matrix
-		if matrix:
-			self._assign_midi_layer()
-		else:
-			pass
+		if not matrix is self._matrix_value.subject:
+			if self._matrix_value.subject:
+				for button in self._matrix_value.subject:
+					button.set_enabled(True)
+					button.use_default_message()
+			self._matrix_value.subject = matrix
+			if self._matrix_value.subject:
+				self._assign_midi_layer()
 	
 
 	@subject_slot('value')
@@ -376,15 +382,15 @@ class MonoScaleComponent(ControlSurfaceComponent):
 	def _detect_instrument_type(self, track):
 		scale = DEFAULT_AUTO_SCALE
 		#for device in self._get_devices(track):
-		if self._assign_mod():
-			scale = 'Mod'
-		else:
-			for device in track.devices:
-				if isinstance(device, Live.Device.Device):
-					#self.log_message('device: ' + str(device.class_name))
-					if device.class_name == 'DrumGroupDevice':
-						scale = 'DrumPad'
-						break
+		#if self._assign_mod():
+		#	scale = 'Mod'
+		#else:
+		for device in track.devices:
+			if isinstance(device, Live.Device.Device):
+				self._script.log_message('device: ' + str(device.class_name))
+				if device.class_name == 'DrumGroupDevice':
+					scale = 'DrumPad'
+					break
 		return scale
 	
 
@@ -502,14 +508,14 @@ class MonoScaleComponent(ControlSurfaceComponent):
 							if scale is 'DrumPad':
 								button.set_identifier((DRUMNOTES[column + (row*8)] + (self._offsets[cur_chan]['drumoffset']*4))%127)
 								button.scale_color = DRUMCOLORS[0]
-								button.send(button.scale_color)
+								button.send_value(button.scale_color)
 								self._offset_component._shifted_value = 3
 							else:
-								note_pos = column + (abs(3-row)*int(vertoffset))
+								note_pos = column + (abs(7-row)*int(vertoffset))
 								note =	offset + SCALES[scale][note_pos%scale_len] + (12*int(note_pos/scale_len))
 								button.set_identifier(note%127)
 								button.scale_color = KEYCOLORS[(note%12 in WHITEKEYS) + (((note_pos%scale_len)==0)*2)]
-								button.send(button.scale_color)
+								button.send_value(button.scale_color)
 								self._offset_component._shifted_value = 11
 							button.set_enabled(False)
 							button.set_channel(cur_chan)
@@ -521,20 +527,20 @@ class MonoScaleComponent(ControlSurfaceComponent):
 				else:
 					#self._send_midi(MIDIBUTTONMODE)
 					scale_len = len(SCALES[scale])
-					for row in range(4):
+					for row in range(8):
 						for column in range(8):
 							button = matrix.get_button(column, row)
 							if scale is 'DrumPad':
 								button.set_identifier((DRUMNOTES[column + (row*8)] + (self._offsets[cur_chan]['drumoffset']*4))%127)
 								button.scale_color = DRUMCOLORS[column<4]
-								button.send(button.scale_color)
+								button.send_value(button.scale_color)
 								self._offset_component._shifted_value = 3
 							else:
-								note_pos = column + (abs(3-row)*vertoffset)
+								note_pos = column + (abs(7-row)*vertoffset)
 								note =	offset + SCALES[scale][note_pos%scale_len] + (12*int(note_pos/scale_len))
 								button.set_identifier(note%127)
 								button.scale_color = KEYCOLORS[(note%12 in WHITEKEYS) + (((note_pos%scale_len)==0)*2)]
-								button.send(button.scale_color)
+								button.send_value(button.scale_color)
 								self._offset_component._shifted_value = 11
 							button.set_enabled(False)
 							button.set_channel(cur_chan)

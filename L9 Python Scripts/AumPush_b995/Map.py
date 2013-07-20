@@ -5,19 +5,6 @@ Base_Map.py
 Created by amounra on 2013-07-18.
 """
 
-""" The default assignment of colors within the OhmRGB is:
-Note 2 = white
-Note 4 = cyan 
-Note 8 = magenta 
-Note 16 = red 
-Note 32 = blue 
-Note 64 = yellow
-Note 127 = green
-Because the colors are reassignable, and the default colors have changed from the initial prototype,
-	MonOhm script utilizes a color map to assign colors to the buttons.	 This color map can be changed 
-	here in the script.	 The color ordering is from 1 to 7.	 
-"""
-COLOR_MAP = [2, 64, 4, 8, 16, 127, 32]
 
 """This variable determines whether or not the script automatically arms an instruments track for recording when it is selected"""
 AUTO_ARM_SELECTED = True
@@ -27,7 +14,7 @@ OFFSET_SHIFT_IS_MOMENTARY = False
 
 """The following variables contain color values for different operational mode indicators"""
 """[blackkey, whitekey]"""
-KEYCOLORS = [7, 3, 4, 5]
+KEYCOLORS = [127, 120, 30, 1]
 DRUMCOLORS = [4, 6]
 
 CHAN_SELECT = 7

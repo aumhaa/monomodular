@@ -351,6 +351,7 @@ class AumPush(Push):
 		mod_device = self._is_mod(current_device)
 		drum_device = find_if(lambda d: d.can_have_drum_pads, track.devices)
 		channelized = False
+		self.log_message('track has midi input: ' + str(track.has_midi_input) + ' current subrouting in CHANNELS: ' + str(track.current_input_sub_routing))
 		if track.has_midi_input and track.current_input_sub_routing in ['Ch. 2', 'Ch. 3', 'Ch. 4', 'Ch. 5', 'Ch. 6', 'Ch. 7', 'Ch. 8', 'Ch. 9', 'Ch. 10', 'Ch. 11', 'Ch. 12', 'Ch. 13', 'Ch. 14', 'Ch. 15', 'Ch. 16']:
 			channelized = True
 		self._step_sequencer.set_drum_group_device(drum_device)
@@ -369,6 +370,7 @@ class AumPush(Push):
 			self._note_modes.selected_mode = 'sequencer'
 		else:
 			self._note_modes.selected_mode = 'instrument'
+		self.log_message('selected note mode: ' + str(self._note_modes.selected_mode))
 	
 
 	def disconnect(self):
