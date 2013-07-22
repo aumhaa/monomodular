@@ -14,7 +14,7 @@ OFFSET_SHIFT_IS_MOMENTARY = False
 
 """The following variables contain color values for different operational mode indicators"""
 """[blackkey, whitekey]"""
-KEYCOLORS = [127, 120, 30, 1]
+KEYCOLORS = [127, 118, 30, 31]
 DRUMCOLORS = [4, 6]
 
 CHAN_SELECT = 7

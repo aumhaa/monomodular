@@ -52,6 +52,7 @@ from Push.TouchStripController import TouchStripControllerComponent, TouchStripE
 from Push.Selection import L9CSelection
 from Push.AccentComponent import AccentComponent
 from Push.AutoArmComponent import AutoArmComponent
+from Push.MatrixMaps import *
 #from Push.PadSensitivity import PadSensitivity
 
 from Push.NavigationNode import RackNode
@@ -75,6 +76,7 @@ from Push.SpecialMixerComponent import SpecialMixerComponent
 from Push.SpecialChanStripComponent import SpecialChanStripComponent
 
 from MonoScaleComponent import MonoScaleComponent
+
 
 CHANNEL_TEXT = ['Ch. 1', 'Ch. 2', 'Ch. 3', 'Ch. 4', 'Ch. 5', 'Ch. 6', 'Ch. 7', 'Ch. 8']
 
@@ -266,8 +268,9 @@ class AumPush(Push):
 	def _setup_monoscale(self):
 		self._monoscale = MonoScaleComponent(self)
 		self._monoscale.name = 'MonoScaleComponent'
-		self._monoscale.layer = Layer( button_matrix = self._matrix, shift_button = self._shift_button, alt_button = self._select_button)
+		self._monoscale.layer = Layer( button_matrix = self._matrix, shift_button = self._shift_button, alt_button = self._select_button, shifted_controls = self._track_state_buttons, scales_toggle_button=self._scale_presets_button)
 		self._monoscale.layer.priority = 4
+		#self._monoscale.shift_layer = AddLayerMode( self._monoscale, Layer(shifted_controls = 
 	
 
 	def _setup_mod(self):
@@ -416,10 +419,15 @@ class AumPush(Push):
 			self.set_feedback_channels(FEEDBACK_CHANNELS)
 		self._update_calibration()
 		super(Push, self).update()
+	
 
+
+
+	def _can_auto_arm_track(self, track):
+		routing = track.current_input_routing
+		return routing == 'Ext: All Ins' or routing == 'All Ins' or routing.startswith('AumPush')
 
 	"""
-
 	def _init_mixer(self):
 		super(AumPush, self)._init_mixer()
 		#for channelstrip in self._mixer._channel_strips:

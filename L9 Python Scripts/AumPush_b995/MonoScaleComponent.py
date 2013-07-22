@@ -10,6 +10,11 @@ import Live
 from _Framework.ControlSurfaceComponent import ControlSurfaceComponent
 from _Framework.ModeSelectorComponent import ModeSelectorComponent
 from _Framework.SubjectSlot import subject_slot, subject_slot_group
+from _Framework.ButtonElement import ButtonElement
+from Push.Colors import Basic, Rgb, Pulse, Blink, BiLed
+
+INITIAL_SCROLLING_DELAY = 5
+INTERVAL_SCROLLING_DELAY = 1
 
 _NOTENAMES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B']
 NOTENAMES = [(_NOTENAMES[index%12] + ' ' + str(int(index/12))) for index in range(128)]
@@ -61,14 +66,14 @@ class SplitModeSelector(ModeSelectorComponent):
 			if len(self._modes_buttons) > 0:
 				for index in range(len(self._modes_buttons)):
 					if self._mode_index == index:
-						self._modes_buttons[index].turn_on(True)
+						self._modes_buttons[index].turn_on()
 					else:
-						self._modes_buttons[index].turn_off(True)
+						self._modes_buttons[index].turn_off()
 			if not self._mode_toggle is None:
 				if self._mode_index > 0:
-					self._mode_toggle.turn_on(True)
+					self._mode_toggle.turn_on()
 				else:
-					self._mode_toggle.turn_off(True)
+					self._mode_toggle.turn_off()
 	
 
 
@@ -133,6 +138,7 @@ class ScrollingOffsetComponent(ControlSurfaceComponent):
 	def __init__(self, callback):
 		super(ScrollingOffsetComponent, self).__init__()
 		self._report_change = callback
+		self._offset = 0
 		self._maximum = 127
 		self._minimum = 0
 		self._shifted = False
@@ -267,19 +273,19 @@ class ScrollingOffsetComponent(ControlSurfaceComponent):
 	def update(self):
 		if (self._scroll_down_button != None):
 			if (self._offset > self._minimum):
-				self._scroll_down_button.turn_on(True)
+				self._scroll_down_button.turn_on()
 			else:
-				self._scroll_down_button.turn_off(True)
+				self._scroll_down_button.turn_off()
 		if (self._scroll_up_button != None):
 			if (self._offset < self._maximum):
-				self._scroll_up_button.turn_on(True)
+				self._scroll_up_button.turn_on()
 			else:
-				self._scroll_up_button.turn_off(True)	
+				self._scroll_up_button.turn_off()	
 		if (self._shift_button != None):
 			if (self._shifted):
-				self._shift_button.turn_on(True)
+				self._shift_button.turn_on()
 			else:
-				self._shift_button.turn_off(True)
+				self._shift_button.turn_off()
 	
 
 	def deassign_all(self):
@@ -295,6 +301,8 @@ class MonoScaleComponent(ControlSurfaceComponent):
 	def __init__(self, script):
 		super(MonoScaleComponent, self).__init__()
 		self._script = script
+		self._shifted_controls = None
+		self._shifted = False
 
 		self._offsets = [{'offset':DEFAULT_OFFSET, 'vertoffset':DEFAULT_VERTOFFSET, 'drumoffset':DEFAULT_DRUMOFFSET, 'scale':DEFAULT_SCALE, 'split':DEFAULT_SPLIT} for index in range(16)]
 
@@ -309,6 +317,24 @@ class MonoScaleComponent(ControlSurfaceComponent):
 		self._scale_offset_component = ScrollingOffsetComponent(self._scale_offset_value)
 		self._scale_offset_component._minimum = 0
 		self._scale_offset_component._maximum = len(SCALES.keys())-1
+	
+
+	def set_shifted_controls(self, controls):
+		self._shifted_controls = controls
+	
+
+	def set_scales_toggle_button(self, button):
+		self._scales_toggle_value.subject = button
+		if button:
+			button.turn_on()
+	
+
+	@subject_slot('value')
+	def _scales_toggle_value(self, value):
+		self._script.log_message('monoscale scale value in: ' + str(value))
+		if value:
+			self._shifted = not self._shifted
+			self.update()
 	
 
 	def set_button_matrix(self, matrix):
@@ -333,7 +359,7 @@ class MonoScaleComponent(ControlSurfaceComponent):
 
 	@subject_slot('value')
 	def _shift_value(self, value):
-		self._script.log_message('monoscale shift in: ' + str(value))
+		pass
 	
 
 	def set_alt_button(self, alt_button):
@@ -346,7 +372,27 @@ class MonoScaleComponent(ControlSurfaceComponent):
 	
 
 	def update(self):
-		pass
+		if self.is_enabled():
+			if self._shifted and self._shifted_controls:
+				"""self._shifted_controls[0].set_on_off_values(127, 0)
+				self._shifted_controls[2].set_on_off_values(10, 7)
+				self._shifted_controls[3].set_on_off_values(10, 7)
+				self._shifted_controls[4].set_on_off_values(22, 19)
+				self._shifted_controls[5].set_on_off_values(22, 19)
+				self._shifted_controls[6].set_on_off_values(4, 1)
+				self._shifted_controls[7].set_on_off_values(4, 1)"""
+				self._split_mode_selector.set_mode_toggle(self._shifted_controls[0])
+				self._vertical_offset_component.set_offset_change_buttons(self._shifted_controls[3], self._shifted_controls[2])
+				self._scale_offset_component.set_offset_change_buttons(self._shifted_controls[5], self._shifted_controls[4])
+				self._offset_component.set_offset_change_buttons(self._shifted_controls[7], self._shifted_controls[6])
+			else:
+				self._split_mode_selector.set_mode_toggle(None)
+				self._vertical_offset_component.set_offset_change_buttons(None, None)
+				self._scale_offset_component.set_offset_change_buttons(None, None)
+				self._offset_component.set_offset_change_buttons(None, None)
+				for button in self._shifted_controls:
+					button.turn_off()
+				
 	
 
 	def _is_mod(self, device):
@@ -472,7 +518,7 @@ class MonoScaleComponent(ControlSurfaceComponent):
 		#if not self.pad_held():
 		#if self.shift_pressed():
 			#if self.select_pressed():
-		cur_track = self._scrip._mixer._selected_strip._track
+		cur_track = self._script._mixer._selected_strip._track
 		if cur_track.has_midi_input:
 			cur_chan = cur_track.current_input_sub_routing
 			if cur_chan in CHANNELS:
@@ -502,14 +548,15 @@ class MonoScaleComponent(ControlSurfaceComponent):
 				elif scale in SPLIT_SCALES or split:
 					#self._send_midi(SPLITBUTTONMODE)
 					scale_len = len(SCALES[scale])
-					for row in range(4):
+					for row in range(8):
 						for column in range(4):
 							button = matrix.get_button(column, row)
 							if scale is 'DrumPad':
-								button.set_identifier((DRUMNOTES[column + (row*8)] + (self._offsets[cur_chan]['drumoffset']*4))%127)
-								button.scale_color = DRUMCOLORS[0]
-								button.send_value(button.scale_color)
-								self._offset_component._shifted_value = 3
+								if row < 4:
+									button.set_identifier((DRUMNOTES[column + (row*8)] + (self._offsets[cur_chan]['drumoffset']*4))%127)
+									button.scale_color = DRUMCOLORS[0]
+									button.send_value(button.scale_color)
+									self._offset_component._shifted_value = 3
 							else:
 								note_pos = column + (abs(7-row)*int(vertoffset))
 								note =	offset + SCALES[scale][note_pos%scale_len] + (12*int(note_pos/scale_len))
@@ -531,10 +578,11 @@ class MonoScaleComponent(ControlSurfaceComponent):
 						for column in range(8):
 							button = matrix.get_button(column, row)
 							if scale is 'DrumPad':
-								button.set_identifier((DRUMNOTES[column + (row*8)] + (self._offsets[cur_chan]['drumoffset']*4))%127)
-								button.scale_color = DRUMCOLORS[column<4]
-								button.send_value(button.scale_color)
-								self._offset_component._shifted_value = 3
+								if row < 4:
+									button.set_identifier((DRUMNOTES[column + (row*8)] + (self._offsets[cur_chan]['drumoffset']*4))%127)
+									button.scale_color = DRUMCOLORS[column<4]
+									button.send_value(button.scale_color)
+									self._offset_component._shifted_value = 3
 							else:
 								note_pos = column + (abs(7-row)*vertoffset)
 								note =	offset + SCALES[scale][note_pos%scale_len] + (12*int(note_pos/scale_len))
