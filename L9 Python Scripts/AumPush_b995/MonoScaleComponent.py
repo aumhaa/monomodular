@@ -8,13 +8,21 @@ Copyright (c) 2013 __aumhaa__. All rights reserved.
 import Live
 
 from _Framework.ControlSurfaceComponent import ControlSurfaceComponent
+from _Framework.CompoundComponent import CompoundComponent
 from _Framework.ModeSelectorComponent import ModeSelectorComponent
 from _Framework.SubjectSlot import subject_slot, subject_slot_group
 from _Framework.ButtonElement import ButtonElement
+from _Framework.DisplayDataSource import DisplayDataSource
+from _Framework.ModesComponent import DisplayingModesComponent, ModesComponent
+from _Framework.Util import forward_property
+from _Framework.SessionComponent import SessionComponent
+
 from Push.Colors import Basic, Rgb, Pulse, Blink, BiLed
 
 INITIAL_SCROLLING_DELAY = 5
 INTERVAL_SCROLLING_DELAY = 1
+
+DISPLAY_NAMES = ['SplitMode', 'Vertical Offset', 'Scale Type', 'Root Note']
 
 _NOTENAMES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B']
 NOTENAMES = [(_NOTENAMES[index%12] + ' ' + str(int(index/12))) for index in range(128)]
@@ -47,6 +55,16 @@ class SplitModeSelector(ModeSelectorComponent):
 
 	def number_of_modes(self):
 		return 2
+	
+
+	def set_mode_toggle(self, button):
+		assert(button == None or isinstance(button, ButtonElement))
+		if self._mode_toggle != None:
+			self._mode_toggle.remove_value_listener(self._toggle_value)
+		self._mode_toggle = button
+		if self._mode_toggle != None:
+			self._mode_toggle.add_value_listener(self._toggle_value)
+		self.update()
 	
 
 	def _mode_value(self, value, sender):
@@ -191,9 +209,11 @@ class ScrollingOffsetComponent(ControlSurfaceComponent):
 
 	def _scroll_up_value(self, value):
 		assert (value in range(128))
-		assert (self._scroll_up_button != None)
+		#assert (self._scroll_up_button != None)
 		if self.is_enabled():
-			button_is_momentary = self._scroll_up_button.is_momentary()
+			button_is_momentary = True
+			if not self._scroll_up_button is None:
+				button_is_momentary = self._scroll_up_button.is_momentary()
 			if button_is_momentary:
 				if (value != 0):
 					self._scroll_up_ticks_delay = INITIAL_SCROLLING_DELAY
@@ -207,9 +227,11 @@ class ScrollingOffsetComponent(ControlSurfaceComponent):
 
 	def _scroll_down_value(self, value):
 		assert (value in range(128))
-		assert (self._scroll_down_button != None)
+		#assert (self._scroll_down_button != None)
 		if self.is_enabled():
-			button_is_momentary = self._scroll_down_button.is_momentary()
+			button_is_momentary = True
+			if not self._scroll_down_button is None:
+				button_is_momentary = self._scroll_down_button.is_momentary()
 			if button_is_momentary:
 				if (value != 0):
 					self._scroll_down_ticks_delay = INITIAL_SCROLLING_DELAY
@@ -294,15 +316,153 @@ class ScrollingOffsetComponent(ControlSurfaceComponent):
 		self.on_enabled_changed()
 	
 
+class BaseSessionComponent(SessionComponent):
 
-class MonoScaleComponent(ControlSurfaceComponent):
 
-
-	def __init__(self, script):
-		super(MonoScaleComponent, self).__init__()
-		self._script = script
-		self._shifted_controls = None
+	def __init__(self, num_tracks, num_scenes, script):
+		super(BaseSessionComponent, self).__init__(num_tracks, num_scenes)
 		self._shifted = False
+		self._script = script
+	
+
+	def deassign_all(self):
+		self._shifted = False
+		self.set_scene_bank_buttons(None, None)
+		self.set_track_bank_buttons(None, None)
+		self.set_stop_all_clips_button(None)
+		self.set_stop_track_clip_buttons(None)
+		self.set_select_buttons(None, None)
+		for scene in self._scenes:
+			scene.set_launch_button(None)
+			for slot in scene._clip_slots:
+				slot.set_launch_button(None)
+	
+
+	def _bank_up_value(self, value):
+		assert (value in range(128))
+		assert (self._bank_up_button != None)
+		if self.is_enabled():
+			button_is_momentary = self._bank_up_button.is_momentary()
+			if button_is_momentary:
+				if (value != 0):
+					self._scroll_up_ticks_delay = INITIAL_SCROLLING_DELAY
+				else:
+					self._scroll_up_ticks_delay = -1
+			if ((not self._is_scrolling()) and ((value is not 0) or (not button_is_momentary))):
+				self.set_offsets(self._track_offset, (self._scene_offset + (1+(self._shifted*3))))
+	
+
+	def _bank_down_value(self, value):
+		assert (value in range(128))
+		assert (self._bank_down_button != None)
+		if self.is_enabled():
+			button_is_momentary = self._bank_down_button.is_momentary()
+			if button_is_momentary:
+				if (value != 0):
+					self._scroll_down_ticks_delay = INITIAL_SCROLLING_DELAY
+				else:
+					self._scroll_down_ticks_delay = -1
+			if ((not self._is_scrolling()) and ((value is not 0) or (not button_is_momentary))):
+				self.set_offsets(self._track_offset, max(0, self._scene_offset - (1+(self._shifted*3))))
+	
+
+	def _bank_right_value(self, value):
+		assert (value in range(128))
+		assert (self._bank_right_button != None)
+		if self.is_enabled():
+			button_is_momentary = self._bank_right_button.is_momentary()
+			if button_is_momentary:
+				if (value != 0):
+					self._scroll_right_ticks_delay = INITIAL_SCROLLING_DELAY
+				else:
+					self._scroll_right_ticks_delay = -1
+			if ((not self._is_scrolling()) and ((value is not 0) or (not button_is_momentary))):
+				self.set_offsets((self._track_offset + (1+(self._shifted*7))), self._scene_offset)
+	
+
+	def _bank_left_value(self, value):
+		assert isinstance(value, int)
+		assert (self._bank_left_button != None)
+		if self.is_enabled():
+			button_is_momentary = self._bank_left_button.is_momentary()
+			if button_is_momentary:
+				if (value != 0):
+					self._scroll_left_ticks_delay = INITIAL_SCROLLING_DELAY
+				else:
+					self._scroll_left_ticks_delay = -1
+			if ((not self._is_scrolling()) and ((value is not 0) or (not button_is_momentary))):
+				self.set_offsets(max(0, (self._track_offset - (1+(self._shifted*7)))), self._scene_offset)
+	
+
+
+class MonoScaleDisplayComponent(ControlSurfaceComponent):
+
+
+	def __init__(self, parent, *a, **k):
+		super(MonoScaleDisplayComponent, self).__init__(*a, **k)
+		self.num_segments = 4
+		self._parent = parent
+		self._name_display_line = None
+		self._value_display_line = None
+		self._name_data_sources = [ DisplayDataSource(DISPLAY_NAMES[index]) for index in xrange(4) ]
+		self._value_data_sources = [ DisplayDataSource() for _ in range(self.num_segments) ]
+	
+
+	def set_controls(self, controls):
+		if(controls):
+			controls[0].set_on_off_values('DefaultMatrix.On', 'DefaultMatrix.Off')
+			controls[2].set_on_off_values('Session.SceneSelected', 'Scales.Unselected')
+			controls[3].set_on_off_values('Session.SceneSelected', 'Scales.Unselected')
+			controls[4].set_on_off_values('Scales.FixedOn', 'Scales.FixedOff')
+			controls[5].set_on_off_values('Scales.FixedOn', 'Scales.FixedOff')
+			controls[6].set_on_off_values('Mixer.ArmSelected', 'Mixer.ArmUnselected')
+			controls[7].set_on_off_values('Mixer.ArmSelected', 'Mixer.ArmUnselected')
+		if controls is None:
+			controls = [None for index in range(8)]
+		self._parent._split_mode_selector.set_mode_toggle(controls[0])
+		self._parent._vertical_offset_component.set_offset_change_buttons(controls[3], controls[2])
+		self._parent._scale_offset_component.set_offset_change_buttons(controls[5], controls[4])
+		self._parent._offset_component.set_offset_change_buttons(controls[7], controls[6])
+	
+
+	def set_name_display_line(self, display_line):
+		self._name_display_line = display_line
+		if self._name_display_line:
+			self._name_display_line.set_data_sources(self._name_data_sources)
+	
+
+	def set_value_display_line(self, display_line):
+		self._value_display_line = display_line
+		if self._value_display_line:
+			self._value_display_line.set_data_sources(self._value_data_sources)
+	
+
+	def set_value_string(self, value, source = 0):
+		if source in range(len(self._value_data_sources)):
+			self._value_data_sources[source].set_display_string(str(value))
+	
+
+	def update(self):
+		pass
+	
+
+
+class MonoScaleComponent(CompoundComponent):
+
+
+	def __init__(self, script, *a, **k):
+		super(MonoScaleComponent, self).__init__(*a, **k)
+		self._script = script
+		self._setup_selected_session_control()
+		self._touchstrip = None
+
+		self._display = MonoScaleDisplayComponent(self)
+		self._display.set_enabled(False)
+
+		self._scales_modes = self.register_component(ModesComponent())
+		self._scales_modes.add_mode('disabled', None)
+		self._scales_modes.add_mode('enabled', self._display, 'DefaultButton.On')
+		self._scales_modes.selected_mode = 'disabled'
 
 		self._offsets = [{'offset':DEFAULT_OFFSET, 'vertoffset':DEFAULT_VERTOFFSET, 'drumoffset':DEFAULT_DRUMOFFSET, 'scale':DEFAULT_SCALE, 'split':DEFAULT_SPLIT} for index in range(16)]
 
@@ -317,24 +477,56 @@ class MonoScaleComponent(ControlSurfaceComponent):
 		self._scale_offset_component = ScrollingOffsetComponent(self._scale_offset_value)
 		self._scale_offset_component._minimum = 0
 		self._scale_offset_component._maximum = len(SCALES.keys())-1
+
+
 	
 
-	def set_shifted_controls(self, controls):
-		self._shifted_controls = controls
+	display_layer = forward_property('_display')('layer')
+
+	def _setup_selected_session_control(self):
+		self._selected_session = BaseSessionComponent(1, 32, self)
+		self._selected_session.name = "SelectedSession"
+		self._selected_session.set_offsets(0, 0)	 
+		self._selected_session.set_stop_track_clip_value(STOP_CLIP)
+		self._selected_scene = [None for index in range(32)]
+		for row in range(32):
+			self._selected_scene[row] = self._selected_session.scene(row)
+			self._selected_scene[row].name = 'SelectedScene_' + str(row)
+			clip_slot = self._selected_scene[row].clip_slot(0)
+			clip_slot.name = 'Selected_Clip_Slot_' + str(row)
+			clip_slot.set_triggered_to_play_value(CLIP_TRG_PLAY)
+			clip_slot.set_triggered_to_record_value(CLIP_TRG_REC)
+			clip_slot.set_stopped_value(CLIP_STOP)
+			clip_slot.set_started_value(CLIP_STARTED)
+			clip_slot.set_recording_value(CLIP_RECORDING)
+	
+
+	def set_touchstrip(self, control):
+		#if control is None and not self._touchstrip is None:
+		#	self._touchstrip.use_default_message()
+		self._touchstrip = control
+		if control:
+			control.reset()
+	
+
+	def set_name_display_line(self, display_line):
+		self._name_display_line = display_line
+	
+
+	def set_value_display_line(self, display_line):
+		self._value_display_line = display_line
+	
+
+	def _set_display_line(self, line, sources):
+		if line:
+			line.set_num_segments(len(sources))
+			for segment in xrange(len(sources)):
+				line.segment(segment).set_data_source(sources[segment])
 	
 
 	def set_scales_toggle_button(self, button):
-		self._scales_toggle_value.subject = button
-		if button:
-			button.turn_on()
-	
-
-	@subject_slot('value')
-	def _scales_toggle_value(self, value):
-		self._script.log_message('monoscale scale value in: ' + str(value))
-		if value:
-			self._shifted = not self._shifted
-			self.update()
+		assert(button is None or button.is_momentary())
+		self._scales_modes.set_toggle_button(button)
 	
 
 	def set_button_matrix(self, matrix):
@@ -344,55 +536,53 @@ class MonoScaleComponent(ControlSurfaceComponent):
 					button.set_enabled(True)
 					button.use_default_message()
 			self._matrix_value.subject = matrix
-			if self._matrix_value.subject:
-				self._assign_midi_layer()
+		if self._matrix_value.subject:
+			self._script.schedule_message(1, self._assign_midi_layer)
 	
 
 	@subject_slot('value')
 	def _matrix_value(self, value, x, y, *a, **k):
 		self._script.log_message('monoscale grid in: ' + str(x) + ' ' + str(y) + ' ' + str(value))
+		#pass
 	
 
-	def set_shift_button(self, shift_button):
-		self._shift_value.subject = shift_button
-	
-
-	@subject_slot('value')
-	def _shift_value(self, value):
-		pass
-	
-
-	def set_alt_button(self, alt_button):
-		self._alt_value.subject = alt_button
+	def set_octave_up_button(self, button):
+		self._octave_up_value.subject = button
+		if button:
+			button.turn_on()
 	
 
 	@subject_slot('value')
-	def _alt_value(self, value):
-		self._script.log_message('monoscale alt in: ' + str(value))
+	def _octave_up_value(self, value):
+		if value:
+			self._offset_component.set_enabled(True)
+			self._offset_component._shifted = True
+			self._offset_component._scroll_up_value(1)
+			self._offset_component._shifted = False
+			self._offset_component.set_enabled(False)
+	
+
+	def set_octave_down_button(self, button):
+		self._octave_down_value.subject = button
+		if button:
+			button.turn_on()
+	
+
+	@subject_slot('value')
+	def _octave_down_value(self, value):
+		if value:
+			self._offset_component.set_enabled(True)
+			self._offset_component._shifted = True
+			self._offset_component._scroll_down_value(1)
+			self._offset_component._shifted = False
+			self._offset_component.set_enabled(False)
 	
 
 	def update(self):
-		if self.is_enabled():
-			if self._shifted and self._shifted_controls:
-				"""self._shifted_controls[0].set_on_off_values(127, 0)
-				self._shifted_controls[2].set_on_off_values(10, 7)
-				self._shifted_controls[3].set_on_off_values(10, 7)
-				self._shifted_controls[4].set_on_off_values(22, 19)
-				self._shifted_controls[5].set_on_off_values(22, 19)
-				self._shifted_controls[6].set_on_off_values(4, 1)
-				self._shifted_controls[7].set_on_off_values(4, 1)"""
-				self._split_mode_selector.set_mode_toggle(self._shifted_controls[0])
-				self._vertical_offset_component.set_offset_change_buttons(self._shifted_controls[3], self._shifted_controls[2])
-				self._scale_offset_component.set_offset_change_buttons(self._shifted_controls[5], self._shifted_controls[4])
-				self._offset_component.set_offset_change_buttons(self._shifted_controls[7], self._shifted_controls[6])
-			else:
-				self._split_mode_selector.set_mode_toggle(None)
-				self._vertical_offset_component.set_offset_change_buttons(None, None)
-				self._scale_offset_component.set_offset_change_buttons(None, None)
-				self._offset_component.set_offset_change_buttons(None, None)
-				for button in self._shifted_controls:
-					button.turn_off()
-				
+		if not self.is_enabled():
+			self._selected_session.deassign_all()
+			self._script.set_highlighting_session_component(self._script._session)
+			self._script._session._do_show_highlight()
 	
 
 	def _is_mod(self, device):
@@ -441,8 +631,6 @@ class MonoScaleComponent(ControlSurfaceComponent):
 	
 
 	def _offset_value(self, offset):
-		#self.log_message('root offset: ' + str(self._offset_component._offset) + ' ' + str(offset))
-		#if not self.pad_held():
 		cur_track = self._script._mixer._selected_strip._track
 		if cur_track.has_midi_input:
 			cur_chan = cur_track.current_input_sub_routing
@@ -455,45 +643,27 @@ class MonoScaleComponent(ControlSurfaceComponent):
 					old_offset = self._offsets[cur_chan]['drumoffset']
 					self._offsets[cur_chan]['drumoffset'] = offset
 					self._script.show_message('New drum root is ' + str(self._offsets[cur_chan]['drumoffset']))
-					#newval = list(str(offset))
-					#if len(newval)==2:
-					#	self._display_chars(newval[0], newval[1])
-					#elif len(newval)==1:
-					#	self._display_chars('-', newval[0])
+					self._display.set_value_string(str(self._offsets[cur_chan]['drumoffset']), 3)
 				else:
 					self._offsets[cur_chan]['offset'] = offset
 					self._script.show_message('New root is Note# ' + str(self._offsets[cur_chan]['offset']) + ', ' + str(NOTENAMES[self._offsets[cur_chan]['offset']]))
-					#newval = list(str(offset))
-					#if len(newval)>=2:
-					#	self._display_chars(newval[0], newval[1])
-					#elif len(newval)==1:
-					#	self._display_chars('-', newval[0])
-				#self._assign_notes_per_scale(cur_chan)
+					self._display.set_value_string(str(self._offsets[cur_chan]['offset']) + ', ' + str(NOTENAMES[self._offsets[cur_chan]['offset']]), 3)
 				self._assign_midi_layer()
 	
 
 	def _vertical_offset_value(self, offset):
-		#self.log_message('vertical offset: ' + str(self._vertical_offset_component._offset) + ' ' + str(offset))
-		#if not self.pad_held():
 		cur_track = self._script._mixer._selected_strip._track
 		if cur_track.has_midi_input:
 			cur_chan = cur_track.current_input_sub_routing
 			if cur_chan in CHANNELS:
 				cur_chan = (CHANNELS.index(cur_chan))+1
-				#self._assign_notes_per_scale(cur_chan)
 				self._offsets[cur_chan]['vertoffset'] = offset
 				self._script.show_message('New vertical offset is ' + str(self._offsets[cur_chan]['vertoffset']))
-				#newval = list(str(offset))
-				#if len(newval)>=2:
-				#	self._display_chars(newval[0], newval[1])
-				#elif len(newval)==1:
-				#	self._display_chars('-', newval[0])
+				self._display.set_value_string(str(self._offsets[cur_chan]['vertoffset']), 1)
 				self._assign_midi_layer()
 	
 
 	def _scale_offset_value(self, offset):
-		#self.log_message('scale offset ================= ' + str(offset))
-		#if not self.pad_held():
 		cur_track = self._script._mixer._selected_strip._track
 		if cur_track.has_midi_input:
 			cur_chan = cur_track.current_input_sub_routing
@@ -501,46 +671,48 @@ class MonoScaleComponent(ControlSurfaceComponent):
 				cur_chan = (CHANNELS.index(cur_chan))+1
 				self._offsets[cur_chan]['scale'] = SCALENAMES[offset]
 				self._script.show_message('New scale is ' + str(self._offsets[cur_chan]['scale']))
-				#if str(SCALENAMES[offset]) in SCALEABBREVS.keys():
-				#	newval = list(str(SCALEABBREVS[str(SCALENAMES[offset])]))		#sorry :/
-				#else:
-				#	newval = list(str(SCALENAMES[offset]))
-				#if len(newval)>=2:
-				#	self._display_chars(newval[0], newval[1])
+				self._display.set_value_string(str(self._offsets[cur_chan]['scale']), 2)
 				if len(SCALES[self._offsets[cur_chan]['scale']])>8:
 					self._offsets[cur_chan]['vert_offset'] = 8
-				#self._assign_notes_per_scale(cur_chan)
 				self._assign_midi_layer()
 	
 
 	def _split_mode_value(self, mode):
-		#self.log_message('split mode value' + str(mode))
-		#if not self.pad_held():
-		#if self.shift_pressed():
-			#if self.select_pressed():
 		cur_track = self._script._mixer._selected_strip._track
 		if cur_track.has_midi_input:
 			cur_chan = cur_track.current_input_sub_routing
 			if cur_chan in CHANNELS:
 				cur_chan = (CHANNELS.index(cur_chan))+1
-				self._offsets[cur_chan]['split'] = bool(mode)  #not self._offsets[cur_chan]['split'] 
-				#self.log_message('split is ' + str(self._offsets[cur_chan]['split'] ))	
+				self._offsets[cur_chan]['split'] = bool(mode)
+				self._display.set_value_string(str(bool(mode)), 0)
+				self._assign_midi_layer()
 	
 
 	def _assign_midi_layer(self):
 		cur_track = self._script.song().view.selected_track
 		is_midi = False
-		if cur_track.has_midi_input:
-			matrix = self._matrix_value.subject
+		matrix = self._matrix_value.subject
+		if cur_track.has_midi_input and not matrix is None:
 			is_midi = True
 			cur_chan = cur_track.current_input_sub_routing
-			self._script.log_message('cur_chan ' + str(cur_chan) + str(type(cur_chan)) + str(len(cur_chan)))
+			#self._script.log_message('cur_chan ' + str(cur_chan) + str(type(cur_chan)) + str(len(cur_chan)))
 			if cur_chan in CHANNELS:
 				cur_chan = (CHANNELS.index(cur_chan))+1
 				offset, vertoffset, scale, split = self._offsets[cur_chan]['offset'], self._offsets[cur_chan]['vertoffset'], self._offsets[cur_chan]['scale'], self._offsets[cur_chan]['split']
 				if scale is 'Auto':
 					scale = self._detect_instrument_type(cur_track)
-					self._script.log_message('auto found: ' + str(scale))
+					#self._script.log_message('auto found: ' + str(scale))
+				self._split_mode_selector._mode_index = int(self._offsets[cur_chan]['split'])
+				self._split_mode_selector.update()
+				self._vertical_offset_component._offset = self._offsets[cur_chan]['vertoffset']	
+				self._vertical_offset_component.update()
+				self._scale_offset_component._offset = SCALENAMES.index(self._offsets[cur_chan]['scale'])
+				self._scale_offset_component.update()
+				if scale is 'DrumPad':
+					self._offset_component._offset = self._offsets[cur_chan]['drumoffset']
+				else:
+					self._offset_component._offset = self._offsets[cur_chan]['offset']	
+				self._offset_component.update()
 				if scale is 'Session':
 					is_midi = False
 				elif scale is 'Mod':
@@ -567,10 +739,13 @@ class MonoScaleComponent(ControlSurfaceComponent):
 							button.set_enabled(False)
 							button.set_channel(cur_chan)
 							#self._selected_session.deassign_all()
-							#self._selected_scene[column+(row*4)].clip_slot(0).set_launch_button(self._pad[column + 4 + (row*8)])
+							matrix = self._matrix_value.subject
+							matrix.get_button(column + 4, row).use_default_message()
+							matrix.get_button(column + 4, row).set_enabled(True)
+							self._selected_scene[column+(row*4)].clip_slot(0).set_launch_button(matrix.get_button(column + 4, row))
 					#self._selected_session.set_scene_bank_buttons(self._button[5], self._button[4])
-					#self.set_highlighting_session_component(self._selected_session)
-					#self._selected_session._do_show_highlight()
+					self._script.set_highlighting_session_component(self._selected_session)
+					self._selected_session._do_show_highlight()
 				else:
 					#self._send_midi(MIDIBUTTONMODE)
 					scale_len = len(SCALES[scale])
@@ -592,11 +767,15 @@ class MonoScaleComponent(ControlSurfaceComponent):
 								self._offset_component._shifted_value = 11
 							button.set_enabled(False)
 							button.set_channel(cur_chan)
-					#self._session.set_scene_bank_buttons(self._button[5], self._button[4])
-					#self._session.set_track_bank_buttons(self._button[6], self._button[7])
-				#if self.pad_held():
-				#	for index in range(len(self._last_pad_stream)):
-				#		self._stream_pads[index].press_flash(self._last_pad_stream[index])
+					self._selected_session.deassign_all()
+					self._script.set_highlighting_session_component(self._script._session)
+					self._script._session._do_show_highlight()
+				#if not self._touchstrip is None:
+				#	self._touchstrip.set_channel(cur_chan)
+				self._display.set_value_string(str(bool(self._split_mode_selector._mode_index)), 0)
+				self._display.set_value_string(str(self._offsets[cur_chan]['vertoffset']), 1)
+				self._display.set_value_string(str(self._offsets[cur_chan]['scale']), 2)
+				self._display.set_value_string(str(self._offsets[cur_chan]['offset']) + ', ' + str(NOTENAMES[self._offsets[cur_chan]['offset']]), 3)
 			else:
 				is_midi = False
 		return is_midi	
@@ -652,7 +831,10 @@ class MonoScaleComponent(ControlSurfaceComponent):
 		return is_midi
 	
 
-
+	def on_selected_track_changed(self):
+		if self.is_enabled() and self._matrix_value.subject:
+			self._assign_midi_layer()
+	
 
 
 

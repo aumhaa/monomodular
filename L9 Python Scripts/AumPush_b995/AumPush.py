@@ -268,8 +268,8 @@ class AumPush(Push):
 	def _setup_monoscale(self):
 		self._monoscale = MonoScaleComponent(self)
 		self._monoscale.name = 'MonoScaleComponent'
-		self._monoscale.layer = Layer( button_matrix = self._matrix, shift_button = self._shift_button, alt_button = self._select_button, shifted_controls = self._track_state_buttons, scales_toggle_button=self._scale_presets_button)
-		self._monoscale.layer.priority = 4
+		self._monoscale.layer = Layer( button_matrix = self._matrix, touchstrip = self._touch_strip_control, scales_toggle_button=self._scale_presets_button, octave_up_button = self._octave_up_button, octave_down_button = self._octave_down_button)
+		self._monoscale.display_layer = Layer( controls = self._track_state_buttons, name_display_line = self._display_line3, value_display_line = self._display_line4 )
 		#self._monoscale.shift_layer = AddLayerMode( self._monoscale, Layer(shifted_controls = 
 	
 
@@ -354,7 +354,7 @@ class AumPush(Push):
 		mod_device = self._is_mod(current_device)
 		drum_device = find_if(lambda d: d.can_have_drum_pads, track.devices)
 		channelized = False
-		self.log_message('track has midi input: ' + str(track.has_midi_input) + ' current subrouting in CHANNELS: ' + str(track.current_input_sub_routing))
+		#self.log_message('track has midi input: ' + str(track.has_midi_input) + ' current subrouting in CHANNELS: ' + str(track.current_input_sub_routing))
 		if track.has_midi_input and track.current_input_sub_routing in ['Ch. 2', 'Ch. 3', 'Ch. 4', 'Ch. 5', 'Ch. 6', 'Ch. 7', 'Ch. 8', 'Ch. 9', 'Ch. 10', 'Ch. 11', 'Ch. 12', 'Ch. 13', 'Ch. 14', 'Ch. 15', 'Ch. 16']:
 			channelized = True
 		self._step_sequencer.set_drum_group_device(drum_device)
@@ -373,7 +373,7 @@ class AumPush(Push):
 			self._note_modes.selected_mode = 'sequencer'
 		else:
 			self._note_modes.selected_mode = 'instrument'
-		self.log_message('selected note mode: ' + str(self._note_modes.selected_mode))
+		#self.log_message('selected note mode: ' + str(self._note_modes.selected_mode))
 	
 
 	def disconnect(self):
@@ -421,6 +421,10 @@ class AumPush(Push):
 		super(Push, self).update()
 	
 
+	def set_highlighting_session_component(self, session_component):
+		self._highlighting_session_component = session_component
+		self._highlighting_session_component.set_highlighting_callback(self._set_session_highlight)
+	
 
 
 	def _can_auto_arm_track(self, track):
@@ -428,6 +432,7 @@ class AumPush(Push):
 		return routing == 'Ext: All Ins' or routing == 'All Ins' or routing.startswith('AumPush')
 
 	"""
+
 	def _init_mixer(self):
 		super(AumPush, self)._init_mixer()
 		#for channelstrip in self._mixer._channel_strips:
