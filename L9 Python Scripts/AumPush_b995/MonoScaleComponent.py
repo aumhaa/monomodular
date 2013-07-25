@@ -724,11 +724,10 @@ class MonoScaleComponent(CompoundComponent):
 						for column in range(4):
 							button = matrix.get_button(column, row)
 							if scale is 'DrumPad':
-								if row < 4:
-									button.set_identifier((DRUMNOTES[column + (row*8)] + (self._offsets[cur_chan]['drumoffset']*4))%127)
-									button.scale_color = DRUMCOLORS[0]
-									button.send_value(button.scale_color)
-									self._offset_component._shifted_value = 3
+								button.set_identifier((DRUMNOTES[column + (row*8)] + (self._offsets[cur_chan]['drumoffset']*4))%127)
+								button.scale_color = DRUMCOLORS[row<4]
+								button.send_value(button.scale_color)
+								self._offset_component._shifted_value = 3
 							else:
 								note_pos = column + (abs(7-row)*int(vertoffset))
 								note =	offset + SCALES[scale][note_pos%scale_len] + (12*int(note_pos/scale_len))
@@ -753,11 +752,10 @@ class MonoScaleComponent(CompoundComponent):
 						for column in range(8):
 							button = matrix.get_button(column, row)
 							if scale is 'DrumPad':
-								if row < 4:
-									button.set_identifier((DRUMNOTES[column + (row*8)] + (self._offsets[cur_chan]['drumoffset']*4))%127)
-									button.scale_color = DRUMCOLORS[column<4]
-									button.send_value(button.scale_color)
-									self._offset_component._shifted_value = 3
+								button.set_identifier((DRUMNOTES[column + (row*8)] + (self._offsets[cur_chan]['drumoffset']*4))%127)
+								button.scale_color = DRUMCOLORS[(column<4)+((row<4)*2)]
+								button.send_value(button.scale_color)
+								self._offset_component._shifted_value = 3
 							else:
 								note_pos = column + (abs(7-row)*vertoffset)
 								note =	offset + SCALES[scale][note_pos%scale_len] + (12*int(note_pos/scale_len))
@@ -778,6 +776,7 @@ class MonoScaleComponent(CompoundComponent):
 				self._display.set_value_string(str(self._offsets[cur_chan]['offset']) + ', ' + str(NOTENAMES[self._offsets[cur_chan]['offset']]), 3)
 			else:
 				is_midi = False
+			self._script.set_controlled_track(None)
 		return is_midi	
 	
 
@@ -832,9 +831,18 @@ class MonoScaleComponent(CompoundComponent):
 	
 
 	def on_selected_track_changed(self):
+		track = self._script._mixer.selected_strip()._track
+		track_list = []
+		for t in self._script._mixer.tracks_to_use():
+			track_list.append(t)
+		if track in track_list:
+			self._selected_session._track_offset = track_list.index(track)
+		self._selected_session._reassign_tracks()
+		self._selected_session._reassign_scenes()
 		if self.is_enabled() and self._matrix_value.subject:
 			self._assign_midi_layer()
 	
+
 
 
 
