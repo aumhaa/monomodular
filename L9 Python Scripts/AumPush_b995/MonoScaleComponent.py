@@ -776,7 +776,7 @@ class MonoScaleComponent(CompoundComponent):
 				self._display.set_value_string(str(self._offsets[cur_chan]['offset']) + ', ' + str(NOTENAMES[self._offsets[cur_chan]['offset']]), 3)
 			else:
 				is_midi = False
-			self._script.set_controlled_track(None)
+			self._script.set_feedback_channels([])
 		return is_midi	
 	
 
