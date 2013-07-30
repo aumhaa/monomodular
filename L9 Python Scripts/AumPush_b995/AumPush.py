@@ -11,7 +11,7 @@ from _Framework.ControlSurfaceComponent import ControlSurfaceComponent
 from _Framework.InputControlElement import MIDI_CC_TYPE, MIDI_NOTE_TYPE, MIDI_CC_STATUS, MIDI_NOTE_ON_STATUS
 from _Framework.ButtonMatrixElement import ButtonMatrixElement
 from _Framework.DisplayDataSource import DisplayDataSource
-from _Framework.ModesComponent import AddLayerMode, MultiEntryMode, ModesComponent, SetAttributeMode, CancellableBehaviour, AlternativeBehaviour, ReenterBehaviour, DynamicBehaviourMixin, ExcludingBehaviourMixin
+from _Framework.ModesComponent import AddLayerMode, MultiEntryMode, ModesComponent, SetAttributeMode, CancellableBehaviour, AlternativeBehaviour, ReenterBehaviour, DynamicBehaviourMixin, ExcludingBehaviourMixin, ImmediateBehaviour, LatchingBehaviour, ModeButtonBehaviour
 from _Framework.SysexValueControl import SysexValueControl
 from _Framework.Layer import Layer
 from _Framework.Resource import PrioritizedResource
@@ -491,14 +491,15 @@ class AumPush(Push):
 class MonomodDisplayComponent(ControlSurfaceComponent):
 
 
-	def __init__(self, parent, display_strings, *a, **k):
+	def __init__(self, parent, display_strings, value_strings, *a, **k):
+		assert len(display_strings) == len(value_strings)
 		super(MonomodDisplayComponent, self).__init__(*a, **k)
 		self.num_segments = len(display_strings)
 		self._parent = parent
 		self._name_display_line = None
 		self._value_display_line = None
 		self._name_data_sources = [ DisplayDataSource(string) for string in display_strings ]
-		self._value_data_sources = [ DisplayDataSource() for _ in range(self.num_segments) ]
+		self._value_data_sources = [ DisplayDataSource(string) for string in value_strings ]
 	
 
 	def set_name_display_line(self, display_line):
@@ -523,34 +524,22 @@ class MonomodDisplayComponent(ControlSurfaceComponent):
 	
 
 
-class ModShiftBehaviour(LatchingBehaviour):
+class ModShiftBehaviour(ModeButtonBehaviour):
 
-
-	def __init__(self, auto_arm = None, *a, **k):
-		super(ModShiftBehaviour, self).__init__(*a, **k)
-
-	def _mode_is_active(self, component, mode, selected_mode):
-		groups = component.get_mode_groups(mode)
-		selected_groups = component.get_mode_groups(selected_mode)
-		return mode == selected_mode or bool(groups & selected_groups)
 
 	def press_immediate(self, component, mode):
-		super(AutoArmRestoreBehaviour, self).press_immediate(component, mode)
-		if self._auto_arm.needs_restore_auto_arm:
-			self._auto_arm.restore_auto_arm()
+		component.push_mode(mode)
+	
 
-	def update_button(self, component, mode, selected_mode):
-		self._last_update_params = (component, mode, selected_mode)
-		button = component.get_mode_button(mode)
-		if button:
-			if self._mode_is_active(component, mode, selected_mode):
-				button.set_light('DefaultButton.Alert' if self._auto_arm.needs_restore_auto_arm else True)
-			else:
-				button.set_light(False)
+	def release_immediate(self, component, mode):
+		if len(component.active_modes) > 1:
+			component.pop_mode(mode)
+	
 
-	def update(self):
-		if self._last_update_params:
-			self.update_button(*self._last_update_params)"""
+	def release_delayed(self, component, mode):
+		if len(component.active_modes) > 1:
+			component.pop_mode(mode)
+	
 
 
 class PushMonomodComponent(MonomodComponent):
@@ -573,14 +562,16 @@ class PushMonomodComponent(MonomodComponent):
 			self._color_maps[index][1:8] = [3, 85, 33, 95, 5, 21, 67]
 			self._color_maps[index][127] = 67
 
-		self._alt_display = MonomodDisplayComponent(self, [' ', ' ', ' ', ' ', 'Display', 'Mute', 'Enable', 'Select'])
-		self._shift_display = MonomodDisplayComponent(self, ['ModLock', ' ', ' ', ' ', ' ', ' ', 'Channel', 'Name'])
+		self._alt_display = MonomodDisplayComponent(self, [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '], [' ', ' ', ' ', ' ', 'Display', 'Mute', 'Enable', 'Select'])
+		self._shift_display = MonomodDisplayComponent(self, ['ModLock', ' ', ' ', ' ', ' ', ' ', 'Channel', 'Name'], [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '])
 
 		self._shift_modes = self.register_component(ModesComponent())
 		self._shift_modes.add_mode('disabled', None)
-		self._shift_modes.add_mode('alt', self._alt_display, groups = 'shifted')
-		self._shift_modes.add_mode('shift', self._shift_display, groups = 'shifted')
+		self._shift_modes.add_mode('alt', self._alt_display, groups = 'alt', behaviour = ModShiftBehaviour())
+		self._shift_modes.add_mode('shift', self._shift_display, groups = 'shift', behaviour = ModShiftBehaviour())
 		self._shift_modes.selected_mode = 'disabled'
+
+		self._shift_display.set_value_string(self._is_modlocked, 0)
 	
 
 	alt_display_layer = forward_property('_alt_display')('layer')
@@ -601,9 +592,19 @@ class PushMonomodComponent(MonomodComponent):
 		self._script._select_note_mode(device)
 	
 
+	def _select_client(self, *a, **k):
+		super(PushMonomodComponent, self)._select_client(*a, **k)
+		if self._active_client != None and self._active_client.device != None:
+			self._shift_display.set_value_string(str(self._active_client.device.name), 7)
+			self._shift_display.set_value_string(str(self._active_client._channel), 6)
+		else:
+			self._shift_display.set_value_string('Empty', 7)
+			self._shift_display.set_value_string(str(self._active_client._channel), 6)	
+	
+
 	def udpate(self):
 		super(PushMonomodComponent, self).update()
-		if (self.is_enabled()) and (self._active_client != None):
+		if self.is_enabled() and not self._active_client is None:
 			self._active_client._device_component.update()
 		if not self.device_component is None:
 			self._device_component.update()
@@ -632,7 +633,7 @@ class PushMonomodComponent(MonomodComponent):
 		self._shift_button = button
 		if self._shift_button != None:
 			self._shift_button.add_value_listener(self._shift_value)
-		self._shift_modes.set_toggle_button(button)
+		#self._shift_modes.set_toggle_button(button)
 		self._shift_modes.set_mode_button('shift', self._shift_button)
 		#self._shift_modes.set_mode_toggle(self._shift_button)
 	
@@ -641,10 +642,9 @@ class PushMonomodComponent(MonomodComponent):
 	def _on_lock_value(self, value):
 		if value:
 			self._is_modlocked = not self._is_modlocked
+			self._shift_display.set_value_string("Locked" if self._is_modlocked else "Unlocked")
 			button = self._on_lock_value.subject
 			if not button is None:
-				#button.set_on_off_values('DefaultButton.Alert', 'DefaultButton.On')
-				#button.turn_on() if self.is_modlocked() else button.turn_off()
 				button.set_light('DefaultButton.Alert' if self.is_modlocked() else True)
 	
 
@@ -750,11 +750,15 @@ class PushMonomodComponent(MonomodComponent):
 	
 
 	def on_enabled_changed(self, *a, **k):
-		super(AumPushMonomodComponent, self).on_enabled_changed(*a, **k)
+		super(PushMonomodComponent, self).on_enabled_changed(*a, **k)
 		if not self._is_enabled:
 			self._is_modlocked = False
+			self._script._on_selected_track_changed()
+		else:
+			button = self._on_lock_value.subject
+			if button:
+				button.set_light(True)
 	
 
-
-
+	
 #a

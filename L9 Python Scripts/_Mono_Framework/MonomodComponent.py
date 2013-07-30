@@ -547,8 +547,7 @@ class MonomodComponent(CompoundComponent):
 			self._update_nav_buttons()
 			self._update_shift_button()
 			self._update_lock_button()
-			self._update_alt_button()
-			return None 
+			self._update_alt_button() 
 		else:
 			self._update_requests +=1
 	
