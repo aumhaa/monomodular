@@ -348,7 +348,8 @@ class AumPush(Push):
 		self._mixer.selected_strip().name = 'Selected_Channel_strip'
 		self._mixer.master_strip().name = 'Master_Channel_strip'
 		self._mixer.master_strip()._do_select_track = self._selector.on_select_track
-		self._mixer.master_strip().layer = Layer(volume_control=self._master_volume_control, cue_volume_control=ComboElement((self._shift_button,), self._master_volume_control), select_button=self._master_select_button, selector_button=self._select_button)
+		#self._mixer.master_strip().layer = Layer(volume_control=self._master_volume_control, cue_volume_control=ComboElement((self._shift_button,), self._master_volume_control), select_button=self._master_select_button, selector_button=self._select_button)
+		self._mixer.master_strip().layer = Layer(volume_control=self._master_volume_control, cue_volume_control=ComboElement(self._master_volume_control, [self._shift_button]), select_button=self._master_select_button, selector_button=self._select_button)
 		self._mixer.set_enabled(True)
 	
 
@@ -435,8 +436,11 @@ class AumPush(Push):
 	def _is_mod(self, device):
 		mod_device = None
 		if isinstance(device, Live.Device.Device):
-			if device.can_have_chains and not device.can_have_drum_pads and len(device.view.selected_chain.devices)>0:
-				device = device.view.selected_chain.devices[0]
+			try:
+				if device.can_have_chains and not device.can_have_drum_pads and len(device.view.selected_chain.devices)>0:
+					device = device.view.selected_chain.devices[0]
+			except:
+				pass
 		if not device is None:
 			if self._host and self._host._client:
 				for client in self._host._client:
@@ -449,14 +453,18 @@ class AumPush(Push):
 	def _is_newmod(self, device):
 		mod_device = None
 		if isinstance(device, Live.Device.Device):
-			if device.can_have_chains and not device.can_have_drum_pads and len(device.view.selected_chain.devices)>0:
-				device = device.view.selected_chain.devices[0]
+			try:
+				if device.can_have_chains and not device.can_have_drum_pads and len(device.view.selected_chain.devices)>0:
+					device = device.view.selected_chain.devices[0]
+			except:
+				pass
 		if not device is None:
 			if self.monomodular and self.monomodular._mods:
 				for mod in self.monomodular._mods:
 					if mod.device == device:
 						mod_device = mod
 						break
+		self.modhandler.select_mod(mod_device)
 		return mod_device
 	
 
@@ -854,7 +862,7 @@ class PushModHandler(ModHandler):
 	
 
 	def _receive_push_grid(self, x, y, value, is_id = False):
-		self.log_message('_receive_base_grid: %s %s %s %s' % (x, y, value, is_id))
+		#self.log_message('_receive_push_grid: %s %s %s %s' % (x, y, value, is_id))
 		if not self._push_grid is None:
 			if is_id:
 				button = self._push_grid.get_button(x, y)
@@ -916,14 +924,14 @@ class PushModHandler(ModHandler):
 
 	@subject_slot('value')
 	def _push_grid_value(self, value, x, y, *a, **k):
-		self.log_message('_base_grid_value ' + str(x) + str(y) + str(value))
+		#self.log_message('_base_grid_value ' + str(x) + str(y) + str(value))
 		if self._active_mod:
 			self._active_mod.send('push_grid', x, y, value)
 	
 
 	@subject_slot('value')
 	def _push_grid_CC_value(self, value, x, y, *a, **k):
-		self.log_message('_base_grid_CC_value ' + str(x) + str(y) + str(value))
+		#self.log_message('_base_grid_CC_value ' + str(x) + str(y) + str(value))
 		if self._active_mod:
 			self._active_mod.send('push_grid_CC', x, y, value)
 	
