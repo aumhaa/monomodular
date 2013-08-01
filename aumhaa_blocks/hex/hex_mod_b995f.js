@@ -16,13 +16,12 @@ majority of processes in this script are maintained between both versions.*/
 /*It should be noted that many of the processes used in "binary" are still available yet unused 
 in this script, offering some excellent prospects for the future development of this mod.*/
 
-post('fuck this');
 autowatch = 1;
 
 DEBUG = 1;
 DEBUG_LCD = 0;
 DEBUG_PTR = 0;
-DEBUG_STEP = 1;
+DEBUG_STEP = 0;
 DEBUG_BLINK = 0;
 DEBUG_REC = 0;
 DEBUG_LOCK = 0;
@@ -253,9 +252,7 @@ function init(val)
 				part[i].obj.set[Objs[j].Name] = make_obj_setter(part[i], Objs[j]);
 				part[i].obj.get[Objs[j].Name] = make_obj_getter(part[i], Objs[j]);
 			}
-			post('finished making objs');
 			part[i].funcs = make_funcs(part[i]);
-			post('made funcs...');
 			script['Speed'+(i+1)].message('set', part[i].obj.timedivisor.getvalueof());
 			//part[i].notes_assignment = part[i].obj.notes.getvalueof();
 			//part[i].note = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -270,7 +267,6 @@ function init(val)
 		messnamed(unique+'restart', 1);
 		transport_change.message('set', -1);
 		selected = part[0];
-		if(DEBUG){post('here4\n');}
 		for(var i in script)
 		{
 			if((/^_/).test(i))
@@ -1944,7 +1940,7 @@ function _grid_play(x, y, voice, val, poly)
 	switch(grid_mode)
 	{
 		case 2:
-			//if(DEBUG){post('sel:', selected.num, poly, '\n');}
+			if(DEBUG){post('sel:', selected.num, poly, '\n');}
 			if(alt>0)
 			{
 				if((voice==0)&&((poly-1)==selected.num))

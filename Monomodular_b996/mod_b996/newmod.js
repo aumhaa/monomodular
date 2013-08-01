@@ -5,7 +5,7 @@ outlets = 2;
 var finder;
 
 var script = this;
-var DEBUG = false;
+var DEBUG = true;
 var MONOMODULAR=new RegExp(/(monomodular)/);
 var FUNCTION = new RegExp(/(function)/);
 var PROPERTY = new RegExp(/(property)/);
@@ -145,4 +145,3 @@ function send_stored_messages()
 	}
 }
 
-post('new');

@@ -79,6 +79,7 @@ from Push.SpecialChanStripComponent import SpecialChanStripComponent
 
 from MonoScaleComponent import MonoScaleComponent
 
+from _Mono_Framework.Mod import *
 
 CHANNEL_TEXT = ['Ch. 1', 'Ch. 2', 'Ch. 3', 'Ch. 4', 'Ch. 5', 'Ch. 6', 'Ch. 7', 'Ch. 8']
 
@@ -289,10 +290,32 @@ class AumPush(Push):
 		self.hosts = [self._host]
 	
 
+	def _setup_newmod(self):
+		if isinstance(__builtins__, dict):
+			if not 'monomodular' in __builtins__.keys():
+				#self.log_message('make attr')
+				__builtins__['monomodular'] = ModRouter()
+			self.monomodular = __builtins__['monomodular']
+		else:
+			if not hasattr(__builtins__, 'monomodular'):
+				#self.log_message('make attr2')
+				setattr(__builtins__, 'monomodular', ModRouter())
+			self.monomodular = __builtins__['monomodular']
+		if not self.monomodular.has_host():
+			self.monomodular.set_host(self)
+		self.monomodular.name = 'monomodular_switcher'
+		self.modhandler = PushModHandler(self)
+		self.modhandler.name = 'ModHandler'
+		self.modhandler.layer = Layer( lock_button = self._note_mode_button, push_grid = self._matrix, shift_button = self._shift_button, alt_button = self._select_button, key_buttons = self._track_state_buttons )
+		# self.log_message('mod is: ' + str(self.monomodular) + ' ' + str(__builtins__['monomodular']))
+	
+
 	def _init_matrix_modes(self):
 		super(AumPush, self)._init_matrix_modes()
 		self._setup_monoscale()
 		self._setup_mod()
+		self._setup_newmod()
+		self._note_modes.add_mode('newmod', self.modhandler)
 		self._note_modes.add_mode('mod', self._host)
 		self._note_modes.add_mode('looperhack', self._audio_loop)
 		self._note_modes.add_mode('monoscale', self._monoscale)
@@ -358,6 +381,7 @@ class AumPush(Push):
 		track = self.song().view.selected_track
 		current_device = self._device._device
 		mod_device = self._is_mod(current_device)
+		newmod_device = self._is_newmod(current_device)
 		drum_device = find_if(lambda d: d.can_have_drum_pads, track.devices)
 		channelized = False
 		#self.log_message('track has midi input: ' + str(track.has_midi_input) + ' current subrouting in CHANNELS: ' + str(track.current_input_sub_routing))
@@ -372,6 +396,9 @@ class AumPush(Push):
 				self._note_modes.selected_mode = 'mod'
 				if not self._host._active_client is mod_device:
 					self._host._select_client(mod_device._number)
+			elif not newmod_device is None:
+				self._note_modes.selected_mode = 'disabled'
+				self._note_modes.selected_mode = 'newmod'
 			elif track and track.has_audio_input:
 				self._note_modes.selected_mode = 'looperhack'
 			elif channelized:
@@ -415,6 +442,20 @@ class AumPush(Push):
 				for client in self._host._client:
 					if client.device == device:
 						mod_device = client
+						break
+		return mod_device
+	
+
+	def _is_newmod(self, device):
+		mod_device = None
+		if isinstance(device, Live.Device.Device):
+			if device.can_have_chains and not device.can_have_drum_pads and len(device.view.selected_chain.devices)>0:
+				device = device.view.selected_chain.devices[0]
+		if not device is None:
+			if self.monomodular and self.monomodular._mods:
+				for mod in self.monomodular._mods:
+					if mod.device == device:
+						mod_device = mod
 						break
 		return mod_device
 	
@@ -760,5 +801,131 @@ class PushMonomodComponent(MonomodComponent):
 				button.set_light(True)
 	
 
+
+class PushGrid(Grid):
+
+
+	def __init__(self, active_handlers, name, width, height):
+		self._active_handlers = active_handlers
+		self._name = name
+		self._cell = [[StoredElement(active_handlers, _name = self._name + '_' + str(x) + '_' + str(y), _x = x, _y = y, _id = -1, _channel = -1 ) for y in range(height)] for x in range(width)]
+	
+
+	def restore(self):
+		for column in self._cell:
+			for element in column:
+				self.update_element(element)
+				for handler in self._active_handlers():
+					handler.receive_address(self._name, element._x, element._y, element, True)
+	
+
+	def identifier(self, x, y, identifier = -1):
+		element = self._cell[x][y]
+		element._id = min(127, max(-1, identifier))
+		for handler in self._active_handlers():
+			handler.receive_address(self._name, element._x, element._y, element, True)
+	
+
+	def channel(self, x, y, channel = -1):
+		element = self._cell[x][y]
+		element._channel = min(15, max(-1, channel))
+		for handler in self._active_handlers():
+			handler.receive_address(self._name, element._x, element._y, element, True)
+	
+
+
+class PushModHandler(ModHandler):
+
+
+	def __init__(self, *a, **k):
+		super(PushModHandler, self).__init__(*a, **k)
+		self._push_grid = None
+		self._push_grid_CC = None
+		self._keys = None
+		self._receive_methods = {'grid': self._receive_grid, 'push_grid': self._receive_push_grid, 'key': self._receive_key}
+		self._shifted = False
+	
+
+	def _register_addresses(self, client):
+		if not 'push_grid' in client._addresses:
+			client._addresses['push_grid'] = PushGrid(client.active_handlers, 'push_grid', 8, 8)
+		if not 'key' in client._addresses:
+			client._addresses['key'] = Array(client.active_handlers, 'key', 8)
+	
+
+	def _receive_push_grid(self, x, y, value, is_id = False):
+		self.log_message('_receive_base_grid: %s %s %s %s' % (x, y, value, is_id))
+		if not self._push_grid is None:
+			if is_id:
+				button = self._push_grid.get_button(x, y)
+				if value._id is -1 and value._channel is -1:
+					button.use_default_message()
+					button.set_enabled(True)
+				else:
+					identifier = value._id
+					if identifier < 0:
+						identifier = button._original_identifier
+					channel = value._channel
+					if channel < 0:
+						channel = button._original_channel
+					button.set_identifier(identifier)
+					button.set_channel(channel)
+					button.set_enabled(False)
+			else:
+				self._push_grid.send_value(x, y, value, True)
+	
+
+	def _receive_key(self, x, value):
+		#self.log_message('_receive_key: %s %s' % (x, value))
+		if not self._keys is None:
+			self._keys.send_value(x, 0, value, True)
+	
+
+	def set_push_grid(self, grid):
+		self._push_grid = grid
+		self._push_grid_value.subject = self._push_grid
+	
+
+	def set_push_grid_CC(self, grid):
+		self._push_grid_CC = grid
+		self._push_grid_CC_value.subject = self._push_grid_CC
+	
+
+	def set_key_buttons(self, keys):
+		self._keys = keys
+		self._keys_value.subject = self._keys
+	
+
+	def set_lock_button(self, button):
+		pass
+	
+
+	def set_shift_button(self, button):
+		pass
+	
+
+	def set_alt_button(self, button):
+		pass
+	
+
+	@subject_slot('value')
+	def _keys_value(self, value, x, y, *a, **k):
+		if self._active_mod:
+			self._active_mod.send('key', x, value)
+	
+
+	@subject_slot('value')
+	def _push_grid_value(self, value, x, y, *a, **k):
+		self.log_message('_base_grid_value ' + str(x) + str(y) + str(value))
+		if self._active_mod:
+			self._active_mod.send('push_grid', x, y, value)
+	
+
+	@subject_slot('value')
+	def _push_grid_CC_value(self, value, x, y, *a, **k):
+		self.log_message('_base_grid_CC_value ' + str(x) + str(y) + str(value))
+		if self._active_mod:
+			self._active_mod.send('push_grid_CC', x, y, value)
+	
 	
 #a
