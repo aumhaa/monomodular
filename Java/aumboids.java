@@ -5,7 +5,8 @@ public class aumboids extends MaxObject
 {
 	public int[][] modes = new int[8][4];
 	public int[] notes = {0, 5, 7, 10, 12, 17, 19, 24};
-	public int[] durations ={8000, 4000, 2000, 1000};
+	public int[] durations = {8000, 4000, 2000, 1000};
+	public double[] weights = {1., 1., 1., 1., 1., 1., 1., 1.}; 
 	public double sixteenth = 1./16;
 	public double centroid_x = 0.;
 	public double centroid_y = 0.;
@@ -82,6 +83,7 @@ public class aumboids extends MaxObject
 		public double dist;
 		public int order;
 		public int rulecount;
+		public double weight;
 	
 		public Agent(int num, double x, double y, double vx, double vy, double px, double py, int prime, int order)
 		{
@@ -96,6 +98,7 @@ public class aumboids extends MaxObject
 			this.order = order;
 			this.dist = 0.;
 			this.rulecount = 0;
+			this.weight = 1.;
 		}
 	}
 	
@@ -283,7 +286,7 @@ public class aumboids extends MaxObject
 			outlet(3, new Atom[]{ Atom.newAtom(Math.round(agent.x*15)), Atom.newAtom(Math.round(agent.y*15)), Atom.newAtom(((i==leader)?1:0)+((order<4)?1:0)+1)});
 			if(order< 4)
 			{
-				outlet(4, new Atom[]{ Atom.newAtom(i), Atom.newAtom(notes[leader] + modes[i][order]), Atom.newAtom(120 - (order*30)), Atom.newAtom(durations[order])});
+				outlet(4, new Atom[]{ Atom.newAtom(i), Atom.newAtom(notes[leader] + modes[i][order]), Atom.newAtom(120 - (order*30)), Atom.newAtom(durations[order]), Atom.newAtom(agent.weight)});
 			}
 			else
 			{
@@ -525,7 +528,17 @@ public class aumboids extends MaxObject
 	{
 		durations[x] = val;
 	}
+	
+	public void assign_weight(int x, double val)
+	{
+		//weights[x] = val;
+		agents[x].weight = val;
+	}
 }
+
+
+
+
 
 
 
