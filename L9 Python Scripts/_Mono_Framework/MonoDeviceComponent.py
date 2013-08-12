@@ -357,13 +357,13 @@ class MonoDeviceComponent(DeviceComponent):
 
 	def set_device(self, device, force = False):
 		#self._parent._host.log_message('set device: ' + str(device) + ' ' + str(force))
-		#self._post('set device 0')
+		#self._parent._host.log_message('set device 0')
 		assert ((device == None) or isinstance(device, Live.Device.Device) or isinstance(device, NoDevice))
 		if self._device != None:
 			if self._device.canonical_parent != None:
 				if self._device.canonical_parent.devices_has_listener(self._device_changed):
 					self._device.canonical_parent.remove_devices_listener(self._device_changed)
-		#self._post('set device 1')
+		#self._parent._host.log_message('set device 1')
 		if ((not self._locked_to_device) and (device != self._device)) or force==True:
 			if (self._device != None):
 				self._device.remove_name_listener(self._on_device_name_changed)
@@ -376,7 +376,7 @@ class MonoDeviceComponent(DeviceComponent):
 						for control in host._parameter_controls:
 							control.release_parameter()
 			self._device = device
-			#self._post('set device 2')
+			#self._parent._host.log_message('set device 2')
 			if (self._device != None):
 				if self._device.canonical_parent != None:
 					if not self._device.canonical_parent.devices_has_listener(self._device_changed):
@@ -387,14 +387,14 @@ class MonoDeviceComponent(DeviceComponent):
 				parameter = self._on_off_parameter()
 				if (parameter != None):
 					parameter.add_value_listener(self._on_on_off_changed)
-			#self._post('set device 3')
+			#self._parent._host.log_message('set device 3')
 			for key in self._device_bank_registry.keys():
 				if (key == self._device):
 					self._bank_index = self._device_bank_registry.get(key, 0)
 					del self._device_bank_registry[key]
 					break
 			self._bank_name = '<No Bank>' #added
-			#self._post('set device 4')
+			#self._parent._host.log_message('set device 4')
 			self._on_device_name_changed()
 			self.update() 
 	
@@ -428,8 +428,9 @@ class MonoDeviceComponent(DeviceComponent):
 					if len(host._parameter_controls) > 0:
 						host._script.request_rebuild_midi_map()
 					if hasattr(host, '_device_component'):
-						if not host._device_component is None:
-							host._device_component.update()
+						if host._device_component != None:
+							#host._device_component.update()
+							self._parent._host.schedule_message(1, host._device_component.update)
 	
 
 	#major hack here....this will need to be changed to a constant based on the length of the MOD_TYPES bank used
@@ -491,6 +492,7 @@ class MonoDeviceComponent(DeviceComponent):
 		#self._parent._host.log_message('set type ' + str(mod_device_type))
 		for host in self._parent._active_host:
 			host.on_enabled_changed()
+		#self._parent._host.log_message('and then...')
 		#self._parent._host.schedule_message(5, self._set_type, mod_device_type)
 		self._set_type(mod_device_type)
 	

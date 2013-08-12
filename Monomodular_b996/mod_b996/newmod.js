@@ -54,7 +54,7 @@ function init()
 			//if(DEBUG){post('\nProperty #', item, ':', properties[item]);}
 			if(MONOMODULAR.test(properties[item])>0)
 			{
-				post('in there');
+				if(DEBUG){post('in there\n');}
 				found = true;
 				var new_id = finder.get('monomodular');
 				if(DEBUG){post('found, focusing on', new_id, '\n');}

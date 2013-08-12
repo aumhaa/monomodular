@@ -18,7 +18,7 @@ in this script, offering some excellent prospects for the future development of 
 
 autowatch = 1;
 
-DEBUG = 1;
+DEBUG = 0;
 DEBUG_LCD = 0;
 DEBUG_PTR = 0;
 DEBUG_STEP = 0;
@@ -1824,7 +1824,7 @@ function _vblink(num, val)
 		grid_out('mask', 'key', num, val);
 	}
 	outlet(0, 'mask', 'c_grid', num%4, Math.floor(num/4), Blinks[Math.floor(val>0)]);
-	grid_out('mask', 'grid', num, val);
+	//grid_out('mask', 'key', num%8, Math.floor(num/4), Blinks[Math.floor(val>0)]);
 }
 
 //evaluate and distribute data recieved from the settings menu
@@ -3047,7 +3047,7 @@ function detect_drumrack()
 	//setup the initial API path:
 	if(devices[0] > 0)
 	{
-		devices[0] = check_device_id(devices[0]);
+		devices[0] = check_device_id(devices[0], selected.channel);
 	}
 	if(devices[0] == 0)
 	{
@@ -3089,26 +3089,26 @@ function set_devices()
 }
 
 //find the appointed_device
-function detect_device()
+function detect_device(channel)
 {
 	if(DEBUG){post('select_device \n');}
 	finder.goto('live_set', 'appointed_device');
 	if(DEBUG){post('device id ==', finder.id, '\n');}
-	if(check_device_id(parseInt(finder.id))>0)
+	if(check_device_id(parseInt(finder.id), channel)>0)
 	{
 		_select_chain(selected.num);
-	}
+	}	
 	//this.patcher.getnamed('devices').wclose();
 }
 
 //check to make sure previous found_device is valid
-function check_device_id(id)
+function check_device_id(id, channel)
 {
 	var found = 0;
 	if(DEBUG){post('device_id', id, '\n')};
 	if(id>0)
 	{
-		if(selected.channel == 0)
+		if(channel == 0)
 		{
 			finder.id = id;
 			if(finder.get('class_name')=='DrumGroupDevice')
@@ -3125,7 +3125,7 @@ function check_device_id(id)
 			}
 		}
 	}
-	devices[selected.channel] = found;
+	devices[channel] = found;
 	this.patcher.getnamed('devices').subpatcher().getnamed('devices').message('list', devices);
 	return found;
 }

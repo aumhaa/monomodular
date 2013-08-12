@@ -8,7 +8,7 @@
 			"architecture" : "x86"
 		}
 ,
-		"rect" : [ 163.0, 355.0, 808.0, 778.0 ],
+		"rect" : [ 710.0, 210.0, 808.0, 778.0 ],
 		"bgcolor" : [ 0.607843, 0.607843, 0.607843, 1.0 ],
 		"bglocked" : 0,
 		"openinpresentation" : 0,
@@ -28,7 +28,7 @@
 		"description" : "",
 		"digest" : "",
 		"tags" : "",
-		"globalpatchername" : "u378001436[1][16][16][1][1][16][16][3][16][16][1][16][16][16][16][16][16][16]",
+		"globalpatchername" : "u378001436[1][16][16][1][1][16][16][3][16][16][1][16][16][16][16][16][16][16][16][16]",
 		"boxes" : [ 			{
 				"box" : 				{
 					"fontname" : "Arial",
@@ -750,8 +750,8 @@
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 40.0, 1793.0, 58.0, 15.0 ],
-					"text" : "speedlim 100"
+					"patching_rect" : [ 40.0, 1793.0, 48.0, 15.0 ],
+					"text" : "thresh 500"
 				}
 
 			}
@@ -9012,11 +9012,11 @@
 			}
  ],
 		"parameters" : 		{
-			"obj-81" : [ "channelpattr", "channelpattr", 60 ],
 			"obj-129" : [ "polyoffsetpattr", "polyoffsetpattr", 0 ],
 			"obj-121" : [ "polyenable", "polyenable", 200 ],
-			"obj-116" : [ "note", "note", 140 ],
-			"obj-115" : [ "modepattr", "modepattr", 120 ]
+			"obj-81" : [ "channelpattr", "channelpattr", 60 ],
+			"obj-115" : [ "modepattr", "modepattr", 120 ],
+			"obj-116" : [ "note", "note", 140 ]
 		}
 ,
 		"dependency_cache" : [ 			{

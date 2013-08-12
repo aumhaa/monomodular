@@ -652,10 +652,11 @@ class PushMonomodComponent(MonomodComponent):
 	
 
 	def udpate(self):
+		self.log_message('updating Monomodcomponent')
 		super(PushMonomodComponent, self).update()
 		if self.is_enabled() and not self._active_client is None:
 			self._active_client._device_component.update()
-		if not self.device_component is None:
+		if not self._device_component is None:
 			self._device_component.update()
 	
 
