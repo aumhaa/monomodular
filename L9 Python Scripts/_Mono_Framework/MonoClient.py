@@ -62,6 +62,9 @@ LOGO = [[], [], [], [], [], [], [], [],
 		[], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []]
 
 
+def unpack_values(values):
+	return [int(i) for i in str(values).split('^')]
+
 
 
 class MonoClient(NotifyingControlElement):
