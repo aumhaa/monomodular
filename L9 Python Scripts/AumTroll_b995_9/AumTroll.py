@@ -676,8 +676,10 @@ class AumTroll(Cntrlr):
 				self._mixer2.channel_strip(index).set_select_button(self._button[index+4])
 			for index in range(4):
 				self._mixer2.channel_strip(index).set_volume_control(self._knobs[index+8])
-				self._mixer2.channel_strip(index+4).set_volume_control(self._knobs[index+20])
 				self._send_reset.set_buttons(tuple(self._encoder_button[4:8]))
+			for index in range(3):
+				self._mixer2.channel_strip(index+4).set_volume_control(self._knobs[index+20])
+			self._mixer.set_crossfader_control(self._knobs[23])
 			for index in range(4):
 				self._mixer3.return_strip(index).set_volume_control(self._encoder[index+4])
 				self._encoder_button[index+4].send_value(127, True)
@@ -688,7 +690,8 @@ class AumTroll(Cntrlr):
 			else:
 				self._mixer.return_strip(0).set_send_controls(tuple([None, self._encoder[8]]))
 				self._mixer.return_strip(1).set_send_controls(tuple([self._encoder[9], None]))
-				self._mixer.set_crossfader_control(self._encoder[11])
+				#self._mixer.set_crossfader_control(self._encoder[11])
+				self._mixer2.channel_strip(4).set_volume_control(self._encoder[11])
 				self._encoder_button[8].send_value(5, True)
 				self._encoder_button[9].send_value(5, True)
 				self._encoder_button[11].send_value(1, True)
