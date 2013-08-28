@@ -399,7 +399,7 @@ class ModRouter(CompoundComponent):
 	
 
 	def get_mod(self, device):
-		self.log_message('getting mod...')
+		#self.log_message('getting mod...')
 		mod = None
 		for mod_device in self._mods:
 			if mod_device.device == device:
@@ -411,7 +411,7 @@ class ModRouter(CompoundComponent):
 		self._host.log_message('device: ' + str(device))
 		if not device in self.devices():
 			with self._host.component_guard():
-				self._host.log_message('its not there...')
+				#self._host.log_message('its not there...')
 				self._mods.append( ModClient(self, device, 'modClient'+str(len(self._mods))) )
 		ret = self.get_mod(device)
 		#self._host.log_message('sending back: ' + str(ret))

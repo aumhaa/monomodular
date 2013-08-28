@@ -864,6 +864,9 @@ class PushModHandler(ModHandler):
 		self._alt = None
 		self._shift = None
 		self._receive_methods = {'grid': self._receive_grid, 'push_grid': self._receive_push_grid, 'key': self._receive_key} # 'shift': self._receive_shift, 'alt': self._receive_alt}
+		self._colors = range(128)
+		self._colors[1:8] = [3, 85, 33, 95, 5, 21, 67]
+		self._colors[127] = 67
 		self._shifted = False
 	
 
@@ -879,7 +882,7 @@ class PushModHandler(ModHandler):
 	
 
 	def _receive_push_grid(self, x, y, value, is_id = False):
-		self.log_message('_receive_push_grid: %s %s %s %s' % (x, y, value, is_id))
+		#self.log_message('_receive_push_grid: %s %s %s %s' % (x, y, value, is_id))
 		if not self._push_grid is None:
 			if is_id:
 				button = self._push_grid.get_button(x, y)
@@ -897,7 +900,7 @@ class PushModHandler(ModHandler):
 					button.set_channel(channel)
 					button.set_enabled(False)
 			else:
-				self._push_grid.send_value(x, y, value, True)
+				self._push_grid.send_value(x, y, self._colors[value], True)
 	
 
 	def _receive_grid(self, *a, **k):
@@ -907,7 +910,7 @@ class PushModHandler(ModHandler):
 	def _receive_key(self, x, value):
 		#self.log_message('_receive_key: %s %s' % (x, value))
 		if not self._keys is None:
-			self._keys.send_value(x, 0, value, True)
+			self._keys.send_value(x, 0, self._colors[value], True)
 	
 
 	def _receive_shift(self, value):

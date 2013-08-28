@@ -12,7 +12,7 @@ var assignment_coll;
 var keys_gui;
 var assignments = [];
 var current_edit = 0;
-var KEYS = [13, 1, 2, 3, 4, 5, 6, 127];
+var KEYS = [1, 2, 3, 4, 5, 6, 7, 127];
 var NOTES = [-1, 0, 1, 2, 3, 4, 5, 6];
 var groups={0:{'val':0, 'fsr':undefined}, 
 			1:{'val':0, 'fsr':undefined}, 
@@ -47,7 +47,7 @@ function init()
 	keys_gui = this.patcher.getnamed('keys');
 	for(var i=0;i<8;i++)
 	{
-		outlet(0, 'base_fader', 'value', i, KEYS[i]);
+		outlet(0, 'base_fader', 'value', i, 1);
 		assignments[i]=[];
 		for(var j=0;j<8;j++)
 		{
@@ -95,10 +95,8 @@ function base_grid(x, y, val)
 			if(assignments[x][y].val!=current_edit)
 			{
 				assignments[x][y].val = current_edit;
-				
-				outlet(0, 'push_grid', 'value', x, y, current_edit);
-				
-				//update_assignment_grid();
+				outlet(0, 'base_grid', 'value', x, y, KEYS[current_edit]);
+				outlet(0, 'push_grid', 'value', x, y, KEYS[current_edit]);
 			}
 		}
 		else

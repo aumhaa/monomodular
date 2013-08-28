@@ -1100,8 +1100,10 @@ class BaseModHandler(ModHandler):
 		self._base_grid = None
 		self._base_grid_CC = None
 		self._keys = None
+		self._shift = None
+		self._alt = None
 		self._fader_color_override = False
-		self._receive_methods = {'grid': self._receive_grid, 'base_grid': self._receive_base_grid, 'key': self._receive_key, 'base_fader': self._receive_base_fader}
+		self._receive_methods = {'grid': self._receive_grid, 'base_grid': self._receive_base_grid, 'key': self._receive_key, 'base_fader': self._receive_base_fader, 'shift': self._receive_shift, 'alt': self._receive_alt}
 		self._shifted = False
 	
 
@@ -1112,6 +1114,10 @@ class BaseModHandler(ModHandler):
 			client._addresses['key'] = Array(client.active_handlers, 'key', 8)
 		if not 'base_fader' in client._addresses:
 			client._addresses['base_fader'] = BaseFaderArray(client.active_handlers, 'base_fader', 8)
+		if not 'shift' in client._addresses:
+			client._addresses['shift'] = StoredElement(client.active_handlers, _name = 'shift')
+		if not 'alt' in client._addresses:
+			client._addresses['alt'] = StoredElement(client.active_handlers, _name = 'alt')
 	
 
 	def _receive_base_grid(self, x, y, value, is_id = False):
@@ -1148,6 +1154,17 @@ class BaseModHandler(ModHandler):
 			self._script._send_midi((191, num+10, value))
 	
 
+	def _receive_shift(self, value):
+		#if not self._shift is None:
+		#	self._shift.send_value(value)
+		pass
+	
+
+	def _receive_alt(self, value):
+		if not self._alt is None:
+			self._alt.send_value(value)
+	
+
 	def _assign_base_grid(self, grid):
 		self._base_grid = grid
 		self._base_grid_value.subject = self._base_grid
@@ -1161,6 +1178,16 @@ class BaseModHandler(ModHandler):
 	def _assign_keys(self, keys):
 		self._keys = keys
 		self._keys_value.subject = self._keys
+	
+
+	def set_shift_button(self, button):
+		self._shift = button
+		self._shift_value.subject = self._shift
+	
+
+	def set_alt_button(self, button):
+		self._alt = button
+		self._alt_value.subject = self._alt
 	
 
 	@subject_slot('value')
@@ -1181,6 +1208,18 @@ class BaseModHandler(ModHandler):
 		#self.log_message('_base_grid_CC_value ' + str(x) + str(y) + str(value))
 		if self._active_mod:
 			self._active_mod.send('base_grid_CC', x, y, value)
+	
+
+	@subject_slot('value')
+	def _shift_value(self, value, *a, **k):
+		if self._active_mod:
+			self._active_mod.send('shift', value)
+	
+
+	@subject_slot('value')
+	def _alt_value(self, value, *a, **k):
+		if self._active_mod:
+			self._active_mod.send('alt', value)
 	
 
 
@@ -1696,6 +1735,7 @@ class Base(ControlSurface):
 			self.modhandler._assign_keys(None)
 			self.modhandler._assign_base_grid(None)
 			self.modhandler._assign_base_grid_CC(None)
+			self.modhandler.set_shift_button(None)
 			self._transport.set_overdub_button(None)
 			self._recorder.set_new_button(None)
 			self._recorder.set_record_button(None)
@@ -1830,7 +1870,8 @@ class Base(ControlSurface):
 					self._recorder.set_record_button(self._button[6])
 					self._recorder.set_length_button(self._button[7])
 			else:
-				if not self._assign_midi_shift_layer():
+				is_midi = self._assign_midi_shift_layer()
+				if not is_midi:
 					for index in range(8):
 						self._touchpad[index].set_on_off_values(CHAN_SELECT, 0)
 						self._mixer.channel_strip(index).set_select_button(self._touchpad[index])
@@ -1843,7 +1884,7 @@ class Base(ControlSurface):
 					for index in range(4):
 						self._button[index+4].set_on_off_values(SESSION_NAV[shifted], 0)
 					self._session.update()
-				#self._send_midi(tuple([240, 0, 1, 97, 12, 61, 7, 7, 7, 7, 7, 7, 7, 7, 2, 247]))
+					#self._send_midi(tuple([240, 0, 1, 97, 12, 61, 7, 7, 7, 7, 7, 7, 7, 7, 2, 247]))
 				else:
 					self._button[4].set_on_off_values(24, 0)
 					self._offset_component.set_shift_button(self._button[4])
@@ -1854,19 +1895,20 @@ class Base(ControlSurface):
 					self._send_midi(tuple([191, index+10, 125]))
 				for index in range(8):
 					self._mixer.channel_strip(index).set_volume_control(self._fader[index])
-				if not self.pad_held():
-					for index in range(8):
-						self._pad[index].set_on_off_values(TRACK_MUTE, 0)
-						self._mixer.channel_strip(index).set_mute_button(self._pad[index])
-						self._pad[index+8].set_on_off_values(TRACK_SOLO, 0)
-						self._mixer.channel_strip(index).set_solo_button(self._pad[index+8])
-						self._pad[index+16].set_on_off_values(TRACK_ARM, 0)
-						self._mixer.channel_strip(index).set_arm_button(self._pad[index+16])
-						self._pad[index+24].set_on_off_values(TRACK_STOP, TRACK_STOP)
-						self._pad[index+24].send_value(TRACK_STOP)
-					self._session.set_stop_track_clip_buttons(tuple(self._pad[24:32]))
-				else:
-					self._assign_midi_layer()
+				if not is_midi is 'Mod':
+					if not self.pad_held():
+						for index in range(8):
+							self._pad[index].set_on_off_values(TRACK_MUTE, 0)
+							self._mixer.channel_strip(index).set_mute_button(self._pad[index])
+							self._pad[index+8].set_on_off_values(TRACK_SOLO, 0)
+							self._mixer.channel_strip(index).set_solo_button(self._pad[index+8])
+							self._pad[index+16].set_on_off_values(TRACK_ARM, 0)
+							self._mixer.channel_strip(index).set_arm_button(self._pad[index+16])
+							self._pad[index+24].set_on_off_values(TRACK_STOP, TRACK_STOP)
+							self._pad[index+24].send_value(TRACK_STOP)
+						self._session.set_stop_track_clip_buttons(tuple(self._pad[24:32]))
+					else:
+						self._assign_midi_layer()
 			#self._mixer._reassign_tracks()
 			self._mixer.update()
 		self.request_rebuild_midi_map()
@@ -1903,7 +1945,8 @@ class Base(ControlSurface):
 				self._device.update()
 				self._device_navigator.update()
 			else:
-				if not self._assign_midi_shift_layer():
+				is_midi = self._assign_midi_shift_layer()
+				if not is_midi:
 					for index in range(8):
 						self._touchpad[index].set_on_off_values(CHAN_SELECT, 0)
 						self._mixer.channel_strip(index).set_select_button(self._touchpad[index])
@@ -1913,25 +1956,26 @@ class Base(ControlSurface):
 						self._button[index+4].set_on_off_values(DEVICE_NAV, 0)
 					#self._device.update()
 					#self._device_navigator.update()
-				self._device.deassign_all()
-				self._send_midi(tuple([240, 0, 1, 97, 12, 61, 7, 7, 7, 7, 7, 7, 7, 7, 2, 247]))
-				#for index in range(8):
-				#	self._send_midi(tuple([191, index+10, 125]))
-				for index in range(8):
-					self._mixer.channel_strip(index).set_volume_control(self._fader[index])
-				if not self.pad_held():
+					self._device.deassign_all()
+					self._send_midi(tuple([240, 0, 1, 97, 12, 61, 7, 7, 7, 7, 7, 7, 7, 7, 2, 247]))
+					#for index in range(8):
+					#	self._send_midi(tuple([191, index+10, 125]))
 					for index in range(8):
-						self._pad[index].set_on_off_values(TRACK_MUTE, 0)
-						self._mixer.channel_strip(index).set_mute_button(self._pad[index])
-						self._pad[index+8].set_on_off_values(TRACK_SOLO, 0)
-						self._mixer.channel_strip(index).set_solo_button(self._pad[index+8])
-						self._pad[index+16].set_on_off_values(TRACK_ARM, 0)
-						self._mixer.channel_strip(index).set_arm_button(self._pad[index+16])
-						self._pad[index+24].set_on_off_values(TRACK_STOP, TRACK_STOP)
-						self._pad[index+24].send_value(TRACK_STOP)
-					self._session.set_stop_track_clip_buttons(tuple(self._pad[24:32]))
-				else:
-					self._assign_midi_layer()
+						self._mixer.channel_strip(index).set_volume_control(self._fader[index])
+				if not is_midi is 'Mod':
+					if not self.pad_held():
+						for index in range(8):
+							self._pad[index].set_on_off_values(TRACK_MUTE, 0)
+							self._mixer.channel_strip(index).set_mute_button(self._pad[index])
+							self._pad[index+8].set_on_off_values(TRACK_SOLO, 0)
+							self._mixer.channel_strip(index).set_solo_button(self._pad[index+8])
+							self._pad[index+16].set_on_off_values(TRACK_ARM, 0)
+							self._mixer.channel_strip(index).set_arm_button(self._pad[index+16])
+							self._pad[index+24].set_on_off_values(TRACK_STOP, TRACK_STOP)
+							self._pad[index+24].send_value(TRACK_STOP)
+						self._session.set_stop_track_clip_buttons(tuple(self._pad[24:32]))
+					else:
+						self._assign_midi_layer()
 				self._device_navigator.set_layer_buttons(self._rt_button, self._lt_button)
 				self._device_navigator.set_chain_nav_buttons(self._up_button, self._dn_button)
 				self._current_nav_buttons = self._button[4:8]
@@ -2084,7 +2128,7 @@ class Base(ControlSurface):
 				if scale is 'Session':
 					is_midi = False
 				elif scale is 'Mod':
-					is_midi = True
+					is_midi = 'Mod'
 				else:
 					for button in self._touchpad[0:1]:
 						button.set_on_off_values(SPLITMODE, 0)
@@ -2205,6 +2249,7 @@ class Base(ControlSurface):
 			self._send_midi(MIDIBUTTONMODE)
 			self.modhandler._assign_base_grid(self._base_grid)
 			self.modhandler._assign_base_grid_CC(self._base_grid_CC)
+			self.modhandler.set_shift_button(self._button[self._layer])
 			if self.shift_pressed():
 				self.modhandler._assign_keys(self._keys)
 			else:
