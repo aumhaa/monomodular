@@ -79,6 +79,7 @@ function init()
 					post('making func:', modAddresses[address], '\n');
 					script[modAddresses[address]] = make_receive_func(modAddresses[address]);
 				}
+				outlet(1, 'init');
 				send_stored_messages();
 				return;
 			}

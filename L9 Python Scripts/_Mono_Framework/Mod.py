@@ -80,7 +80,7 @@ class StoredElement(object):
 	
 
 	def restore(self):
-		self.update()
+		self.update_element()
 	
 
 

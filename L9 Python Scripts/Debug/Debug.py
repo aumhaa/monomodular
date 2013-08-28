@@ -19,7 +19,7 @@ class Debug(ControlSurface):
 		#self._log_version_data()
 		#self._log_sys_modules()
 		#self._log_dirs()
-		self.log_message('_^_^_^_^_^_^_^_^_^_^_^_^_^_^_^_^_ DEBUG ON 3_^_^_^_^_^_^_^_^_^_^_^_^_^_^_^_^_')
+		self.log_message('_^_^_^_^_^_^_^_^_^_^_^_^_^_^_^_^_ DEBUG ON _^_^_^_^_^_^_^_^_^_^_^_^_^_^_^_^_')
 		self._scripts = []
 
 	
@@ -74,11 +74,11 @@ class Debug(ControlSurface):
 						for key in sys.modules.keys():
 							if name == key[:len(name)]:
 								del sys.modules[key]
-								self.log_message('deleting key---' + str(key))
+								#self.log_message('deleting key---' + str(key))
 						"""if sys.modules.has_key(name):
 							del sys.modules[name]
 							self.log_message('deleting key---' + str(name))"""
-		self._log_sys_modules()
+		#self._log_sys_modules()
 	
 
 	def _log_builtins(self):

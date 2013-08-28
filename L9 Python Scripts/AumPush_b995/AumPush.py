@@ -60,6 +60,7 @@ from Push.MatrixMaps import *
 from Push.NavigationNode import RackNode
 from _Mono_Framework.MonomodComponent import MonomodComponent
 from _Mono_Framework.MonoDeviceComponent import MonoDeviceComponent
+from _Mono_Framework.MonoEncoderElement import MonoEncoderElement
 from _Mono_Framework.ModDevices import *
 
 from Push.consts import *
@@ -227,12 +228,21 @@ class AumPush(Push):
 		self._auto_arm_calls = 0
 		super(AumPush, self).__init__(c_instance)
 		with self.component_guard():
+			#self._create_CC_controls()
 			self._device._alt_pressed = False
 			self._host.set_device_component(self._device)
 			self._device.add_device_listener(self._on_new_device_set)
 			self.set_feedback_channels(FEEDBACK_CHANNELS)
 			self._hack_stepseq()
 		self.log_message('<<<<<<<<<<<<<<<<<<<<<<<< AumPush ' + str(self._monomod_version) + ' log opened >>>>>>>>>>>>>>>>>>>>>>>>') 
+	
+
+	"""def _create_controls(self):
+		super(AumPush, self)._create_controls()
+		self._pad_CC = [MonoEncoderElement(MIDI_CC_TYPE, 15, index, Live.MidiMap.MapMode.absolute, 'Pad_CC_' + str(index), index, self) for index in range(64)]
+		self._matrix_CC = ButtonMatrixElement()
+		for index in range(8):
+			self._matrix_CC.add_row(self._pad_CC[(index*8):(index*8)+8])"""
 	
 
 	def _init_instrument(self):
@@ -851,7 +861,9 @@ class PushModHandler(ModHandler):
 		self._push_grid = None
 		self._push_grid_CC = None
 		self._keys = None
-		self._receive_methods = {'grid': self._receive_grid, 'push_grid': self._receive_push_grid, 'key': self._receive_key}
+		self._alt = None
+		self._shift = None
+		self._receive_methods = {'grid': self._receive_grid, 'push_grid': self._receive_push_grid, 'key': self._receive_key} # 'shift': self._receive_shift, 'alt': self._receive_alt}
 		self._shifted = False
 	
 
@@ -860,10 +872,14 @@ class PushModHandler(ModHandler):
 			client._addresses['push_grid'] = PushGrid(client.active_handlers, 'push_grid', 8, 8)
 		if not 'key' in client._addresses:
 			client._addresses['key'] = Array(client.active_handlers, 'key', 8)
+		if not 'shift' in client._addresses:
+			client._addresses['shift'] = StoredElement(client.active_handlers, _name = 'shift')
+		if not 'alt' in client._addresses:
+			client._addresses['alt'] = StoredElement(client.active_handlers, _name = 'alt')
 	
 
 	def _receive_push_grid(self, x, y, value, is_id = False):
-		#self.log_message('_receive_push_grid: %s %s %s %s' % (x, y, value, is_id))
+		self.log_message('_receive_push_grid: %s %s %s %s' % (x, y, value, is_id))
 		if not self._push_grid is None:
 			if is_id:
 				button = self._push_grid.get_button(x, y)
@@ -884,10 +900,24 @@ class PushModHandler(ModHandler):
 				self._push_grid.send_value(x, y, value, True)
 	
 
+	def _receive_grid(self, *a, **k):
+		self._receive_push_grid(*a, **k)
+	
+
 	def _receive_key(self, x, value):
 		#self.log_message('_receive_key: %s %s' % (x, value))
 		if not self._keys is None:
 			self._keys.send_value(x, 0, value, True)
+	
+
+	def _receive_shift(self, value):
+		if not self._shift is None:
+			self._shift.send_value(value)
+	
+
+	def _receive_alt(self, value):
+		if not self._alt is None:
+			self._alt.send_value(value)
 	
 
 	def set_push_grid(self, grid):
@@ -910,11 +940,13 @@ class PushModHandler(ModHandler):
 	
 
 	def set_shift_button(self, button):
-		pass
+		self._shift = button
+		self._shift_value.subject = self._shift
 	
 
 	def set_alt_button(self, button):
-		pass
+		self._alt = button
+		self._alt_value.subject = self._alt
 	
 
 	@subject_slot('value')
@@ -936,5 +968,18 @@ class PushModHandler(ModHandler):
 		if self._active_mod:
 			self._active_mod.send('push_grid_CC', x, y, value)
 	
+
+	@subject_slot('value')
+	def _shift_value(self, value, *a, **k):
+		if self._active_mod:
+			self._active_mod.send('shift', value)
 	
+
+	@subject_slot('value')
+	def _alt_value(self, value, *a, **k):
+		if self._active_mod:
+			self._active_mod.send('alt', value)
+	
+
+		
 #a
