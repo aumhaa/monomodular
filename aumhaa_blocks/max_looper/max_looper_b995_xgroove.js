@@ -54,6 +54,7 @@ const POBJ = ['buffetloop', 'buffetundo', 'bufferloop', 'bufferundo', 'pokeloop'
 				'quantizerecordui', 'loopui', 'quantizemenuui', 'frommaster', 'fadein', 'fadetime', 
 				'copybuffer', 'relativerecordui', 'calc_record', 'drivesource'];  // 'record', 'buffetin', 'bufferin', 'groovelength', 'latency'
 const TOBJ = ['relativetimer',  'metro'];
+const LENGTHS = [1, 2, 4, 8, 16, 32, 64];
 
 //var del_chan = new Task(change_poke_channel, this);
 
@@ -168,7 +169,6 @@ function set_loop(state)
 			break;
 	}
 }
-
 
 function begin_loop(rec_phase, ms)
 {
@@ -348,6 +348,21 @@ function make_loop(rotate)
 	//}
 }
 
+function make_dummy_loop(len)
+{
+	clear();
+	loop_end = LENGTHS[len]*quantize_record.samples;
+	if(DEBUG){post('make_dummy_loop', len, loop_end, '\n');}
+	looper.speedui.message('float', 1);
+	looper.feedbackui.message('float', 1);
+	looper.inputui.message('float', 1);
+	set_mute(0);
+	looper.bufferloop.message('size', loop_end);
+	looper.grooveend.message('float', loop_end);
+	looper.groove.message('start');
+	looper.overdubui.message('int', 1);
+}
+
 //this is called after make_loop() to carry out functions initiated by the method used to end the loop
 function afterbirth()
 {
@@ -497,6 +512,16 @@ function set_quantize_record(val)
 	if(registered > 0)
 	{
 		messnamed('looper_master', 'looper_quantize_status', looper_id, looper_number, val);
+	}
+}
+
+//set the predefined loop creation size
+function set_dummy_size(size)
+{
+	dummy_size = size;
+	if(registered > 0)
+	{
+		messnamed('looper_master', 'looper_dummy_size', looper_id, looper_number, dummy_size);
 	}
 }
 
@@ -702,8 +727,12 @@ function distribute(func, val)
 			//post('max_looper copy_buffer', val);
 			copy_buffer_to_destination(val);
 			break;
+		case 'make_dummy_loop':
+			make_dummy_loop(val);
+			break;
 		default:
 			post('not recognized', func, val, '\n');
+			break;
 	}
 }
 
@@ -719,6 +748,7 @@ function copy_buffer_to_destination(dest)
 }
 
 //called from LoopMaster....what does this do?  Is this for automation?
+//no dumbass, it does the same thing that you just coded make_dummy_loop() to do ;)
 function gen_loop(len)
 {
 	make_undo_step();

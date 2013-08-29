@@ -694,6 +694,10 @@ function new_looper(number, id, waveform)
 	{
 		messnamed(new_looper.address, 'distribute', 'relative', val);
 	}
+	new_looper.make_dummy_loop = function(val)
+	{
+		messnamed(new_looper.address, 'distribute', 'make_dummy_loop', val);
+	}
 	new_looper.request_current_settings = function()
 	{
 		messnamed(new_looper.address, 'send_current_settings');
@@ -1547,7 +1551,8 @@ function grid(x, y, z)
 		{
 			if((x%8)<5)
 			{
-				looper[number].set_quantize_amount(x%8);
+				//looper[number].set_quantize_amount(x%8);
+				looper[number].make_dummy_loop(x%8);
 			}
 			else
 			{

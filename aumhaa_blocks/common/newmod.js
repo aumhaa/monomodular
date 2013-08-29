@@ -5,7 +5,7 @@ outlets = 2;
 var finder;
 
 var script = this;
-var DEBUG = true;
+var DEBUG = false;
 var MONOMODULAR=new RegExp(/(monomodular)/);
 var FUNCTION = new RegExp(/(function)/);
 var PROPERTY = new RegExp(/(property)/);

@@ -4,7 +4,7 @@ inlets = 1;
 outlets = 2;
 
 var script = this;
-var DEBUG = true;
+var DEBUG = false;
 var FORCELOAD = false;
 var shifted = false;
 var assignment_gui;
