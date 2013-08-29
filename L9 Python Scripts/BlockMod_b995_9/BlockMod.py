@@ -304,7 +304,6 @@ class BlockMod(MonOhm):
 				self._cntrlr._monohm_shift(0)
 	
 
-
 	"""shift/zoom methods"""
 	def deassign_matrix(self):
 		self._session_zoom.set_button_matrix(None)
@@ -904,7 +903,7 @@ class BlockMod(MonOhm):
 
 
 	"""called on timer"""
-	def update(self):
+	def update_display(self):
 		super(BlockMod, self).update_display()
 		if(self._timer == 0):
 			self._shift_pressed_timer = -12
