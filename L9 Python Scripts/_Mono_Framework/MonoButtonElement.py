@@ -100,7 +100,7 @@ class MonoButtonElement(ButtonElement):
 			if (force_send or self._force_next_send or ((value != self._last_sent_value) and self._is_being_forwarded)):
 				data_byte1 = self._original_identifier
 				if value in range(1, 127):
-					data_byte2 = self._color_map[(value - 1) % (self._num_colors-1)]
+					data_byte2 = self._color_map[(value - 1) % (self._num_colors)]
 				elif value == 127:
 					data_byte2 = self._color_map[self._num_colors-1]
 				else:

@@ -12,7 +12,7 @@ var assignment_coll;
 var keys_gui;
 var assignments = [];
 var current_edit = 0;
-var KEYS = [1, 2, 3, 4, 5, 6, 7, 127];
+var KEYS = [0, 1, 2, 3, 4, 5, 6, 7];
 var NOTES = [-1, 0, 1, 2, 3, 4, 5, 6];
 var groups={0:{'val':0, 'fsr':undefined}, 
 			1:{'val':0, 'fsr':undefined}, 
@@ -26,7 +26,7 @@ var groups={0:{'val':0, 'fsr':undefined},
 
 function anything()
 {
-	post('anything', arrayfromargs(messagename, arguments));
+	//post('anything', arrayfromargs(messagename, arguments));
 }
 
 
@@ -74,14 +74,14 @@ function key(num, val)
 
 function shift(val)
 {
-	post('shift', val, '\n');
+	//post('shift', val, '\n');
 	shifted = val>0;
 	update_assignment_grid();
 }
 
 function push_grid(x, y, val)
 {
-	post('push_grid', x, y, val, '\n');
+	//post('push_grid', x, y, val, '\n');
 	base_grid(x, y, val);
 }
 
@@ -89,7 +89,7 @@ function base_grid(x, y, val)
 {
 	if(shifted)
 	{
-		post('base_grid', x, y, val, '\n');
+		//post('base_grid', x, y, val, '\n');
 		if((val>0))
 		{
 			if(assignments[x][y].val!=current_edit)
@@ -139,7 +139,7 @@ function update_assignment_grid()
 {
 	if(!shifted)
 	{
-		post('update assignment grid\n');
+		//post('update assignment grid\n');
 		groups={0:{'val':0, 'fsr':undefined}, 
 		1:{'val':0, 'fsr':undefined}, 
 		2:{'val':0, 'fsr':undefined}, 
@@ -168,17 +168,17 @@ function update_assignment_grid()
 	}
 	else
 	{
-		post('reassigning default grids');
+		//post('reassigning default grids');
 		var x=7;do{
-			post('basegrid...');
+			//post('basegrid...');
 			var y=3;do{
-				post('x:', x, 'y:', y, '\n');
+				//post('x:', x, 'y:', y, '\n');
 				outlet(0, 'base_grid', 'value', x, y, KEYS[assignments[x][y].val]);
-				post('a', assignments[x][y], '\n');
-				post('b', assignments[x][y].val, '\n');
+				//post('a', assignments[x][y], '\n');
+				//post('b', assignments[x][y].val, '\n');
 				outlet(0, 'base_grid', 'channel', x, y, -1);
 				outlet(0, 'base_grid', 'identifier', x, y, -1);
-				post('returning');
+				//post('returning');
 			}while(y--);
 			post('pushgrid...');
 			var y=7;do{
@@ -204,7 +204,7 @@ function post_assignments()
 	}*/
 }
 
-post('new patch');
+//post('new patch');
 
 if(FORCELOAD){init();}
 

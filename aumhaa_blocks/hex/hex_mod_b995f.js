@@ -109,7 +109,7 @@ var ACCENT_VALS = [63, 87, 111, 127];
 var TRANS = {0:[[1, 1], [1, 2], [1, 4], [1, 8], [1, 16], [1, 32], [1, 64], [1, 128]],
 				1:[[3, 2], [3, 4], [3, 8], [3, 16], [3, 32], [3, 64], [3, 128], [1, 128]], 
 				2:[[2, 3], [1, 3], [1, 6], [1, 12], [1, 24], [1, 48], [1, 96], [1, 128]]};
-
+var ENC_COLORS = [5, 5, 127, 127, 6, 1, 2, 2];
 
 /*Naming the js instance as script allows us to create scoped variables 
 (properties of js.this) without specifically declaring them with var
@@ -140,6 +140,7 @@ var locked = 0;
 var selected;
 var presets = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
 var devices = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+var drumgroup_is_present = false;
 var preset = 1;
 var last_mask = 0;
 var global_offset = 0;
@@ -286,8 +287,9 @@ function init(val)
 		outlet(0, 'set_color_map', 'Monochrome', 127, 127, 127, 15, 22, 29, 36, 43);
 		outlet(0, 'set_report_offset', 1);
 		outlet(0, 'set_number_params', 12);
-		var i=0;do{
+		var i=7;do{
 			outlet(0, 'key', i, (i==grid_mode)*8);
+			outlet(0, 'grid', i, 6, ENC_COLORS[i]);
 		}while(i--);
 		rotgate.message('int', 1);
 		messnamed(unique+'ColNOTE', ColNOTE);
@@ -606,9 +608,9 @@ function refresh_c_keys()
 		case 2:
 			var i=15;do{
 				outlet(0, 'mask', 'c_key', i, -1);
-				grid_out('default', 'key', i, -1);
+				grid_out('mask', 'key', i, -1);
 				outlet(0, 'c_key', i, Colors[part[selected.num].behavior[i]]);
-				grid_out('default', 'key', Colors[part[selected.num].behavior[i]]);
+				grid_out('default', 'key', i, Colors[part[selected.num].behavior[i]]);
 				keygui.message(i, 0, selected.behavior[i]+8);
 				outlet(0, 'c_key', i+16, selected.pattern[i] * StepColors[i]);
 				grid_out('default', 'key', i+16, selected.pattern[i] * StepColors[i]);
@@ -696,6 +698,9 @@ function refresh_grid()
 			//cntrlr_emu_mode
 			refresh_pads();
 			refresh_c_keys();
+			var i=7;do{
+				outlet(0, 'grid', i, 6, ENC_COLORS[i]);
+			}while(i--);
 			break;
 		case 1:
 			//TR256_mode
@@ -1019,6 +1024,7 @@ function _c_button(x, y, val)
 	}	 
 }
 
+
 //from mod.js
 function _c_key(num, val)
 {
@@ -1122,7 +1128,8 @@ function _c_key(num, val)
 			case 7:
 				if(val>0)
 				{
-					selected.velocity[num] = ACCENT_VALS[(ACCENTS[Math.floor(selected.velocity[num]/8)]+1)%4];
+					selected.velocity[num] = ACCENT_VALS[(ACCENTS[Math.floor(selected.velocity[num]/8)])%4];
+					//post('vel:', selected.velocity[num], 'calc:', (Math.floor(selected.velocity[num]/8)), '\n');
 					selected.obj.set.velocity(selected.velocity);
 					refresh_c_keys();
 				}
@@ -1130,6 +1137,7 @@ function _c_key(num, val)
 		}
 	}
 }
+
 
 //distribute presses received from mod.js
 function _c_grid(x, y, val)
@@ -2934,7 +2942,8 @@ function update_bank()
 	switch(pad_mode)
 	{
 		default:
-			outlet(0, 'set_device_bank', selected.channel>0);
+			//outlet(0, 'set_device_bank', selected.channel>0);
+			outlet(0, 'set_device_bank', selected.channel>0 ? 1 : drumgroup_is_present ? 0 : 1);
 			outlet(0, 'set_c_local_ring_control', 1);
 			outlet(0, 'set_local_ring_control', 1);
 			var i=7;do{
@@ -3110,15 +3119,18 @@ function check_device_id(id, channel)
 	{
 		if(channel == 0)
 		{
+			drumgroup_is_present = false;
 			finder.id = id;
 			if(finder.get('class_name')=='DrumGroupDevice')
 			{
+				drumgroup_is_present = true;
 				found = parseInt(finder.id);
 			}
 		}
-		else
+		if(!found)
 		{	
 			finder.goto('this_device');
+			//post('class:', finder.get('class_name'), '\n');
 			if (parseInt(finder.id) != id)
 			{
 				found = id;
@@ -3134,7 +3146,7 @@ function check_device_id(id, channel)
 function _select_chain(chain_num)
 {
 	if(DEBUG){post('select_chain', chain_num, selected.channel, devices[selected.channel], '\n');}
-	if(selected.channel==0)
+	if((selected.channel==0)&&(drumgroup_is_present))
 	{
 		outlet(0, 'set_device_parent', devices[selected.channel]);
 		outlet(0, 'set_device_chain', Math.max(0, Math.min(chain_num + global_offset - global_chain_offset, 112)));
