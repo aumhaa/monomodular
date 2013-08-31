@@ -2458,6 +2458,7 @@ function rotate_wheel(num, pos)
 		default:
 			break;
 		case 1:
+			//tr256 mode
 			var _num = num-1;
 			if((_num<14)&&(preset==edit_preset))
 			{
@@ -2466,19 +2467,19 @@ function rotate_wheel(num, pos)
 			}
 			break;
 		case 3:
+			//cafe mode
+			//var pat = part[num-1].pattern.slice();
+			var _num=num-1, Part = part[_num];
+			if(DEBUG){post('cafe_pos', _num, Part.clutch, '\n');}
+			if(Part.clutch > 0)
 			{
-				//var pat = part[num-1].pattern.slice();
-				var _num=num-1, Part = part[_num];
-				if(DEBUG){post('cafe_pos', _num, Part.clutch, '\n');}
-				if(Part.clutch > 0)
-				{
-					var i=15;do{
-						outlet(0, 'grid', i, _num, Part.pattern[(pos+i)%16]);
-					}while(i--);
-				}
+				var i=15;do{
+					outlet(0, 'grid', i, _num, Part.pattern[(pos+i)%16]);
+				}while(i--);
 			}
 			break;
 		case 4:
+			//boingg mode
 			var _num=num-1;
 			if(part[_num].active>0)
 			{

@@ -187,7 +187,7 @@ class MonomodComponent(CompoundComponent):
 							elif x == 4:
 								self.display_active_client()
 						else:
-							self._active_client._send_key(x, value)		
+							self._active_client._send_key(x, int(value>0))		
 			elif self._shift_pressed == 0:	
 				if (self._active_client._is_monolink) and (self._alt_pressed > 0):
 					if value > 0:
@@ -205,14 +205,14 @@ class MonomodComponent(CompoundComponent):
 							elif x == 4:
 								self.display_active_client()
 							else:
-								self._active_client._send_key(x, value)
+								self._active_client._send_key(x, int(value>0))
 							#to here
 						else:
-							self._active_client._send_key(x, value) 
+							self._active_client._send_key(x, int(value>0)) 
 					else:
-						self._active_client._send_grid(x + self._x, y + self._y, value)
+						self._active_client._send_grid(x + self._x, y + self._y, int(value>0))
 				else:
-					self._active_client._send_grid(x + self._x, y + self._y, value)
+					self._active_client._send_grid(x + self._x, y + self._y, int(value>0))
 	
 
 	def _update_grid(self):
@@ -370,7 +370,7 @@ class MonomodComponent(CompoundComponent):
 				self._send_key(6, self._active_client.device.parameters[0].value>0)
 			self._send_key(5, self._active_client._mute==0)
 		else:
-			for index in range(len(self._keys)):
+			for index in range(8):
 				self._send_key(index, self._active_client._key[index])
 	
 
