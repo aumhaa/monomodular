@@ -358,7 +358,7 @@ class MonomodComponent(CompoundComponent):
 					self.display_active_client()
 			else:
 				self._active_client._send_key(self._keys.index(sender), int(value!=0))
-			self._active_client._send_key(self._keys.index(sender), int(value!=0))
+			#self._active_client._send_key(self._keys.index(sender), int(value!=0))
 	
 
 	def _update_keys(self):
