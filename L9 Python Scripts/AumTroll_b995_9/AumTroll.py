@@ -122,8 +122,8 @@ class LoopPedalExpressionElement(EncoderElement):
 	def update_value(self, values):
 		if values[1] is self._last:
 			self.receive_value(values[0])
-			
-		
+	
+
 
 class AumTrollMonoDevice(MonoDeviceComponent):
 
@@ -659,51 +659,7 @@ class AumTroll(Cntrlr):
 			self._device2.update()
 
 		elif self._aumpush:
-			for index in range(4):
-				self._mixer.channel_strip(index).set_volume_control(self._fader[index])
-				self._mixer3.channel_strip(index).set_volume_control(self._fader[index+4])
-			self._mixer2.set_track_offset(TROLL_OFFSET)
-			self._device_selector.set_mode_buttons(self._grid[:15])
-			self._on_shift_button_value.subject = self._grid[15]
-			self._aumpush._host._set_bank_buttons(tuple(self._button[16:32]))
-			for index in range(4):
-				self._button[index].set_on_off_values(SELECT[self._rgb], 1)
-				self._mixer.channel_strip(index).set_select_button(self._button[index])
-				self._button[index+12].set_on_off_values(SELECT[self._rgb], 1)
-				self._mixer3.channel_strip(index).set_select_button(self._button[index+12])
-			for index in range(8):
-				self._button[index+4].set_on_off_values(SELECT[self._rgb], (5, 6)[int(index>3)])
-				self._mixer2.channel_strip(index).set_select_button(self._button[index+4])
-			for index in range(4):
-				self._mixer2.channel_strip(index).set_volume_control(self._knobs[index+8])
-				self._send_reset.set_buttons(tuple(self._encoder_button[4:8]))
-			for index in range(3):
-				self._mixer2.channel_strip(index+4).set_volume_control(self._knobs[index+20])
-			self._mixer.set_crossfader_control(self._knobs[23])
-			for index in range(4):
-				self._mixer3.return_strip(index).set_volume_control(self._encoder[index+4])
-				self._encoder_button[index+4].send_value(127, True)
-			if not self._shifted:
-				self._mixer.selected_strip().set_send_controls(self._encoder[8:12])
-				for index in range(4):
-					self._encoder_button[index+8].send_value(3, True)
-			else:
-				self._mixer.return_strip(0).set_send_controls(tuple([None, self._encoder[8]]))
-				self._mixer.return_strip(1).set_send_controls(tuple([self._encoder[9], None]))
-				#self._mixer.set_crossfader_control(self._encoder[11])
-				self._mixer2.channel_strip(4).set_volume_control(self._encoder[11])
-				self._encoder_button[8].send_value(5, True)
-				self._encoder_button[9].send_value(5, True)
-				self._encoder_button[11].send_value(1, True)
-
-			self._device1.set_parameter_controls(tuple([self._knobs[index] for index in range(8)]))
-			self._device2.set_parameter_controls(tuple([self._knobs[index+12] for index in range(8)]))
-			self._device1.set_enabled(True)
-			self._device2.set_enabled(True)
-			self._find_devices()
-			self._device1.update()
-			self._device2.update()
-
+			self.assign_aumpush_controls()
 
 		"""this section assigns the encoders and encoder buttons"""
 		if not self._aumpush:
@@ -722,7 +678,7 @@ class AumTroll(Cntrlr):
 			self._device.set_enabled(True)													#enable the Device Component
 			self._device_navigator.set_enabled(True)										#enable the Device Navigator
 			self._device.update()															#tell the Device component to update its assingments so that it will detect the currently selected device parameters and display them on the encoder rings
-
+	
 
 	"""this assigns the CNTRLR's controls on for 4th empty modSlot"""
 	"""these assignments mirror the main section; commenting is restricted to the differences"""
@@ -833,16 +789,19 @@ class AumTroll(Cntrlr):
 			self._shift_mode._modes_buttons[3].send_value(8)		#turn on the LED below the modButton
 		else:											#otherwise, if we are in modMode
 			self.deassign_live_controls()				#remove all of our assignments from the controls and refresh their caches
-			for index in range(8):
-				self._mixer2.channel_strip(index).set_volume_control(self._fader[index])
-			self._mixer2.set_track_offset(TROLL_OFFSET)
-			self._device1.set_parameter_controls(tuple([self._knobs[index] for index in range(8)]))
-			self._device2.set_parameter_controls(tuple([self._knobs[index+12] for index in range(8)]))
-			self._device1.set_enabled(True)
-			self._device2.set_enabled(True)
-			self._find_devices()
-			self._device1.update()
-			self._device2.update()
+			if self._aumpush is None:
+				for index in range(8):
+					self._mixer2.channel_strip(index).set_volume_control(self._fader[index])
+				self._mixer2.set_track_offset(TROLL_OFFSET)
+				self._device1.set_parameter_controls(tuple([self._knobs[index] for index in range(8)]))
+				self._device2.set_parameter_controls(tuple([self._knobs[index+12] for index in range(8)]))
+				self._device1.set_enabled(True)
+				self._device2.set_enabled(True)
+				self._find_devices()
+				self._device1.update()
+				self._device2.update()
+			else:
+				self.assign_aumpush_controls()
 			if self._host._client is None or not self._host._client[self._shift_mode._mode_index-1].is_connected():		#if there is not a mod in the currently selected modSlot
 				self.assign_alternate_mappings(self._shift_mode._mode_index)				#assign a different MIDI channel that the controls translated to when entering Live
 				for index in range(4):
@@ -854,8 +813,10 @@ class AumTroll(Cntrlr):
 					#self.log_message('setting keys')
 					self._host._set_key_buttons(tuple(self._button))						#assign the lower buttons to it
 					if(self._host._active_client._monomodular > 0):
-						#self.log_message('but monomod > 0')
-						self._assign_monomodular_controls()				
+						if self._aumpush is None:
+							#self.log_message('but monomod > 0')
+							self._assign_monomodular_controls()
+						
 				else:
 					#self.log_message('self._shifted is True')
 					self._host._set_key_buttons(None)
@@ -869,6 +830,54 @@ class AumTroll(Cntrlr):
 				self._host._display_mod_colors()
 	
 
+	def assign_aumpush_controls(self):
+		if self._aumpush:
+			for index in range(4):
+				self._mixer.channel_strip(index).set_volume_control(self._fader[index])
+				self._mixer3.channel_strip(index).set_volume_control(self._fader[index+4])
+			self._mixer2.set_track_offset(TROLL_OFFSET)
+			self._device_selector.set_mode_buttons(self._grid[:15])
+			self._on_shift_button_value.subject = self._grid[15]
+			self._aumpush._host._set_bank_buttons(tuple(self._button[16:32]))
+			for index in range(4):
+				self._button[index].set_on_off_values(SELECT[self._rgb], 1)
+				self._mixer.channel_strip(index).set_select_button(self._button[index])
+				self._button[index+12].set_on_off_values(SELECT[self._rgb], 1)
+				self._mixer3.channel_strip(index).set_select_button(self._button[index+12])
+			for index in range(8):
+				self._button[index+4].set_on_off_values(SELECT[self._rgb], (5, 6)[int(index>3)])
+				self._mixer2.channel_strip(index).set_select_button(self._button[index+4])
+			for index in range(4):
+				self._mixer2.channel_strip(index).set_volume_control(self._knobs[index+8])
+				self._send_reset.set_buttons(tuple(self._encoder_button[4:8]))
+			for index in range(3):
+				self._mixer2.channel_strip(index+4).set_volume_control(self._knobs[index+20])
+			self._mixer.set_crossfader_control(self._knobs[23])
+			for index in range(4):
+				self._mixer3.return_strip(index).set_volume_control(self._encoder[index+4])
+				self._encoder_button[index+4].send_value(127, True)
+			if self._shift_mode._mode_index is 0:
+				if not self._shifted:
+					self._mixer.selected_strip().set_send_controls(self._encoder[8:12])
+					for index in range(4):
+						self._encoder_button[index+8].send_value(3, True)
+				else:
+					self._mixer.return_strip(0).set_send_controls(tuple([None, self._encoder[8]]))
+					self._mixer.return_strip(1).set_send_controls(tuple([self._encoder[9], None]))
+					#self._mixer.set_crossfader_control(self._encoder[11])
+					self._mixer2.channel_strip(4).set_volume_control(self._encoder[11])
+					self._encoder_button[8].send_value(5, True)
+					self._encoder_button[9].send_value(5, True)
+					self._encoder_button[11].send_value(1, True)
+
+			self._device1.set_parameter_controls(tuple([self._knobs[index] for index in range(8)]))
+			self._device2.set_parameter_controls(tuple([self._knobs[index+12] for index in range(8)]))
+			self._device1.set_enabled(True)
+			self._device2.set_enabled(True)
+			self._find_devices()
+			self._device1.update()
+			self._device2.update()
+	
 
 	"""used to connect different control_surfaces so that they can communicate"""
 	def connect_script_instances(self, instanciated_scripts):
