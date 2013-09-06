@@ -27,7 +27,7 @@ DEBUG_REC = 0;
 DEBUG_LOCK = 0;
 SHOW_POLYSELECTOR = 1;
 SHOW_STORAGE = 0;
-FORCELOAD = 0; //this doesn't work anymore, don't waste your time. -a
+FORCELOAD = 1; //this doesn't work anymore, don't waste your time. -a
 
 outlets = 4;
 inlets = 5;
@@ -135,6 +135,7 @@ var last_mode = 1;
 var last_key_mode = 0;
 var last_pad_mode = 0;
 var locked = 0;
+var shifted = false;
 //var play_mode = 0;
 
 var selected;
@@ -491,6 +492,7 @@ function refresh_pads()
 					var v = SelectColors[Math.floor(i+(j*4) == selected.num)];
 					outlet(0, 'c_grid', i, j, v);
 					grid_out('default', 'grid', i, j, v);
+					base_grid_out('default', 'grid', i, j, v);
 					padgui.message(i, j, v);
 				}while(j--);
 			}while(i--);
@@ -803,6 +805,56 @@ function grid_out()
 	}
 }
 
+function base_grid_out()
+{
+	var args = arrayfromargs(arguments);
+	//if(DEBUG){post('grid_out:', args, '\n');}
+	if(grid_mode==0)
+	{
+		switch(args[0])
+		{
+			default:
+				switch(args[1])
+				{
+					case 'key':
+						outlet(0, 'base_grid', args[2]%8, Math.floor(args[2]/8)+2, args[3]);
+						break;
+					case 'grid':
+						outlet(0, 'base_grid', args[2]+((args[3]%2)*4), Math.floor(args[3]/2), args[4]);
+						break;
+					/*case 'button':
+						outlet(0, 'base_grid', args[2]+(Math.floor(args[3])*4), 6, args[4]);
+						break;*/
+				}
+				break;
+			case 'mask':
+				switch(args[1])
+				{
+					case 'key':
+						outlet(0, 'mask', 'grid', args[2]%8, Math.floor(args[2]/8)+2, args[3]);
+						break;
+					case 'grid':
+						outlet(0, 'mask', 'grid', args[2]+((args[3]%2)*4), Math.floor(args[3]/2), args[4]);
+						break;
+				}
+				break;
+			case 'batch':
+				switch(args[1])
+				{
+					case 'grid':
+						var x=3;do{
+							var y=3;do{
+								outlet(0, 'grid', x, y, 0);
+							}while(y--);
+						}while(x--);
+						break;
+					case 'key':
+						break;
+				}
+				break;
+		}
+	}
+}
 
 /*/////////////////////////////////
 ///// api callbacks and input /////
@@ -1566,6 +1618,299 @@ function _grid(x, y, val)
 	}
 }
 
+//this sorts grid presses
+function _base_grid(x, y, val)
+{
+	if(DEBUG){post('_base_grid', x, y, val, '\n');}
+	switch(grid_mode)
+	{
+		default:
+			if(y<2)
+			{
+				_c_grid(x%4, Math.floor(x/4)+(y*2), val);
+			}
+			else if (y<6)
+			{
+				
+				_c_key(x + 8*(y-2), val);
+			}
+			else if (y==6)
+			{
+				_c_button(x%4, Math.floor(x/4), val);
+			}
+			break;
+		case 1:
+			if(val>0)
+			{
+				switch(y)
+				{
+					case 0:
+						if(grid_pressed<0)
+						{
+							if(rec_enabled)
+							{
+								set_record(0);
+							}
+							else
+							{						
+								grid_pressed = x + (y*16);
+								preset = x+1;
+								var i=15;do{
+									presets[i] = x+1;
+								}while(i--);
+								storage.message(preset);
+								refresh_grid();
+							}
+							break;
+						}
+						else
+						{
+							copy_global_preset(x+(y*16)+1);
+							grid_pressed = -1;
+						}
+						break;
+					case 1:
+						if(rec_enabled)
+						{
+							set_record(0);
+						}
+						if(grid_pressed<0)
+						{
+							edit_preset = x+1;
+							var y=13;do{
+								storage.getstoredvalue('poly.'+y+'::pattern', edit_preset);
+								storage.getstoredvalue('poly.'+y+'::velocity', edit_preset);
+							}while(y--);
+						}
+						else if(grid_pressed==x)
+						{
+							set_record(1);
+						}
+						refresh_grid();
+						break;
+					default:
+						var Part = part[y-2], cur_step = Part.edit_buffer[x], 
+							cur_vel = Part.edit_velocity[x], new_vel = ACCENT_VALS[Tvel];
+						if((cur_step)&&(cur_vel!=new_vel))
+						{
+							cur_vel=new_vel;
+						}
+						else if(cur_step)
+						{
+							cur_step = 0;
+						}
+						else
+						{
+							cur_step = 1;
+							cur_vel = new_vel;
+						}
+						Part.edit_buffer[x]=cur_step;
+						Part.edit_velocity[x]=cur_vel;
+						if(alt)
+						{
+							var quad = (x+8)%16;
+							Part.edit_buffer[quad] = cur_step;
+							Part.edit_velocity[quad] = ACCENT_VALS[Tvel];	
+						}							
+						if(edit_preset!=preset)
+						{
+							//don't send to objects since this is for a non-loaded preset
+							Part.obj.set.pattern(Part.edit_buffer, edit_preset);
+							if(cur_step>0)
+							{
+								Part.obj.set.velocity(Part.edit_velocity, edit_preset);
+							}
+						}
+						else
+						{
+							Part.obj.set.pattern(Part.edit_buffer);
+							Part.obj.set.velocity(Part.edit_velocity);
+							if(Part == selected)
+							{
+								step.message('velocity', 1, selected.velocity);
+								step.message('extra1', 1, selected.pattern);
+								step.message('zoom', 1, 1);
+								refresh_c_keys();
+								outlet(0, 'to_c_wheel', part[y-2].num%4, Math.floor(part[y-2].num/4)%2, 'custom', 'x'+(part[y-2].pattern.join('')));
+							}
+						}
+						outlet(0, 'grid', x, y, part[y-2].edit_buffer[x]*(ACCENTS[Math.floor(part[y-2].edit_velocity[x]/8)]));
+						//refresh_grid();
+						break;
+				}
+			}
+			else if((x + (y*16) == grid_pressed)&&(val<1))
+			{
+				grid_pressed = -1;
+			}
+			break;
+		case 2:
+			if(alt>0)
+			{
+				//Poly_Record_mode
+				if(((x==0)&&(y==0))||((x==15)&&(y==0))||((x==15)&&(y==15))||((x==0)&&(y==15)))
+				{
+					if(val>0)
+					{
+						poly_hold_toggle();
+						refresh_grid();
+					}
+				}
+				else if((y==0)&&(val>0))
+				{
+					presets[selected.num] = x;
+					storage.message('recall', 'poly.'+(selected.num+1), presets[selected.num]);
+					refresh_grid();
+				}
+				else if(val>0)
+				{
+					var note = (x<<6) + (y<<10) + 32;
+					//if(DEBUG){post('new note', current_step, x, y, note, '\n');}
+					//if(DEBUG){post('decoded:', (note>>6)%16, note>>10, '\n');}
+					if(selected.note[0]<32)
+					{
+						selected.obj.offset.message('int', 0);
+						curSteps[selected.num]=0;
+					}
+					selected.note[curSteps[selected.num]] = note;
+					selected.obj.set.note(selected.note);
+					if(DEBUG){post('new notes:', selected.obj.note.getvalueof(), '\n');}
+					step.message('pitch', 1, selected.note);
+					selected.pattern[curSteps[selected.num]] = 1;
+					selected.obj.set.pattern(selected.pattern);
+					selected.obj.last_trigger.message('bang');
+					step.message('extra1', 1, selected.pattern);
+					step.message('zoom', 0, 16);
+					refresh_c_keys();
+				}
+			}
+			else
+			{
+				//Poly_Play_mode
+				if(((x==0)&&(y==0))||((x==15)&&(y==0))||((x==15)&&(y==15))||((x==0)&&(y==15)))
+				{
+					if(val>0)
+					{
+						poly_hold_toggle();
+						refresh_grid();
+					}
+				}
+				else if((y==0)&&(val>0))
+				{
+					presets[selected.num] = x;
+					storage.message('recall', 'poly.'+(selected.num+1), presets[selected.num]);
+					refresh_grid();
+				}
+				else
+				{
+					play_sequence(selected, ((x-(selected.obj.note.getvalueof()[0]>>6)%16)<<6) + (y-(selected.obj.note.getvalueof()[0]>>10)<<10) + 32, val);
+					refresh_c_keys();
+					refresh_grid();	
+				}
+			}
+			break;
+		case 3:
+			//Cafe_Play_mode
+			if(DEBUG){post('cafe play', presets[x]);} 
+			var Part = part[y];
+			if(((x+1)==presets[y])&&(val==0)&&(alt==0))
+			{
+				//Part.clutch = 0;
+				//Part.obj.clutch.message('int', 0);
+				Part.obj.set.clutch(0);
+				var i=15;do{
+					outlet(0, 'grid', i, y, 0);
+				}while(i--);
+			}
+			else if(val==1)
+			{
+				if((x+1)!=presets[y])
+				{
+					presets[y] = x+1;
+					storage.message('recall', 'poly.'+(y+1), presets[y]);
+					Part.pattern = Part.obj.pattern.getvalueof();	
+				}
+				//Part.obj.offset.message('int', 15);
+				Part.obj.set.offset(15);
+				//Part.clutch = 1;
+				//Part.obj.clutch.message('int', 1);
+				Part.obj.set.clutch(1);
+			}
+			break;
+		case 4:
+			//Boiingg_Play_mode
+			if(val>0)
+			{
+				if(alt>0)
+				{
+					switch(y)
+					{
+						case 0:
+							timeupgui.message('int', val);
+							break;
+						case 1:
+							timedngui.message('int', val);
+							break;
+					}
+				}
+				else
+				{
+					if(y>0)
+					{
+						var pset = presets[x];
+						var Part = part[x];
+						if(Part.direction!=2){
+							Part.obj.set.direction(2);
+						}
+						if(Part.nudge!=0){
+							Part.obj.set.nudge(0);
+						}
+						if(Part.pattern.join('')!='1000000000000000'){
+							Part.obj.set.pattern([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+						}
+						Part.obj.restartcount.message(0);
+						Part.obj.set.steps(y);
+					}
+					else
+					{
+						outlet(0, 'mask', 'column', x, -1);
+					}
+					if(part[x].active!=(y>0)){
+						part[x].obj.set.active(y>0);
+					}
+					if(part[x]==selected)
+					{
+						refresh_c_keys();
+						if(pad_mode==2){refresh_pads();}
+						update_gui();
+					}
+				}
+			}
+			break;
+		case 5:
+			break;
+		case 6:
+			//Preset_Mode
+			break;
+		case 7:
+			//Behavior_Grid_mode
+			if((val>0)&&(x<7))
+			{
+				rulemap.message('list', x, y, (behavegraph[x][y]+1)%7);
+			}
+			break;
+				
+	}
+}
+
+function _shift(val)
+{
+	if(DEBUG){post('shift:', val, '\n');}
+	shifted = val;
+	refresh_grid();
+	refresh_keys();
+}
+	
 //this sorts key presses
 function _key(num, val)
 {
@@ -1599,7 +1944,7 @@ function surface_offset(val)
 //this is mainly for the select-hold
 function _msg_int(val)
 {
-	if(DEBUG){post('msg_int', args, '\n');}
+	if(DEBUG){post('msg_int', val, '\n');}
 	if((inlet==2)&&(pad_pressed==val))
 	{
 		change_key_mode(pad_invoked_key_mode);
