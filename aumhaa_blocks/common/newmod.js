@@ -73,11 +73,15 @@ function init()
 				}
 				modAddresses = finder.call('addresses');
 				if(DEBUG){post('addresses:', modAddresses, '\n');}
-				for(address in modAddresses)
+				for(var address in modAddresses)
 				{
 					post('address length', modAddresses[address].length);
 					post('making func:', modAddresses[address], '\n');
 					script[modAddresses[address]] = make_receive_func(modAddresses[address]);
+				}
+				for(var func in modFunctions)
+				{
+					script[modFunctions[func]] = make_func(modFunctions[func]);
 				}
 				outlet(1, 'init');
 				send_stored_messages();
@@ -94,6 +98,18 @@ function make_receive_func(address)
 		if(DEBUG){post('accessing func', address, '\n');}
 		var args = arrayfromargs(arguments);
 		finder.call('receive', address, args[0], args.slice(1).join('^'));
+	}
+	return func;
+}
+
+function make_func(address)
+{
+	var func = function()
+	{
+		if(DEBUG){post('accessing func', address, '\n');}
+		var args = arrayfromargs(arguments);
+		//finder.apply(address, args);
+		finder.call('distribute', address, args.join('^'))
 	}
 	return func;
 }

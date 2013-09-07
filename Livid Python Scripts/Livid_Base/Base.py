@@ -37,6 +37,8 @@ from _Framework.SubjectSlot import subject_slot, subject_slot_group
 from _Mono_Framework.MonoButtonElement import *
 from _Mono_Framework.MonoEncoderElement import MonoEncoderElement
 from _Mono_Framework.MonoBridgeElement import MonoBridgeElement
+from _Mono_Framework.MonoDeviceComponent import MonoDeviceComponent
+from _Mono_Framework.ModDevices import *
 from _Mono_Framework.Mod import *
 
 """to be included from Monomodular"""
@@ -606,6 +608,7 @@ class BaseDeviceComponent(DeviceComponent):
 		super(BaseDeviceComponent, self)._on_device_bank_changed(*a, **k)
 		self._script._on_device_bank_changed()
 	
+
 
 class DeviceNavigator(ControlSurfaceComponent):
 	__module__ = __name__
@@ -1390,7 +1393,7 @@ class Base(ControlSurface):
 	
 
 	def _setup_device_control(self):
-		self._device = BaseDeviceComponent(self)
+		self._device = BaseDeviceComponent(self)  #, MOD_BANK_DICT, MOD_TYPES)
 		self._device.name = 'Device_Component'
 		self._device.update = self._device_update(self._device)
 		self.set_device_component(self._device)
@@ -1861,10 +1864,10 @@ class Base(ControlSurface):
 					self._session.set_show_highlight(True)
 					self._session.update()
 				else:
-					self._button[4].set_on_off_values(OVERDUB+6, OVERDUB)
-					self._button[5].set_on_off_values(NEW+6, NEW)
-					self._button[6].set_on_off_values(RECORD+6, RECORD)
-					self._button[7].set_on_off_values(LENGTH+6, LENGTH)
+					self._button[4].set_on_off_values(OVERDUB+7, OVERDUB)
+					self._button[5].set_on_off_values(NEW+7, NEW)
+					self._button[6].set_on_off_values(RECORD+7, RECORD)
+					self._button[7].set_on_off_values(LENGTH+7, LENGTH)
 					self._transport.set_overdub_button(self._button[4])
 					self._recorder.set_new_button(self._button[5])
 					self._recorder.set_record_button(self._button[6])

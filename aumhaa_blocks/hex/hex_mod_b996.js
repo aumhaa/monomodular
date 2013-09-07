@@ -109,7 +109,7 @@ var ACCENT_VALS = [63, 87, 111, 127];
 var TRANS = {0:[[1, 1], [1, 2], [1, 4], [1, 8], [1, 16], [1, 32], [1, 64], [1, 128]],
 				1:[[3, 2], [3, 4], [3, 8], [3, 16], [3, 32], [3, 64], [3, 128], [1, 128]], 
 				2:[[2, 3], [1, 3], [1, 6], [1, 12], [1, 24], [1, 48], [1, 96], [1, 128]]};
-
+var ENC_COLORS = [5, 5, 127, 127, 6, 1, 2, 2];
 
 /*Naming the js instance as script allows us to create scoped variables 
 (properties of js.this) without specifically declaring them with var
@@ -139,6 +139,7 @@ var shifted = false;
 //var play_mode = 0;
 
 var selected;
+var drumgroup_is_present = false;
 var presets = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
 var devices = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 var preset = 1;
@@ -164,7 +165,7 @@ var dirty = 0;
 //new props
 var sel_vel = 0;
 var grid_mode = 0;
-var alt = 0;
+var altVal = 0;
 var ColNOTE = 1;
 var RowNOTE = 2;
 var curSteps = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -203,6 +204,26 @@ _private_function().
 Note:  It is best to only address these private functions by their actual names in the script, since calling aliased 
 names will not be routed to anything().*/
 
+function setup_translations()
+{
+	for(var i = 0;i < 16;i++)
+	{
+		outlet(0, 'add_translation', 'pads_'+i, 'base_grid', i%8, Math.floor(i/8));
+		outlet(0, 'add_translation', 'keys_'+i, 'base_grid', i%8, Math.floor(i/8));
+		outlet(0, 'add_translation', 'keys2_'+i, 'base_grid', i%8, Math.floor(i/8)+2);
+		outlet(0, 'enable_translation', 'keys_'+i, 'base_grid', 0);
+
+		outlet(0, 'add_translation', 'pads_'+i, 'push_grid', i%8, Math.floor(i/8));
+		outlet(0, 'add_translation', 'keys_'+i, 'push_grid', i%8, Math.floor(i/8)+2);
+		outlet(0, 'add_translation', 'keys2_'+i, 'push_grid', i%8, Math.floor(i/8)+4);
+	}
+	for(var i=0;i<8;i++)
+	{
+		outlet(0, 'add_translation', 'buttons_'+i, 'push_grid', i, 6);
+		outlet(0, 'add_translation', 'extras_'+i, 'push_grid', i, 7);
+	}
+}
+
 function alive(val)
 {
 	init(val);
@@ -214,6 +235,7 @@ function init(val)
 	if(val>0)
 	{
 		if(DEBUG){post('hex init\n');}
+		setup_translations();
 		for(var i in Vars)
 		{
 			script[Vars[i]] = this.patcher.getnamed(Vars[i]);
@@ -287,8 +309,9 @@ function init(val)
 		outlet(0, 'set_color_map', 'Monochrome', 127, 127, 127, 15, 22, 29, 36, 43);
 		outlet(0, 'set_report_offset', 1);
 		outlet(0, 'set_number_params', 12);
-		var i=0;do{
-			outlet(0, 'key', i, (i==grid_mode)*8);
+		var i=7;do{
+			outlet(0, 'key', 'value', i, (i==grid_mode)*8);
+			outlet(0, 'receive_translation', 'buttons_'+i, 'value', ENC_COLORS[i]);
 		}while(i--);
 		rotgate.message('int', 1);
 		messnamed(unique+'ColNOTE', ColNOTE);
@@ -490,9 +513,7 @@ function refresh_pads()
 			var i=3;do{
 				var j=3;do{
 					var v = SelectColors[Math.floor(i+(j*4) == selected.num)];
-					outlet(0, 'c_grid', i, j, v);
-					grid_out('default', 'grid', i, j, v);
-					base_grid_out('default', 'grid', i, j, v);
+					outlet(0, 'receive_translation', 'pads_'+(i+(j*4)), 'value', v);
 					padgui.message(i, j, v);
 				}while(j--);
 			}while(i--);
@@ -501,55 +522,40 @@ function refresh_pads()
 			var i=3;do{
 				var j=3;do{
 					var v = AddColors[Math.floor(i+(j*4) == selected.num)];
-					outlet(0, 'c_grid', i, j, v);
-					grid_out('default', 'grid', i, j, v);
+					outlet(0, 'receive_translation', 'pads_'+(i+(j*4)), 'value', v);
 					padgui.message(i, j, v);
 				}while(j--);
 			}while(i--);
 			break;
 		case 2:
 			var i=15;do{
-				var x = i%4;
-				var y = Math.floor(i/4);
 				var v = part[i].active*2;
-				outlet(0, 'c_grid', x, y, v);
-				grid_out('default', 'grid', x, y, v);
+				outlet(0, 'receive_translation', 'pads_'+i, 'value', v);
 				padgui.message(x, y, v);
 			}while(i--);
 			break;
 		case 3:
 			var p = presets[selected.num]-1;
 			var i=15;do{
-				var x = i%4;
-				var y = Math.floor(i/4);
 				var v = (i==p)+3;
-				outlet(0, 'mask', 'c_grid', x, y, -1);
-				outlet(0, 'c_grid', x, y, v);
-				grid_out('mask', 'grid', x, y, -1);
-				grid_out('default', 'grid', x, y, v);
+				outlet(0, 'receive_translation', 'pads_'+i, 'value', v);
+				//outlet(0, 'receive_translation', 'pads_'+i, 'value', v);
 				padgui.message(x, y, v);
 			}while(i--);
 			break;
 		case 4:
 			var p = presets[selected.num]-1;
 			var i=15;do{
-				var x = i%4;
-				var y = Math.floor(i/4);
 				var v = (i==p)+6;
-				outlet(0, 'mask', 'c_grid', x, y, -1);
-				outlet(0, 'c_grid', x, y, v);
-				grid_out('mask', 'grid', x, y, -1);
-				grid_out('default', 'grid', x, y, v);
+				outlet(0, 'receive_translation', 'pads_'+i, 'value', -1);
+				outlet(0, 'receive_translation', 'pads_'+i, 'value', v);
 				padgui.message(x, y, v);
 			}while(i--);
 			break;
 		case 6:
 			var i=15;do{
-				var x=i%4;
-				var y=Math.floor(i/4);
 				var v=(selected.triggered.indexOf(i)>-1) + 7;
-				outlet(0, 'c_grid', x, y, v);
-				grid_out('default', 'grid', x, y, v);
+				outlet(0, 'receive_translation', 'pads_'+i, 'value', v);
 				padgui.message(x, y, v);
 			}while(i--);
 			break;
@@ -559,8 +565,7 @@ function refresh_pads()
 				var i=3;do{
 					var j=3;do{
 						var v = SelectColors[Math.floor(i+(j*4) == selected.num)+((j<2)*2)];
-						outlet(0, 'c_grid', i, j, v);
-						grid_out('default', 'grid', i, j, v);
+						outlet(0, 'receive_translation', 'pads_'+(i+(j*4)), 'value', v);
 						padgui.message(i, j, v);
 					}while(j--);
 				}while(i--);
@@ -570,8 +575,7 @@ function refresh_pads()
 				var i=3;do{
 					var j=3;do{
 						var v = SelectColors[Math.floor(i+(j*4) == selected.num)+((j>1)*2)];
-						outlet(0, 'c_grid', i, j, v);
-						grid_out('default', 'grid', i, j, v);
+						outlet(0, 'receive_translation', 'pads_'+(i+(j*4)), 'value', v);
 						padgui.message(i, j, v);
 					}while(j--);
 				}while(i--);
@@ -595,95 +599,117 @@ function refresh_c_keys()
 			break;*/
 		case 1:
 			var i=15;do{
-				outlet(0, 'mask', 'c_key', i, -1);
-				grid_out('mask', 'key', i, -1);
+				//outlet(0, 'mask', 'c_key', i, -1);
+				//grid_out('mask', 'key', i, -1);
+				outlet(0, 'receive_translation', 'keys_'+i, 'mask', -1);
 				var v = (i>=part[selected.num].nudge&&i<=(part[selected.num].nudge+part[selected.num].steps))*5;
-				outlet(0, 'c_key', i, v);
-				grid_out('default', 'key', i, v);
+				//outlet(0, 'c_key', i, v);
+				//grid_out('default', 'key', i, v);
 				keygui.message(i, 0, v);
-				outlet(0, 'c_key', i+16, selected.pattern[i] * StepColors[i]);
-				grid_out('default', 'key', i+16, selected.pattern[i] * StepColors[i]);
+				outlet(0, 'receive_translation', 'keys_'+i, 'value', v);
+				//outlet(0, 'c_key', i+16, selected.pattern[i] * StepColors[i]);
+				//grid_out('default', 'key', i+16, selected.pattern[i] * StepColors[i]);
+				outlet(0, 'receive_translation', 'keys2_'+i, 'value', selected.pattern[i] * StepColors[i]);
 			}while(i--);
 			break;
 		case 2:
 			var i=15;do{
-				outlet(0, 'mask', 'c_key', i, -1);
-				grid_out('default', 'key', i, -1);
-				outlet(0, 'c_key', i, Colors[part[selected.num].behavior[i]]);
-				grid_out('default', 'key', Colors[part[selected.num].behavior[i]]);
+				//outlet(0, 'mask', 'c_key', i, -1);
+				//grid_out('default', 'key', i, -1);
+				outlet(0, 'receive_translation', 'keys_'+i, 'mask', -1);
+				//outlet(0, 'c_key', i, Colors[part[selected.num].behavior[i]]);
+				//grid_out('default', 'key', Colors[part[selected.num].behavior[i]]);
+				outlet(0, 'receive_translation', 'keys_'+i, 'value', Colors[part[selected.num].behavior[i]]);
 				keygui.message(i, 0, selected.behavior[i]+8);
-				outlet(0, 'c_key', i+16, selected.pattern[i] * StepColors[i]);
-				grid_out('default', 'key', i+16, selected.pattern[i] * StepColors[i]);
+				//outlet(0, 'c_key', i+16, selected.pattern[i] * StepColors[i]);
+				//grid_out('default', 'key', i+16, selected.pattern[i] * StepColors[i]);
+				outlet(0, 'receive_translation', 'keys2_'+i, 'value', selected.pattern[i] * StepColors[i]);
 			}while(i--);
 			break;
 		case 3:
 			var p = presets[selected.num]-1;
 			var i=15;do{
-				outlet(0, 'mask', 'c_key', i, -1);
-				grid_out('mask', 'key', i, -1);
+				//outlet(0, 'mask', 'c_key', i, -1);
+				//grid_out('mask', 'key', i, -1);
+				outlet(0, 'receive_translation', 'keys_'+i, 'mask', -1);
 				var v = (i==p)+3;
-				outlet(0, 'c_key', i, v);
-				grid_out('default', 'key', i, v);
+				outlet(0, 'receive_translation', 'keys_'+i, 'value', v);
+				//outlet(0, 'c_key', i, v);
+				//grid_out('default', 'key', i, v);
 				keygui.message(i, 0, v);
-				outlet(0, 'c_key', i+16, selected.pattern[i] * StepColors[i]);
-				grid_out('default', 'key', i+16, selected.pattern[i] * StepColors[i]);
+				//outlet(0, 'c_key', i+16, selected.pattern[i] * StepColors[i]);
+				//grid_out('default', 'key', i+16, selected.pattern[i] * StepColors[i]);
+				outlet(0, 'receive_translation', 'keys2_'+i, 'value', selected.pattern[i] * StepColors[i]);
 			}while(i--);
 			break;
 		case 4:
 			var p = presets[selected.num]-1;
 			var i=15;do{
-				outlet(0, 'mask', 'c_key', i, -1);
-				grid_out('mask', 'key', i, -1);
+				//outlet(0, 'mask', 'c_key', i, -1);
+				//grid_out('mask', 'key', i, -1);
+				outlet(0, 'receive_translation', 'keys_'+i, 'mask', -1);
 				var v = (i==p)+6;
-				outlet(0, 'c_key', i, v);
-				grid_out('default', 'key', i, v);
+				//outlet(0, 'c_key', i, v);
+				//grid_out('default', 'key', i, v);
+				outlet(0, 'receive_translation', 'keys_'+i, 'value', v);
 				keygui.message(i, 0, v);
-				outlet(0, 'c_key', i+16, selected.pattern[i] * StepColors[i]);
-				grid_out('default', 'key', i+16, selected.pattern[i] * StepColors[i]);
+				//outlet(0, 'c_key', i+16, selected.pattern[i] * StepColors[i]);
+				//grid_out('default', 'key', i+16, selected.pattern[i] * StepColors[i]);
+				outlet(0, 'receive_translation', 'keys2_'+i, 'value', selected.pattern[i] * StepColors[i]);
 			}while(i--);
 			break;
 		case 5:
 			var i=15;do{
-				outlet(0, 'mask', 'c_key', i, -1);
-				grid_out('mask', 'key', i, -1);
-				outlet(0, 'c_key', i, 4);
-				grid_out('default', 'key', i, 4);
+				//outlet(0, 'mask', 'c_key', i, -1);
+				//grid_out('mask', 'key', i, -1);
+				outlet(0, 'receive_translation', 'keys_'+i, 'mask', -1);
+				//outlet(0, 'c_key', i, 4);
+				//grid_out('default', 'key', i, 4);
+				outlet(0, 'receive_translation', 'keys_'+i, 'value', 4);
 				keygui.message(i, 0, 4);
-				outlet(0, 'c_key', i+16, selected.pattern[i] * StepColors[i]);
-				grid_out('default', 'key', i+16, selected.pattern[i] * StepColors[i]);
+				//outlet(0, 'c_key', i+16, selected.pattern[i] * StepColors[i]);
+				//grid_out('default', 'key', i+16, selected.pattern[i] * StepColors[i]);
+				outlet(0, 'receive_translation', 'keys2_'+i, 'value', selected.pattern[i] * StepColors[i]);
 			}while(i--);
-			outlet(0, 'mask', 'c_key', selected.note[current_step], 5);
-			grid_out('mask', 'key', selected.note[current_step], 5);
+			//outlet(0, 'mask', 'c_key', selected.note[current_step], 5);
+			//grid_out('mask', 'key', selected.note[current_step], 5);
+			outlet(0, 'receive_translation', 'keys_'+i, 'mask', selected.note[current_step], 5);
 			break;
 		case 6:
 			var i=15;do{
 				var v=(selected.triggered.indexOf(i)>-1) + 7;
-				outlet(0, 'c_key', i, v);
-				grid_out('default', 'key', i, v);
+				//outlet(0, 'c_key', i, v);
+				//grid_out('default', 'key', i, v);
+				outlet(0, 'receive_translation', 'keys_'+i, 'value', v);
 				keygui.message(i, 0, v);
-				outlet(0, 'c_key', i+16, selected.pattern[i] * StepColors[i]);
-				grid_out('default', 'key', i+16, selected.pattern[i] * StepColors[i]);
+				//outlet(0, 'c_key', i+16, selected.pattern[i] * StepColors[i]);
+				//grid_out('default', 'key', i+16, selected.pattern[i] * StepColors[i]);
+				outlet(0, 'receive_translation', 'keys2_'+i, 'value', selected.pattern[i] * StepColors[i]);
 			}while(i--);
 			break;
 		case 7:
 			var i=15;do{
 				var v = ACCENTS[Math.floor(selected.velocity[i]/8)];
-				if(DEBUG){post('velocity', v, '\n');}
-				outlet(0, 'c_key', i, v);
-				grid_out('default', 'key', i, v);
+				//if(DEBUG){post('velocity', v, '\n');}
+				//outlet(0, 'c_key', i, v);
+				//grid_out('default', 'key', i, v);
+				outlet(0, 'receive_translation', 'keys_'+i, 'value', v);
 				keygui.message(i, 0, v);
-				outlet(0, 'c_key', i+16, selected.pattern[i] * StepColors[i]);
-				grid_out('default', 'key', i+16, selected.pattern[i] * StepColors[i]);
+				//outlet(0, 'c_key', i+16, selected.pattern[i] * StepColors[i]);
+				//grid_out('default', 'key', i+16, selected.pattern[i] * StepColors[i]);
+				outlet(0, 'receive_translation', 'keys2_'+i, 'value', selected.pattern[i] * StepColors[i]);
 			}while(i--);
 			break;
 		default:
 			var i=15;do{
-				var v = part[i].active*2
-				outlet(0, 'c_key', i, v);
-				grid_out('default', 'key', i, v);
+				var v = part[i].active*2;
+				//outlet(0, 'c_key', i, v);
+				//grid_out('default', 'key', i, v);
+				outlet(0, 'receive_translation', 'keys_'+i, 'value', v);  ////b996
 				keygui.message(i, 0, v);
-				outlet(0, 'c_key', i+16, selected.pattern[i] * StepColors[i]);
-				grid_out('default', 'key', i+16, selected.pattern[i] * StepColors[i]);
+				//outlet(0, 'c_key', i+16, selected.pattern[i] * StepColors[i]);
+				outlet(0, 'receive_translation', 'keys2_'+i, 'value', selected.pattern[i] * StepColors[i]);  ////b996
+				//grid_out('default', 'key', i+16, selected.pattern[i] * StepColors[i]);
 			}while(i--);
 			break;
 	}		 
@@ -698,22 +724,25 @@ function refresh_grid()
 			//cntrlr_emu_mode
 			refresh_pads();
 			refresh_c_keys();
+			var i=7;do{
+				outlet(0, 'receive_translation', 'extras_'+i, 'value', ENC_COLORS[i]);
+			}while(i--);
 			break;
 		case 1:
 			//TR256_mode
 			var i=15;do{
-				outlet(0, 'grid', i, 0, ((preset-1)==i)*((4*rec_enabled)+1));
-				outlet(0, 'grid', i, 1, ((edit_preset-1)==i)*((4*rec_enabled)+1));
+				outlet(0, 'grid', 'value', i, 0, ((preset-1)==i)*((4*rec_enabled)+1));
+				outlet(0, 'grid', 'value', i, 1, ((edit_preset-1)==i)*((4*rec_enabled)+1));
 			}while(i--);
 			break;
 		case 2:
 			//Poly_Rec_mode
-			outlet(0, 'grid', 0, 0, selected.hold*7); 
-			outlet(0, 'grid', 0, 15, selected.hold*7); 
-			outlet(0, 'grid', 15, 0, selected.hold*7); 
-			outlet(0, 'grid', 15, 15, selected.hold*7); 
+			outlet(0, 'grid', 'value',0, 0, selected.hold*7); 
+			outlet(0, 'grid', 'value',0, 15, selected.hold*7); 
+			outlet(0, 'grid', 'value',15, 0, selected.hold*7); 
+			outlet(0, 'grid', 'value',15, 15, selected.hold*7); 
 			var i=13;do{
-				outlet(0, 'grid', i+1, 0, presets[selected.num] == i+1);
+				outlet(0, 'grid', 'value', i+1, 0, presets[selected.num] == i+1);
 			}while(i--);
 			break;
 		case 3:
@@ -731,7 +760,7 @@ function refresh_grid()
 			//Behavior_Grid_mode
 			var i=7;do{
 				var j=6;do{
-					outlet(0, 'grid', j, i, BEHAVE_COLORS[behavegraph[j][i]]);
+					outlet(0, 'grid', 'value', j, i, BEHAVE_COLORS[behavegraph[j][i]]);
 				}while(j--);
 			}while(i--);
 			break;
@@ -740,121 +769,22 @@ function refresh_grid()
 
 function refresh_keys()
 {
-	if(!alt)
+	if(!altVal)
 	{
 		var x=7;do{
-			outlet(0, 'key', x, (x==grid_mode)*8);
+			outlet(0, 'key', 'value', x, (x==grid_mode)*8);
 		}while(x--);
 	}
 	else
 	{
 		var i=3;do{
-			outlet(0, 'key', i, (i==(Tvel))*(TVEL_COLORS[i]));
+			outlet(0, 'key', 'value', i, (i==(Tvel))*(TVEL_COLORS[i]));
 		}while(i--);
 	}
 }
  
-function grid_out()
-{
-	var args = arrayfromargs(arguments);
-	//if(DEBUG){post('grid_out:', args, '\n');}
-	if(grid_mode==0)
-	{
-		switch(args[0])
-		{
-			default:
-				switch(args[1])
-				{
-					case 'key':
-						outlet(0, 'grid', args[2]%8, Math.floor(args[2]/8)+2, args[3]);
-						break;
-					case 'grid':
-						outlet(0, 'grid', args[2]+((args[3]%2)*4), Math.floor(args[3]/2), args[4]);
-						break;
-					case 'button':
-						outlet(0, 'grid', args[2]+(Math.floor(args[3])*4), 6, args[4]);
-						break;
-				}
-				break;
-			case 'mask':
-				switch(args[1])
-				{
-					case 'key':
-						outlet(0, 'mask', 'grid', args[2]%8, Math.floor(args[2]/8)+2, args[3]);
-						break;
-					case 'grid':
-						outlet(0, 'mask', 'grid', args[2]+((args[3]%2)*4), Math.floor(args[3]/2), args[4]);
-						break;
-				}
-				break;
-			case 'batch':
-				switch(args[1])
-				{
-					case 'grid':
-						var x=3;do{
-							var y=3;do{
-								outlet(0, 'grid', x, y, 0);
-							}while(y--);
-						}while(x--);
-						break;
-					case 'key':
-						break;
-				}
-				break;
-		}
-	}
-}
-
-function base_grid_out()
-{
-	var args = arrayfromargs(arguments);
-	//if(DEBUG){post('grid_out:', args, '\n');}
-	if(grid_mode==0)
-	{
-		switch(args[0])
-		{
-			default:
-				switch(args[1])
-				{
-					case 'key':
-						outlet(0, 'base_grid', args[2]%8, Math.floor(args[2]/8)+2, args[3]);
-						break;
-					case 'grid':
-						outlet(0, 'base_grid', args[2]+((args[3]%2)*4), Math.floor(args[3]/2), args[4]);
-						break;
-					/*case 'button':
-						outlet(0, 'base_grid', args[2]+(Math.floor(args[3])*4), 6, args[4]);
-						break;*/
-				}
-				break;
-			case 'mask':
-				switch(args[1])
-				{
-					case 'key':
-						outlet(0, 'mask', 'grid', args[2]%8, Math.floor(args[2]/8)+2, args[3]);
-						break;
-					case 'grid':
-						outlet(0, 'mask', 'grid', args[2]+((args[3]%2)*4), Math.floor(args[3]/2), args[4]);
-						break;
-				}
-				break;
-			case 'batch':
-				switch(args[1])
-				{
-					case 'grid':
-						var x=3;do{
-							var y=3;do{
-								outlet(0, 'grid', x, y, 0);
-							}while(y--);
-						}while(x--);
-						break;
-					case 'key':
-						break;
-				}
-				break;
-		}
-	}
-}
+function grid_out(){}
+function base_grid_out(){}
 
 /*/////////////////////////////////
 ///// api callbacks and input /////
@@ -1174,7 +1104,9 @@ function _c_key(num, val)
 			case 7:
 				if(val>0)
 				{
-					selected.velocity[num] = ACCENT_VALS[(ACCENTS[Math.floor(selected.velocity[num]/8)]+1)%4];
+					//selected.velocity[num] = ACCENT_VALS[(ACCENTS[Math.floor(selected.velocity[num]/8)]+1)%4];
+					selected.velocity[num] = ACCENT_VALS[(ACCENTS[Math.floor(selected.velocity[num]/8)])%4];
+					//post('vel:', selected.velocity[num], 'calc:', (Math.floor(selected.velocity[num]/8)), '\n');
 					selected.obj.set.velocity(selected.velocity);
 					refresh_c_keys();
 				}
@@ -1421,7 +1353,7 @@ function _grid(x, y, val)
 						}
 						Part.edit_buffer[x]=cur_step;
 						Part.edit_velocity[x]=cur_vel;
-						if(alt)
+						if(altVal)
 						{
 							var quad = (x+8)%16;
 							Part.edit_buffer[quad] = cur_step;
@@ -1449,7 +1381,7 @@ function _grid(x, y, val)
 								outlet(0, 'to_c_wheel', part[y-2].num%4, Math.floor(part[y-2].num/4)%2, 'custom', 'x'+(part[y-2].pattern.join('')));
 							}
 						}
-						outlet(0, 'grid', x, y, part[y-2].edit_buffer[x]*(ACCENTS[Math.floor(part[y-2].edit_velocity[x]/8)]));
+						outlet(0, 'grid', 'value', x, y, part[y-2].edit_buffer[x]*(ACCENTS[Math.floor(part[y-2].edit_velocity[x]/8)]));
 						//refresh_grid();
 						break;
 				}
@@ -1460,7 +1392,7 @@ function _grid(x, y, val)
 			}
 			break;
 		case 2:
-			if(alt>0)
+			if(altVal>0)
 			{
 				//Poly_Record_mode
 				if(((x==0)&&(y==0))||((x==15)&&(y==0))||((x==15)&&(y==15))||((x==0)&&(y==15)))
@@ -1528,7 +1460,7 @@ function _grid(x, y, val)
 			//Cafe_Play_mode
 			if(DEBUG){post('cafe play', presets[x]);} 
 			var Part = part[y];
-			if(((x+1)==presets[y])&&(val==0)&&(alt==0))
+			if(((x+1)==presets[y])&&(val==0)&&(altVal==0))
 			{
 				//Part.clutch = 0;
 				//Part.obj.clutch.message('int', 0);
@@ -1556,7 +1488,7 @@ function _grid(x, y, val)
 			//Boiingg_Play_mode
 			if(val>0)
 			{
-				if(alt>0)
+				if(altVal>0)
 				{
 					switch(y)
 					{
@@ -1588,7 +1520,7 @@ function _grid(x, y, val)
 					}
 					else
 					{
-						outlet(0, 'mask', 'column', x, -1);
+						outlet(0, 'grid', 'mask_column', x, -1);
 					}
 					if(part[x].active!=(y>0)){
 						part[x].obj.set.active(y>0);
@@ -1625,14 +1557,17 @@ function _base_grid(x, y, val)
 	switch(grid_mode)
 	{
 		default:
-			if(y<2)
+			if((shifted)&&(y<2))
+			{
+				_c_key(x + 8*(y), val);
+			}
+			else if (y<2)
 			{
 				_c_grid(x%4, Math.floor(x/4)+(y*2), val);
 			}
-			else if (y<6)
+			else if (y<4)
 			{
-				
-				_c_key(x + 8*(y-2), val);
+				_c_key(x + 8*(y), val);
 			}
 			else if (y==6)
 			{
@@ -1706,7 +1641,7 @@ function _base_grid(x, y, val)
 						}
 						Part.edit_buffer[x]=cur_step;
 						Part.edit_velocity[x]=cur_vel;
-						if(alt)
+						if(altVal)
 						{
 							var quad = (x+8)%16;
 							Part.edit_buffer[quad] = cur_step;
@@ -1745,7 +1680,7 @@ function _base_grid(x, y, val)
 			}
 			break;
 		case 2:
-			if(alt>0)
+			if(altVal>0)
 			{
 				//Poly_Record_mode
 				if(((x==0)&&(y==0))||((x==15)&&(y==0))||((x==15)&&(y==15))||((x==0)&&(y==15)))
@@ -1813,7 +1748,7 @@ function _base_grid(x, y, val)
 			//Cafe_Play_mode
 			if(DEBUG){post('cafe play', presets[x]);} 
 			var Part = part[y];
-			if(((x+1)==presets[y])&&(val==0)&&(alt==0))
+			if(((x+1)==presets[y])&&(val==0)&&(altVal==0))
 			{
 				//Part.clutch = 0;
 				//Part.obj.clutch.message('int', 0);
@@ -1841,7 +1776,7 @@ function _base_grid(x, y, val)
 			//Boiingg_Play_mode
 			if(val>0)
 			{
-				if(alt>0)
+				if(altVal>0)
 				{
 					switch(y)
 					{
@@ -1903,19 +1838,32 @@ function _base_grid(x, y, val)
 	}
 }
 
+function _push_grid(x, y, val)
+{
+	_grid(x, y, val)
+}
+
 function _shift(val)
 {
 	if(DEBUG){post('shift:', val, '\n');}
-	shifted = val;
-	refresh_grid();
-	refresh_keys();
+	if(val!=shifted)
+	{
+		shifted = val;
+		for(var i=0;i<16;i++)
+		{
+			outlet(0, 'enable_translation', 'keys_'+i, 'base_grid', Math.floor(shifted));
+			outlet(0, 'enable_translation', 'pads_'+i, 'base_grid', Math.floor(!shifted));
+		}
+		refresh_grid();
+		refresh_keys();
+	}
 }
 	
 //this sorts key presses
 function _key(num, val)
 {
 	if(DEBUG){post('_key', num, val, '\n');}
-	switch(alt)
+	switch(altVal)
 	{
 		default:
 			if(val>0)
@@ -1928,7 +1876,7 @@ function _key(num, val)
 			{
 				Tvel=num;
 				var i=3;do{
-					outlet(0, 'key', i, (i==(Tvel))*(TVEL_COLORS[i]));
+					outlet(0, 'key', 'value', i, (i==(Tvel))*(TVEL_COLORS[i]));
 				}while(i--);
 			}
 			break;
@@ -1966,20 +1914,26 @@ function _list()
 	}
 }
 
+function _alt(val)
+{
+	//because of changes in b996, alt now comes in as "alt" instead of "alt_in"
+	_alt_in(val);
+}
+
 function _alt_in(val)
 {
 	if(DEBUG){post('alt_in', val, '\n');}
-	alt = val;
-	switch(alt)
+	altVal = Math.floor(val>0);
+	switch(altVal)
 	{
 		default:
 			var i=7;do{
-				outlet(0, 'key', i, (i==grid_mode)*8);
+				outlet(0, 'key', 'value', i, (i==grid_mode)*8);
 			}while(i--);
 			break;
 		case 1:
 			var i=3;do{
-				outlet(0, 'key', i, (i==(Tvel))*(TVEL_COLORS[i]));
+				outlet(0, 'key', 'value', i, (i==(Tvel))*(TVEL_COLORS[i]));
 			}while(i--);
 			break;
 	}
@@ -1988,7 +1942,7 @@ function _alt_in(val)
 		default:
 			break;
 		case 2:
-			outlet(0, 'batch', 'grid', 0);
+			outlet(0, 'grid', 'batch', 0);
 			refresh_grid();
 			break;
 	}
@@ -2151,11 +2105,9 @@ function _keygui_in(val)
 //displays played notes on grid
 function _blink(val)
 {
-	if(DEBUG_BLINK){post('blink', val, '\n');}
-	outlet(0, 'mask', 'c_key', last_mask + 16, -1);
-	outlet(0, 'mask', 'c_key', val + 16, 5); 
-	grid_out('mask', 'key', last_mask + 16, -1);
-	grid_out('mask', 'key', val + 16, 5); 
+	//if(DEBUG_BLINK){post('blink', val, '\n');}
+	outlet(0, 'receive_translation', 'keys2_'+last_mask, 'mask', -1);
+	outlet(0, 'receive_translation', 'keys2_'+val, 'mask', 5);
 	last_mask = val;
 }
 
@@ -2165,11 +2117,13 @@ function _vblink(num, val)
 	if(DEBUG_BLINK){post('vblink', val, '\n');}
 	if(key_mode==0)
 	{
-		outlet(0, 'mask', 'c_key', num, val);
-		grid_out('mask', 'key', num, val);
+		//outlet(0, 'mask', 'c_key', num, val);
+		//grid_out('mask', 'key', num, val);
+		outlet(0, 'receive_translation', 'keys_'+num, val);
 	}
-	outlet(0, 'mask', 'c_grid', num%4, Math.floor(num/4), Blinks[Math.floor(val>0)]);
-	grid_out('mask', 'grid', num, val);
+	//outlet(0, 'mask', 'c_grid', num%4, Math.floor(num/4), Blinks[Math.floor(val>0)]);
+	//grid_out('mask', 'grid', num, val);
+	outlet(0, 'receive_translation', 'pads_'+num, Blinks[Math.floor(val>0)]);
 }
 
 //evaluate and distribute data recieved from the settings menu
@@ -2231,7 +2185,7 @@ function behavegraph_in(behave, bar, val)
 	behavegraph[behave][bar] = val;
 	if(grid_mode==7)
 	{
-		outlet(0, 'grid', behave, bar, BEHAVE_COLORS[val]);
+		outlet(0, 'grid', 'value', behave, bar, BEHAVE_COLORS[val]);
 	}
 }
 
@@ -2286,18 +2240,18 @@ function _grid_play(x, y, voice, val, poly)
 	{
 		case 2:
 			if(DEBUG){post('sel:', selected.num, poly, '\n');}
-			if(alt>0)
+			if(altVal>0)
 			{
 				if((voice==0)&&((poly-1)==selected.num))
 				{
-					outlet(0, 'mask', 'grid', Math.max(Math.min(x, 15), 0), Math.max(Math.min(y, 15), 0), val);
+					outlet(0, 'grid', 'mask', Math.max(Math.min(x, 15), 0), Math.max(Math.min(y, 15), 0), val);
 				}
 			}
 			else
 			{
 				if((voice>0)&&((poly-1)==selected.num))
 				{
-					outlet(0, 'mask', 'grid', Math.max(Math.min(x, 15), 0), Math.max(Math.min(y, 15), 0), val*voice);
+					outlet(0, 'grid', 'mask', Math.max(Math.min(x, 15), 0), Math.max(Math.min(y, 15), 0), val*voice);
 				}
 			}
 			break;
@@ -2639,10 +2593,10 @@ function change_grid_mode(val)
 	switch(grid_mode)
 	{
 		default:
-			outlet(0, 'batch', 'grid', 0);
+			outlet(0, 'grid', 'batch', 0);
 			break;
 		case 1:
-			outlet(0, 'batch', 'grid', 0);
+			outlet(0, 'grid', 'batch', 0);
 			edit_preset = preset;
 			var y=13;do{
 				storage.getstoredvalue('poly.'+y+'::pattern', edit_preset);
@@ -2654,7 +2608,7 @@ function change_grid_mode(val)
 	refresh_grid();
 	update_bank();
 	var i=7;do{
-		outlet(0, 'key', i, (i==grid_mode)*8);
+		outlet(0, 'key', 'value', i, (i==grid_mode)*8);
 	}while(i--);
 }
 
@@ -2772,10 +2726,12 @@ function rotate_wheel(num, pos)
 	if((key_mode==5)&&(num==selected.num+1))
 	{
 		//post('current_step', num, pos, '\n');
-		outlet(0, 'mask', 'c_key', selected.note[current_step], -1);
-		grid_out('default', 'key', selected.note[current_step], -1);
-		outlet(0, 'mask', 'c_key', selected.note[pos], 5);
-		grid_out('mask', 'key', selected.note[pos], 5);
+		//outlet(0, 'mask', 'c_key', selected.note[current_step], -1);
+		//grid_out('default', 'key', selected.note[current_step], -1);
+		outlet(0, 'receive_translation', 'keys2_'+(selected.note[current_step]), 'mask', -1);
+		//outlet(0, 'mask', 'c_key', selected.note[pos], 5);
+		//grid_out('mask', 'key', selected.note[pos], 5);
+		outlet(0, 'receive_translation', 'keys2_'+(selected.note[pos]), 'mask', 5);
 	}
 	if(pad_mode==5)
 	{
@@ -2798,8 +2754,8 @@ function rotate_wheel(num, pos)
 			var _num = num-1;
 			if((_num<14)&&(preset==edit_preset))
 			{
-				outlet(0, 'mask', 'grid', curSteps[_num], _num+2, -1);
-				outlet(0, 'mask', 'grid', pos, _num+2, 5+(_num==selected.num));
+				outlet(0, 'grid', 'mask', curSteps[_num], _num+2, -1);
+				outlet(0, 'grid', 'mask', pos, _num+2, 5+(_num==selected.num));
 			}
 			break;
 		case 3:
@@ -2810,7 +2766,7 @@ function rotate_wheel(num, pos)
 				if(Part.clutch > 0)
 				{
 					var i=15;do{
-						outlet(0, 'grid', i, _num, Part.pattern[(pos+i)%16]);
+						outlet(0, 'grid', 'value', i, _num, Part.pattern[(pos+i)%16]);
 					}while(i--);
 				}
 			}
@@ -2819,8 +2775,8 @@ function rotate_wheel(num, pos)
 			var _num=num-1;
 			if(part[_num].active>0)
 			{
-				outlet(0, 'mask', 'grid', _num, curSteps[_num], -1);
-				outlet(0, 'mask', 'grid', _num, pos, 1);
+				outlet(0, 'grid', 'mask', _num, curSteps[_num], -1);
+				outlet(0, 'grid', 'mask', _num, pos, 1);
 			}
 			break;
 	}
@@ -2894,8 +2850,9 @@ function release_held_sequences(part)
 function poly_hold_toggle()
 {
 	selected.hold = Math.abs(selected.hold-1);
-	outlet(0, 'c_button', 3, 2, selected.hold);
-	grid_out('default', 'button', 3, 2, selected.hold);
+	//outlet(0, 'c_button', 3, 2, selected.hold);
+	//grid_out('default', 'button', 3, 2, selected.hold);
+	outlet(0, 'receive_translation', 'buttons_'+6, 'value', selected.hold);
 	if(grid_mode==3)
 	{
 		refresh_grid();
@@ -2992,7 +2949,7 @@ function receive_record(note, val)
 					Part.recdirty=1;
 					if(i<14)
 					{
-						outlet(0, 'grid', cur_step, i+2, ACCENTS[Math.floor(val/8)]);
+						outlet(0, 'grid', 'value',  cur_step, i+2, ACCENTS[Math.floor(val/8)]);
 					}
 					if(i==selected.num)
 					{
@@ -3268,8 +3225,9 @@ function update_gui()
 	PolyOffset.message('set', selected.obj.polyoffset.getvalueof());
 	if((pad_mode == 6)||(key_mode == 6))
 	{
-		outlet(0, 'c_button', 3, 2, selected.hold);
-		grid_out('default', 'button', 3, 2, selected.hold);
+		//outlet(0, 'c_button', 3, 2, selected.hold);
+		//grid_out('default', 'button', 3, 2, selected.hold);
+		outlet('receive_translation', 'buttons_'+6, selected.hold);
 	}
 }
 
@@ -3280,6 +3238,8 @@ function update_bank()
 	{
 		default:
 			outlet(0, 'set_device_bank', selected.channel>0);
+			//outlet(0, 'set_device_bank', selected.channel>0);
+			outlet(0, 'set_device_bank', selected.channel>0 ? 1 : drumgroup_is_present ? 0 : 1);
 			outlet(0, 'set_c_local_ring_control', 1);
 			outlet(0, 'set_local_ring_control', 1);
 			var i=7;do{
@@ -3455,13 +3415,16 @@ function check_device_id(id)
 	{
 		if(selected.channel == 0)
 		{
+			drumgroup_is_present = false;
 			finder.id = id;
 			if(finder.get('class_name')=='DrumGroupDevice')
 			{
+                drumgroup_is_present = true;
 				found = parseInt(finder.id);
 			}
 		}
-		else
+		//else
+		if(!found)
 		{	
 			finder.goto('this_device');
 			if (parseInt(finder.id) != id)
@@ -3479,7 +3442,8 @@ function check_device_id(id)
 function _select_chain(chain_num)
 {
 	if(DEBUG){post('select_chain', chain_num, selected.channel, devices[selected.channel], '\n');}
-	if(selected.channel==0)
+	//if(selected.channel==0)
+	if((selected.channel==0)&&(drumgroup_is_present))
 	{
 		outlet(0, 'set_device_parent', devices[selected.channel]);
 		outlet(0, 'set_device_chain', Math.max(0, Math.min(chain_num + global_offset - global_chain_offset, 112)));

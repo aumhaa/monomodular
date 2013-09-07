@@ -26,6 +26,17 @@ def unpack_values(values):
 	return [int(i) for i in str(values).split('^')]
 
 
+def unpack_items(values):
+	to_convert = str(values).split('^')
+	converted = []
+	for i in to_convert:
+		try:
+			converted.append(int(i))
+		except:
+			converted.append(str(i))
+	return converted
+
+
 class SpecialInputSignal(Signal):
 
 
@@ -56,6 +67,55 @@ class SpecialInputSignal(Signal):
 	def disconnect_all(self, *a, **k):
 		with self._listeners_update():
 			super(SpecialInputSignal, self).disconnect_all(*a, **k)
+	
+
+
+class ElementTranslation(object):
+
+
+	def __init__(self, name, script):
+		self._script = script
+		self._name = name
+		self._targets = {}
+	
+
+	def set_enabled(self, name, enabled):
+		try:
+			self._targets[name]['Enabled'] = enabled > 0
+		except:
+			pass
+	
+
+	def is_enabled(self, name):
+		try:
+			return self._targets[name]['Enabled']
+		except:
+			return False
+	
+
+	def target(self, name):
+		try:
+			return self._targets[name]['Target']
+		except:
+			return None
+	
+
+	def add_target(self, name, target, *args, **k):
+		self._targets[name] = {'Target':target, 'Arguments':args, 'Enabled':True}
+	
+
+	def receive(self, method, value):
+		self._script.log_message(str(self._name) + ' receive: ' + str(method) + ' ' + str(value))
+		for entry in self._targets.keys():
+			target = self._targets[entry]
+			if target['Enabled'] == True:
+				value_list = [i for i in target['Arguments']]
+				#append(value)
+				value_list.append(value)
+				try:
+					getattr(target['Target'], method)(*value_list)
+				except:
+					pass
 	
 
 
@@ -121,33 +181,33 @@ class Grid(object):
 	
 
 	def all(self, value):
-		for column in range(len(self.cell)):
-			for row in range(len(self.cell[column])):
+		for column in range(len(self._cell)):
+			for row in range(len(self._cell[column])):
 				self.value(column, row, value)
 	
 
 	def mask(self, x, y, value):
-		element = self.cell[x][y]
-		if value > 0:
+		element = self._cell[x][y]
+		if value > -1:
 			for handler in self._active_handlers():
-				handler.receive_address(self.name, element._x, element._y, value)
+				handler.receive_address(self._name, element._x, element._y, value)
 		else:
 			self.update_element(element)
 	
 
 	def mask_row(self, row, value):
-		for column in range(len(self.cell[row])):
+		for column in range(len(self._cell[row])):
 			self.mask(column, row, value)
 	
 
 	def mask_column(self, column, value):
-		for row in range(len(self.cell)):
+		for row in range(len(self._cell)):
 			self.mask(column, row, value)
 	
 
 	def mask_all(self, value):
-		for column in range(len(self.cell)):
-			for row in range(len(self.cell[column])):
+		for column in range(len(self._cell)):
+			for row in range(len(self._cell[column])):
 				self.mask(column, row, value)
 	
 
@@ -267,13 +327,18 @@ class ModClient(NotifyingControlElement):
 		self.log_message = parent.log_message
 		self._active_handlers = []
 		self._addresses = {}
-		self.log_message('making modclient')
+		self._translations = {}
+		#self.log_message('making modclient')
 		for handler in self._parent._handlers:
 			handler._register_addresses(self)
 	
 
 	def addresses(self):
 		return self._addresses
+	
+
+	def translations(self):
+		return self._translations
 	
 
 	def active_handlers(self):
@@ -283,12 +348,28 @@ class ModClient(NotifyingControlElement):
 	def receive(self, address_name, method = 'value', values = 0, *a, **k):
 		if address_name in self._addresses.keys():
 			address = self._addresses[address_name]
-			value_list = unpack_values(values)
+			value_list = unpack_items(values)
 			#self.log_message('address: ' + str(address) + ' value_list: ' + str(value_list))
 			try:
 				getattr(address, method)(*value_list)
 			except:
 				self.log_message('receive method exception')
+	
+
+	def distribute(self, function_name, values = 0, *a, **k):
+		if hasattr(self, function_name):
+			value_list = unpack_items(values)
+			try:
+				getattr(self, function_name)(*value_list)
+			except:
+				self.log_message('distribute method exception')
+	
+
+	def receive_translation(self, translation_name, method = 'value', value = 0, *a, **k):
+		try:
+			self._translations[translation_name].receive(method, value)
+		except:
+			self.log_message('receive_translation method exception')
 	
 
 	def send(self, control_name, *a):
@@ -360,6 +441,21 @@ class ModClient(NotifyingControlElement):
 	def script_wants_forwarding(self):
 		return True
 	
+
+	def add_translation(self, name, target, *args, **k):
+		#self.log_message('name: ' + str(name) + ' target: ' + str(target) + ' args: ' + str(args))
+		if target in self._addresses.keys():
+			if not name in self._translations.keys():
+				self._translations[name] = ElementTranslation(name, self)
+			self.log_message('adding new target')
+			self._translations[name].add_target(target, self._addresses[target], *args)
+	
+
+	def enable_translation(self, name, target, enabled):
+		if name in self._translations.keys():
+			self._translations[name].set_enabled(target, enabled)
+	
+
 
 
 class ModRouter(CompoundComponent):
