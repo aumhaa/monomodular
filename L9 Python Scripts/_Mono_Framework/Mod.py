@@ -17,6 +17,8 @@ from _Framework.Debug import debug_print
 from _Framework.Disconnectable import Disconnectable
 from _Framework.InputControlElement import InputSignal
 
+from _Mono_Framework.MonoParamComponent import MonoParamComponent
+from _Mono_Framework.ModDevices import *
 
 def hascontrol(handler, control):
 	return control in handler._controls.keys()
@@ -331,6 +333,9 @@ class ModClient(NotifyingControlElement):
 		#self.log_message('making modclient')
 		for handler in self._parent._handlers:
 			handler._register_addresses(self)
+		self.log_message('here1')
+		self._param_component = MonoParamComponent(self, MOD_BANK_DICT, MOD_TYPES)
+		self.log_message('here2')
 	
 
 	def addresses(self):
@@ -454,6 +459,14 @@ class ModClient(NotifyingControlElement):
 	def enable_translation(self, name, target, enabled):
 		if name in self._translations.keys():
 			self._translations[name].set_enabled(target, enabled)
+	
+
+	def receive_device(self, command, args0 = None, args1 = None, args2 = None):
+		self.log_message('receive_device ' + str(command))
+		if command in dir(self._param_component):
+			self.log_message('distributing....')
+			getattr(self._param_component, command)(args0, args1, args2)
+			self.log_message('distributed.')
 	
 
 

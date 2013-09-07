@@ -308,7 +308,7 @@ function init(val)
 		outlet(0, 'set_mod_color', modColor);
 		outlet(0, 'set_color_map', 'Monochrome', 127, 127, 127, 15, 22, 29, 36, 43);
 		outlet(0, 'set_report_offset', 1);
-		outlet(0, 'set_number_params', 12);
+		outlet(0, 'receive_device', 'set_number_params', 12);
 		var i=7;do{
 			outlet(0, 'key', 'value', i, (i==grid_mode)*8);
 			outlet(0, 'receive_translation', 'buttons_'+i, 'value', ENC_COLORS[i]);
@@ -3237,9 +3237,9 @@ function update_bank()
 	switch(pad_mode)
 	{
 		default:
-			outlet(0, 'set_device_bank', selected.channel>0);
+			outlet(0, 'receive_device', 'set_device_bank', selected.channel>0);
 			//outlet(0, 'set_device_bank', selected.channel>0);
-			outlet(0, 'set_device_bank', selected.channel>0 ? 1 : drumgroup_is_present ? 0 : 1);
+			outlet(0, 'receive_device', 'set_device_bank', selected.channel>0 ? 1 : drumgroup_is_present ? 0 : 1);
 			outlet(0, 'set_c_local_ring_control', 1);
 			outlet(0, 'set_local_ring_control', 1);
 			var i=7;do{
@@ -3249,7 +3249,7 @@ function update_bank()
 			}while(i--);
 			break;
 		case 5:
-			outlet(0, 'set_device_bank', 2+(selected.num>7));
+			outlet(0, 'receive_device', 'set_device_bank', 2+(selected.num>7));
 			outlet(0, 'set_c_local_ring_control', 0);
 			outlet(0, 'set_local_ring_control', 0);
 			var r = (selected.num>7)*8;
@@ -3445,12 +3445,12 @@ function _select_chain(chain_num)
 	//if(selected.channel==0)
 	if((selected.channel==0)&&(drumgroup_is_present))
 	{
-		outlet(0, 'set_device_parent', devices[selected.channel]);
-		outlet(0, 'set_device_chain', Math.max(0, Math.min(chain_num + global_offset - global_chain_offset, 112)));
+		outlet(0, 'receive_device', 'set_device_parent', devices[selected.channel]);
+		outlet(0, 'receive_device', 'set_device_chain', Math.max(0, Math.min(chain_num + global_offset - global_chain_offset, 112)));
 	}
 	else
 	{
-		outlet(0, 'set_device_single', devices[selected.channel]);
+		outlet(0, 'receive_device', 'set_device_single', devices[selected.channel]);
 	}
 	if(devices[selected.channel]==0)
 	{
@@ -3489,7 +3489,7 @@ function _encoder(num, val)
 	{				
 		if(pad_mode!=5)
 		{
-			outlet(0, 'set_parameter_value', num, val);
+			outlet(0, 'receive_device', 'set_parameter_value', num, val);
 		}
 		else
 		{
