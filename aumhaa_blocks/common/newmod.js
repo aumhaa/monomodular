@@ -6,6 +6,7 @@ var finder;
 
 var script = this;
 var DEBUG = false;
+var DEBUG_CB = false;
 var MONOMODULAR=new RegExp(/(monomodular)/);
 var FUNCTION = new RegExp(/(function)/);
 var PROPERTY = new RegExp(/(property)/);
@@ -144,6 +145,7 @@ function callback(args)
 {
 	if((args[0]=='value')&&(args[1]!='bang'))
 	{
+		if(DEBUG_CB){post('from client:', args, '\n');}
 		outlet(0, args.slice(1));
 	}
 }
@@ -162,3 +164,10 @@ function send_stored_messages()
 	}
 }
 
+function send_explicit()
+{
+	var args = arrayfromargs(arguments);
+	post('finder.call('+args[0], args[1], args[2], args[3], args[4], args[5]+');');
+	finder.call(args[0], args[1], args[2], args[3], args[4], args[5]);
+}
+	

@@ -1396,11 +1396,31 @@ class Base(ControlSurface):
 		self._device = BaseDeviceComponent(self)  #, MOD_BANK_DICT, MOD_TYPES)
 		self._device.name = 'Device_Component'
 		self._device.update = self._device_update(self._device)
+		self._device._current_bank_details = self._make_current_bank_details(self._device)
+
 		self.set_device_component(self._device)
 		self._device_navigator = DeviceNavigator(self._device, self._mixer, self)
 		self._device_navigator.name = 'Device_Navigator'
 		self._device_selection_follows_track_selection = FOLLOW 
 		self._device.device_name_data_source().set_update_callback(self._on_device_name_changed)
+	
+
+	def _make_current_bank_details(self, device_component):
+		def _current_bank_details():
+			if not self._is_mod(device_component.device()) is None:
+				if self.modhandler.active_mod() and self.modhandler.active_mod()._param_component._device_parent != None:
+					bank_name = self.modhandler.active_mod()._param_component._bank_name
+					bank = [param._parameter for param in self.modhandler.active_mod()._param_component._params]
+					if self.modhandler._shift_value.subject and self.modhandler._shift_value.subject.is_pressed():
+						bank = bank[8:]
+					#self.log_message('current mod bank details: ' + str(bank_name) + ' ' + str(bank))
+					return (bank_name, bank)
+				else:
+					return DeviceComponent._current_bank_details(device_component)
+			else:
+				return DeviceComponent._current_bank_details(device_component)
+		return _current_bank_details
+		
 	
 
 	def _setup_mode_select(self):
@@ -1739,6 +1759,7 @@ class Base(ControlSurface):
 			self.modhandler._assign_base_grid(None)
 			self.modhandler._assign_base_grid_CC(None)
 			self.modhandler.set_shift_button(None)
+			self.modhandler.set_device_component(None)
 			self._transport.set_overdub_button(None)
 			self._recorder.set_new_button(None)
 			self._recorder.set_record_button(None)
@@ -2253,6 +2274,7 @@ class Base(ControlSurface):
 			self.modhandler._assign_base_grid(self._base_grid)
 			self.modhandler._assign_base_grid_CC(self._base_grid_CC)
 			self.modhandler.set_shift_button(self._button[self._layer])
+			self.modhandler.set_device_component(self._device)
 			if self.shift_pressed():
 				self.modhandler._assign_keys(self._keys)
 			else:

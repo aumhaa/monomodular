@@ -268,6 +268,7 @@ class ModHandler(CompoundComponent):
 		self.log_message = script.log_message
 		self.modrouter = script.monomodular
 		self._active_mod = None
+		self._device_component = None
 		self._color_maps = [range(128) for index in range(17)]
 		self._colors = self._color_maps[0]
 		self._is_enabled = False
@@ -284,6 +285,7 @@ class ModHandler(CompoundComponent):
 	def update(self, *a, **k):
 		if self._active_mod:
 			self._active_mod.restore()
+			#self.update_device()
 	
 
 	def select_mod(self, mod):
@@ -312,6 +314,22 @@ class ModHandler(CompoundComponent):
 		pass
 	
 
+	def set_device_component(self, device_component):
+		self._device_component = device_component
+	
+
+	def update_device(self):
+		self.log_message('update device')
+	 	if not self._device_component is None:
+			try:
+				self._device_component.update()
+			except:
+				pass
+	
+
+	def active_mod(self, *a, **k):
+		return self._active_mod
+	
 
 
 class ModClient(NotifyingControlElement):
@@ -461,14 +479,18 @@ class ModClient(NotifyingControlElement):
 			self._translations[name].set_enabled(target, enabled)
 	
 
-	def receive_device(self, command, args0 = None, args1 = None, args2 = None):
+	def receive_device(self, command, *args):
 		self.log_message('receive_device ' + str(command))
 		if command in dir(self._param_component):
 			self.log_message('distributing....')
-			getattr(self._param_component, command)(args0, args1, args2)
+			getattr(self._param_component, command)(*args)
 			self.log_message('distributed.')
 	
 
+	def update_device(self):
+		for handler in self.active_handlers():
+			handler.update_device()
+	
 
 
 class ModRouter(CompoundComponent):

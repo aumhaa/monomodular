@@ -316,7 +316,7 @@ class AumPush(Push):
 		self.monomodular.name = 'monomodular_switcher'
 		self.modhandler = PushModHandler(self)
 		self.modhandler.name = 'ModHandler'
-		self.modhandler.layer = Layer( lock_button = self._note_mode_button, push_grid = self._matrix, shift_button = self._shift_button, alt_button = self._select_button, key_buttons = self._track_state_buttons )
+		self.modhandler.layer = Layer( lock_button = self._note_mode_button, push_grid = self._matrix, shift_button = self._shift_button, alt_button = self._select_button, key_buttons = self._track_state_buttons)
 		# self.log_message('mod is: ' + str(self.monomodular) + ' ' + str(__builtins__['monomodular']))
 	
 
@@ -334,6 +334,8 @@ class AumPush(Push):
 	def _init_device(self, *a, **k):
 		super(AumPush, self)._init_device(*a, **k)
 		self._device._current_bank_details = self._make_current_bank_details(self._device)
+		self.modhandler._device_component = self._device
+		#self.modhandler.layer = Layer( lock_button = self._note_mode_button, push_grid = self._matrix, shift_button = self._shift_button, alt_button = self._select_button, key_buttons = self._track_state_buttons, device_component = self._device )
 	#	self._device_navigation._on_selected_device_changed = self._make_on_selected_device_changed(self._device_navigation)
 	
 
@@ -437,6 +439,15 @@ class AumPush(Push):
 					return (bank_name, bank)
 				else:
 					return DisplayingDeviceComponent._current_bank_details(device_component)
+			elif not self._is_newmod(device_component.device()) is None:
+				if self.modhandler.active_mod() and self.modhandler.active_mod()._param_component._device_parent != None:
+					bank_name = self.modhandler.active_mod()._param_component._bank_name
+					bank = [param._parameter for param in self.modhandler.active_mod()._param_component._params]
+					if self.modhandler._alt_value.subject:
+						if self.modhandler._alt_value.subject.is_pressed():
+							bank = bank[8:]
+					#self.log_message('current mod bank details: ' + str(bank_name) + ' ' + str(bank))
+					return (bank_name, bank)
 			else:
 				return DisplayingDeviceComponent._current_bank_details(device_component)
 		return _current_bank_details
@@ -871,8 +882,12 @@ class PushModHandler(ModHandler):
 	
 
 	def _register_addresses(self, client):
+		#if not 'grid' in client._addresses:
+		#	client._addresses['grid'] = PushGrid(client.active_handlers, 'grid', 16, 16)
 		if not 'push_grid' in client._addresses:
 			client._addresses['push_grid'] = PushGrid(client.active_handlers, 'push_grid', 8, 8)
+		if not 'grid' in client._addresses:
+			client._addresses['grid'] = client._addresses['push_grid']
 		if not 'key' in client._addresses:
 			client._addresses['key'] = Array(client.active_handlers, 'key', 8)
 		if not 'shift' in client._addresses:
@@ -952,6 +967,12 @@ class PushModHandler(ModHandler):
 		self._alt_value.subject = self._alt
 	
 
+	def update_device(self):
+		if self._push_grid_value.subject:
+			self._device_component.update()
+		#pass
+	
+
 	@subject_slot('value')
 	def _keys_value(self, value, x, y, *a, **k):
 		if self._active_mod:
@@ -982,6 +1003,7 @@ class PushModHandler(ModHandler):
 	def _alt_value(self, value, *a, **k):
 		if self._active_mod:
 			self._active_mod.send('alt', value)
+			self.update_device()
 	
 
 		
