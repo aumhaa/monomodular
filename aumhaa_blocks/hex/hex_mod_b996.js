@@ -27,7 +27,7 @@ DEBUG_REC = 0;
 DEBUG_LOCK = 0;
 SHOW_POLYSELECTOR = 1;
 SHOW_STORAGE = 0;
-FORCELOAD = 0; //this doesn't work anymore, don't waste your time. -a
+FORCELOAD = 1; //this doesn't work anymore, don't waste your time. -a
 
 outlets = 4;
 inlets = 5;
@@ -207,26 +207,44 @@ names will not be routed to anything().*/
 
 function setup_translations()
 {
+	/*Here we set up some translation assignments and send them to the Python ModClient.
+	Each translation add_translation assignment has a name, a target, a group, and possibly some arguments.
+	Translations can be enabled individually using their name/target combinations, or an entire group can be enabled en masse.
+	There are not currently provisions to dynamically change translations or group assignments once they are made.*/
+
+	//Base stuff:
 	for(var i = 0;i < 16;i++)
 	{
-		outlet(0, 'add_translation', 'pads_'+i, 'base_grid', i%8, Math.floor(i/8));
-		outlet(0, 'add_translation', 'keys_'+i, 'base_grid', i%8, Math.floor(i/8));
-		outlet(0, 'add_translation', 'keys2_'+i, 'base_grid', i%8, Math.floor(i/8)+2);
-		outlet(0, 'enable_translation', 'keys_'+i, 'base_grid', 0);
+		outlet(0, 'add_translation', 'pads_'+i, 'base_grid', 'base_pads', i%8, Math.floor(i/8));
+		outlet(0, 'add_translation', 'keys_'+i, 'base_grid', 'base_keys', i%8, Math.floor(i/8));
+		outlet(0, 'add_translation', 'keys2_'+i, 'base_grid', 'base_keys2', i%8, Math.floor(i/8)+2);
+	}
+	outlet(0, 'add_translation', 'pads_batch', 'base_grid', 'base_pads', 0);
+	outlet(0, 'add_translation', 'keys_batch', 'base_grid', 'base_keys', 0);
+	outlet(0, 'add_translation', 'keys2_batch', 'base_grid', 'base_keys2', 2); 
+	outlet(0, 'enable_translation_group', 'base_keys', 0);
 
-		outlet(0, 'add_translation', 'pads_'+i, 'push_grid', i%8, Math.floor(i/8));
-		outlet(0, 'add_translation', 'keys_'+i, 'push_grid', i%8, Math.floor(i/8)+2);
-		outlet(0, 'add_translation', 'keys2_'+i, 'push_grid', i%8, Math.floor(i/8)+4);
+	for(var i=0;i<8;i++)
+	{
+		outlet(0, 'add_translation', 'buttons_'+i, 'base_grid', 'base_buttons', i, 2);
+		outlet(0, 'add_translation', 'extras_'+i, 'base_grid', 'base_extras', i, 3);
+	}
+	outlet(0, 'add_translation', 'buttons_batch', 'base_grid', 'base_buttons', 2);
+	outlet(0, 'add_translation', 'extras_batch', 'base_grid', 'base_extras', 3);
+	outlet(0, 'enable_translation_group', 'base_buttons', 0);
+	outlet(0, 'enable_translation_group', 'base_extras',  0);
+
+	//Push stuff:
+	for(var i = 0;i < 16;i++)
+	{
+		outlet(0, 'add_translation', 'pads_'+i, 'push_grid', 'push_pads', i%8, Math.floor(i/8));
+		outlet(0, 'add_translation', 'keys_'+i, 'push_grid', 'push_keys', i%8, Math.floor(i/8)+2);
+		outlet(0, 'add_translation', 'keys2_'+i, 'push_grid', 'push_keys2', i%8, Math.floor(i/8)+4);
 	}
 	for(var i=0;i<8;i++)
 	{
-		outlet(0, 'add_translation', 'buttons_'+i, 'base_grid', i, 2);
-		outlet(0, 'add_translation', 'extras_'+i, 'base_grid', i, 3);
-		outlet(0, 'enable_translation', 'buttons_'+i, 'base_grid', 0);
-		outlet(0, 'enable_translation', 'extras_'+i, 'base_grid', 0);
-		
-		outlet(0, 'add_translation', 'buttons_'+i, 'push_grid', i, 6);
-		outlet(0, 'add_translation', 'extras_'+i, 'push_grid', i, 7);
+		outlet(0, 'add_translation', 'buttons_'+i, 'push_grid', 'push_buttons', i, 6);
+		outlet(0, 'add_translation', 'extras_'+i, 'push_grid', 'push_extras', i, 7);
 	}
 }
  
@@ -599,130 +617,84 @@ function refresh_pads()
 //update the display on the CNTRLR/keygui to reflect current data
 function refresh_c_keys()
 { 
+	var pattern = [];
+	var i = 15;do{
+		pattern.unshift(selected.pattern[i] * StepColors[i]);
+	}while(i--);
+	outlet(0, 'receive_translation', 'keys2_batch', 'batch_row', pattern);
+	var batch = [];
 	switch(key_mode)
 	{
-		/*case 0:
-			var i=15;do{
-				var v = part[i].active*2
-				outlet(0, 'key', i, v);
-				keygui.message(i, 0, v);
-				outlet(0, 'key', i+16, selected.pattern[i] * StepColors[i]);
-			}while(i--);
-			break;*/
 		case 1:
 			var i=15;do{
-				//outlet(0, 'mask', 'c_key', i, -1);
-				//grid_out('mask', 'key', i, -1);
-				outlet(0, 'receive_translation', 'keys_'+i, 'mask', -1);
 				var v = (i>=part[selected.num].nudge&&i<=(part[selected.num].nudge+part[selected.num].steps))*5;
-				//outlet(0, 'c_key', i, v);
-				//grid_out('default', 'key', i, v);
 				keygui.message(i, 0, v);
-				outlet(0, 'receive_translation', 'keys_'+i, 'value', v);
-				//outlet(0, 'c_key', i+16, selected.pattern[i] * StepColors[i]);
-				//grid_out('default', 'key', i+16, selected.pattern[i] * StepColors[i]);
-				outlet(0, 'receive_translation', 'keys2_'+i, 'value', selected.pattern[i] * StepColors[i]);
+				batch.unshift(v);
 			}while(i--);
+			outlet(0, 'receive_translation', 'keys_batch', 'batch_mask_row', -1);
+			outlet(0, 'receive_translation', 'keys_batch', 'batch_row', batch);	
 			break;
 		case 2:
 			var i=15;do{
-				//outlet(0, 'mask', 'c_key', i, -1);
-				//grid_out('default', 'key', i, -1);
-				outlet(0, 'receive_translation', 'keys_'+i, 'mask', -1);
-				//outlet(0, 'c_key', i, Colors[part[selected.num].behavior[i]]);
-				//grid_out('default', 'key', Colors[part[selected.num].behavior[i]]);
-				outlet(0, 'receive_translation', 'keys_'+i, 'value', Colors[part[selected.num].behavior[i]]);
+				batch.unshift(Colors[part[selected.num].behavior[i]]);
 				keygui.message(i, 0, selected.behavior[i]+8);
-				//outlet(0, 'c_key', i+16, selected.pattern[i] * StepColors[i]);
-				//grid_out('default', 'key', i+16, selected.pattern[i] * StepColors[i]);
-				outlet(0, 'receive_translation', 'keys2_'+i, 'value', selected.pattern[i] * StepColors[i]);
 			}while(i--);
+			outlet(0, 'receive_translation', 'keys_batch', 'batch_mask_row', -1);
+			outlet(0, 'receive_translation', 'keys_batch', 'batch_row', batch);			
 			break;
 		case 3:
 			var p = presets[selected.num]-1;
 			var i=15;do{
-				//outlet(0, 'mask', 'c_key', i, -1);
-				//grid_out('mask', 'key', i, -1);
-				outlet(0, 'receive_translation', 'keys_'+i, 'mask', -1);
 				var v = (i==p)+3;
-				outlet(0, 'receive_translation', 'keys_'+i, 'value', v);
-				//outlet(0, 'c_key', i, v);
-				//grid_out('default', 'key', i, v);
+				batch.unshift(v);
 				keygui.message(i, 0, v);
-				//outlet(0, 'c_key', i+16, selected.pattern[i] * StepColors[i]);
-				//grid_out('default', 'key', i+16, selected.pattern[i] * StepColors[i]);
-				outlet(0, 'receive_translation', 'keys2_'+i, 'value', selected.pattern[i] * StepColors[i]);
 			}while(i--);
+			outlet(0, 'receive_translation', 'keys_batch', 'batch_mask_row', -1);
+			outlet(0, 'receive_translation', 'keys_batch', 'batch_row', batch);	
 			break;
 		case 4:
 			var p = presets[selected.num]-1;
 			var i=15;do{
-				//outlet(0, 'mask', 'c_key', i, -1);
-				//grid_out('mask', 'key', i, -1);
-				outlet(0, 'receive_translation', 'keys_'+i, 'mask', -1);
 				var v = (i==p)+6;
-				//outlet(0, 'c_key', i, v);
-				//grid_out('default', 'key', i, v);
-				outlet(0, 'receive_translation', 'keys_'+i, 'value', v);
+				batch.unshift(v);
 				keygui.message(i, 0, v);
-				//outlet(0, 'c_key', i+16, selected.pattern[i] * StepColors[i]);
-				//grid_out('default', 'key', i+16, selected.pattern[i] * StepColors[i]);
-				outlet(0, 'receive_translation', 'keys2_'+i, 'value', selected.pattern[i] * StepColors[i]);
 			}while(i--);
+			outlet(0, 'receive_translation', 'keys_batch', 'batch_mask_row', -1);
+			outlet(0, 'receive_translation', 'keys_batch', 'batch_row', batch);	
 			break;
 		case 5:
 			var i=15;do{
-				//outlet(0, 'mask', 'c_key', i, -1);
-				//grid_out('mask', 'key', i, -1);
-				outlet(0, 'receive_translation', 'keys_'+i, 'mask', -1);
-				//outlet(0, 'c_key', i, 4);
-				//grid_out('default', 'key', i, 4);
-				outlet(0, 'receive_translation', 'keys_'+i, 'value', 4);
+				batch.unshift(4);
 				keygui.message(i, 0, 4);
-				//outlet(0, 'c_key', i+16, selected.pattern[i] * StepColors[i]);
-				//grid_out('default', 'key', i+16, selected.pattern[i] * StepColors[i]);
-				outlet(0, 'receive_translation', 'keys2_'+i, 'value', selected.pattern[i] * StepColors[i]);
 			}while(i--);
-			//outlet(0, 'mask', 'c_key', selected.note[current_step], 5);
-			//grid_out('mask', 'key', selected.note[current_step], 5);
+			outlet(0, 'receive_translation', 'keys_batch', 'batch_mask_row', -1);
+			outlet(0, 'receive_translation', 'keys_batch', 'batch_row', batch);	
 			outlet(0, 'receive_translation', 'keys_'+i, 'mask', selected.note[current_step], 5);
 			break;
 		case 6:
 			var i=15;do{
 				var v=(selected.triggered.indexOf(i)>-1) + 7;
-				//outlet(0, 'c_key', i, v);
-				//grid_out('default', 'key', i, v);
-				outlet(0, 'receive_translation', 'keys_'+i, 'value', v);
+				batch.unshift(v);
 				keygui.message(i, 0, v);
-				//outlet(0, 'c_key', i+16, selected.pattern[i] * StepColors[i]);
-				//grid_out('default', 'key', i+16, selected.pattern[i] * StepColors[i]);
-				outlet(0, 'receive_translation', 'keys2_'+i, 'value', selected.pattern[i] * StepColors[i]);
 			}while(i--);
+			outlet(0, 'receive_translation', 'keys_batch', 'batch_row', batch);	
 			break;
 		case 7:
 			var i=15;do{
 				var v = ACCENTS[Math.floor(selected.velocity[i]/8)];
-				//if(DEBUG){post('velocity', v, '\n');}
-				//outlet(0, 'c_key', i, v);
-				//grid_out('default', 'key', i, v);
-				outlet(0, 'receive_translation', 'keys_'+i, 'value', v);
+				batch.unshift(v);
 				keygui.message(i, 0, v);
-				//outlet(0, 'c_key', i+16, selected.pattern[i] * StepColors[i]);
-				//grid_out('default', 'key', i+16, selected.pattern[i] * StepColors[i]);
-				outlet(0, 'receive_translation', 'keys2_'+i, 'value', selected.pattern[i] * StepColors[i]);
 			}while(i--);
+			outlet(0, 'receive_translation', 'keys_batch', 'batch_row', batch);	
 			break;
 		default:
 			var i=15;do{
 				var v = part[i].active*2;
-				//outlet(0, 'c_key', i, v);
-				//grid_out('default', 'key', i, v);
-				outlet(0, 'receive_translation', 'keys_'+i, 'value', v);  ////b996
+				batch.unshift(v);
 				keygui.message(i, 0, v);
-				//outlet(0, 'c_key', i+16, selected.pattern[i] * StepColors[i]);
-				outlet(0, 'receive_translation', 'keys2_'+i, 'value', selected.pattern[i] * StepColors[i]);  ////b996
-				//grid_out('default', 'key', i+16, selected.pattern[i] * StepColors[i]);
+				pattern.push(selected.pattern[i] * StepColors[i]);
 			}while(i--);
+			outlet(0, 'receive_translation', 'keys_batch', 'batch_row', batch);	
 			break;
 	}		 
 }
@@ -1615,17 +1587,17 @@ function _shift(val)
 	if(val!=shifted)
 	{
 		shifted = val;
-		for(var i=0;i<16;i++)
-		{
-			outlet(0, 'enable_translation', 'keys_'+i, 'base_grid', Math.floor(shifted));
-			outlet(0, 'enable_translation', 'pads_'+i, 'base_grid', Math.floor(!shifted));
-			outlet(0, 'enable_translation', 'keys2_'+i, 'base_grid', Math.floor(!shifted));
-		}
-		for(var i=0;i<8;i++)
-		{
-			outlet(0, 'enable_translation', 'buttons_'+i, 'base_grid', Math.floor(shifted));
-			outlet(0, 'enable_translation', 'extras_'+i, 'base_grid', Math.floor(shifted));
-		}
+		//for(var i=0;i<16;i++)
+		//{
+			outlet(0, 'enable_translation_group', 'base_keys', Math.floor(shifted));
+			outlet(0, 'enable_translation_group', 'base_pads_', Math.floor(!shifted));
+			outlet(0, 'enable_translation_group', 'base_keys2', Math.floor(!shifted));
+		//}/
+		//for(var i=0;i<8;i++)
+		//{
+			outlet(0, 'enable_translation_group', 'base_buttons',  Math.floor(shifted));
+			outlet(0, 'enable_translation_group', 'base_extras',  Math.floor(shifted));
+		//}
 		refresh_grid();
 		refresh_keys();
 	}

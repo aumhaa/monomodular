@@ -5,7 +5,7 @@ outlets = 2;
 var finder;
 
 var script = this;
-var DEBUG = false;
+var DEBUG = true;
 var DEBUG_CB = false;
 var MONOMODULAR=new RegExp(/(monomodular)/);
 var FUNCTION = new RegExp(/(function)/);
@@ -107,8 +107,8 @@ function make_func(address)
 {
 	var func = function()
 	{
-		if(DEBUG){post('accessing func', address, '\n');}
 		var args = arrayfromargs(arguments);
+		if(DEBUG){post('accessing func', address, args.join('^'), '\n');}
 		//finder.apply(address, args);
 		finder.call('distribute', address, args.join('^'))
 	}

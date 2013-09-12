@@ -25,7 +25,12 @@ def hascontrol(handler, control):
 
 
 def unpack_values(values):
-	return [int(i) for i in str(values).split('^')]
+	values = [int(i) for i in str(values).split('^')]
+	if len(values)<2:
+		return values[0]
+	else:
+		return values
+	
 
 
 def unpack_items(values):
@@ -36,7 +41,10 @@ def unpack_items(values):
 			converted.append(int(i))
 		except:
 			converted.append(str(i))
-	return converted
+	if len(converted)<2:
+		return converted[0]
+	else:
+		return converted
 
 
 class SpecialInputSignal(Signal):
@@ -106,14 +114,12 @@ class ElementTranslation(object):
 		self._targets[name] = {'Target':target, 'Arguments':args, 'Enabled':True}
 	
 
-	def receive(self, method, value):
-		self._script.log_message(str(self._name) + ' receive: ' + str(method) + ' ' + str(value))
+	def receive(self, method, *values):
+		#self._script.log_message(str(self._name) + ' receive: ' + str(method) + ' ' + str(value))
 		for entry in self._targets.keys():
 			target = self._targets[entry]
 			if target['Enabled'] == True:
-				value_list = [i for i in target['Arguments']]
-				#append(value)
-				value_list.append(value)
+				value_list = [i for i in target['Arguments']] + [j for j in values]
 				try:
 					getattr(target['Target'], method)(*value_list)
 				except:
@@ -152,6 +158,8 @@ class Grid(object):
 	def __init__(self, active_handlers, name, width, height):
 		self._active_handlers = active_handlers
 		self._name = name
+		self._width = width
+		self._height = height
 		self._cell = [[StoredElement(active_handlers, _name = self._name + '_' + str(x) + '_' + str(y), _x = x, _y = y ) for y in range(height)] for x in range(width)]
 	
 
@@ -166,29 +174,48 @@ class Grid(object):
 			handler.receive_address(self._name, element._x, element._y, element._value)
 	
 
-	def value(self, x, y, value):
+	def value(self, x, y, value, *a):
 		element = self._cell[x][y]
 		element._value = value
 		self.update_element(element)
 	
 
-	def row(self, row, value):
+	def row(self, row, value, *a):
 		for column in range(len(self._cell)):
 			self.value(column, row, value)
 	
 
-	def column(self, column, value):
+	def column(self, column, value, *a):
 		for row in range(len(self._cell[column])):
 			self.value(column, row, value)
 	
 
-	def all(self, value):
+	def all(self, value, *a):
 		for column in range(len(self._cell)):
 			for row in range(len(self._cell[column])):
 				self.value(column, row, value)
 	
 
-	def mask(self, x, y, value):
+	def batch_row(self, row, *values):
+		width = len(self._cell)
+		for index in range(len(values)):
+			self.value(index%width, row + int(index/width), values[index])
+	
+
+	def batch_column(self, column, *values):
+		for row in range(len(self._cell[column])):
+			if values[row]:
+				self.value(column, row, values[row])
+	
+
+	def batch_all(self, *values):
+		for column in range(len(self._cell)):
+			for row in range(len(self._cell[column])):
+				if values[column + (row*self._width)]:
+					self.value(column, row, values[column + (row*len(self._cell))])
+	
+
+	def mask(self, x, y, value, *a):
 		element = self._cell[x][y]
 		if value > -1:
 			for handler in self._active_handlers():
@@ -197,20 +224,39 @@ class Grid(object):
 			self.update_element(element)
 	
 
-	def mask_row(self, row, value):
+	def mask_row(self, row, value, *a):
 		for column in range(len(self._cell[row])):
 			self.mask(column, row, value)
 	
 
-	def mask_column(self, column, value):
+	def mask_column(self, column, value, *a):
 		for row in range(len(self._cell)):
 			self.mask(column, row, value)
 	
 
-	def mask_all(self, value):
+	def mask_all(self, value, *a):
 		for column in range(len(self._cell)):
 			for row in range(len(self._cell[column])):
 				self.mask(column, row, value)
+	
+
+	def batch_mask_row(self, row, *values):
+		width = len(self._cell)
+		for index in range(len(values)):
+			self.mask(index%width, row + int(index/width), values[index])
+	
+
+	def batch_mask_column(self, column, *values):
+		for row in range(len(self._cell[column])):
+			if values[row]:
+				self.mask(column, row, values[row])
+	
+
+	def batch_mask_all(self, *values):
+		for column in range(len(self._cell)):
+			for row in range(len(self._cell[column])):
+				if values[column + (row*len(self._cell))]:
+					self.mask(column, row, values[column + (row*self._width)])
 	
 
 
@@ -348,12 +394,10 @@ class ModClient(NotifyingControlElement):
 		self._active_handlers = []
 		self._addresses = {}
 		self._translations = {}
-		#self.log_message('making modclient')
+		self._translation_groups = {}
 		for handler in self._parent._handlers:
 			handler._register_addresses(self)
-		self.log_message('here1')
 		self._param_component = MonoParamComponent(self, MOD_BANK_DICT, MOD_TYPES)
-		self.log_message('here2')
 	
 
 	def addresses(self):
@@ -382,15 +426,19 @@ class ModClient(NotifyingControlElement):
 	def distribute(self, function_name, values = 0, *a, **k):
 		if hasattr(self, function_name):
 			value_list = unpack_items(values)
+			#self.log_message('distribute: ' + str(function_name) + ' ' + str(values) + ' ' + str(value_list))
+
 			try:
 				getattr(self, function_name)(*value_list)
 			except:
 				self.log_message('distribute method exception')
 	
 
-	def receive_translation(self, translation_name, method = 'value', value = 0, *a, **k):
+	def receive_translation(self, translation_name, method = 'value', *values):
+		#value_list = unpack_items(values)
+		#self.log_message('receive_translation: ' + str(translation_name) + ' ' + str(method) + ' ' + str(values))
 		try:
-			self._translations[translation_name].receive(method, value)
+			self._translations[translation_name].receive(method, *values)
 		except:
 			self.log_message('receive_translation method exception')
 	
@@ -465,18 +513,30 @@ class ModClient(NotifyingControlElement):
 		return True
 	
 
-	def add_translation(self, name, target, *args, **k):
+	def add_translation(self, name, target, group=None, *args, **k):
 		#self.log_message('name: ' + str(name) + ' target: ' + str(target) + ' args: ' + str(args))
 		if target in self._addresses.keys():
 			if not name in self._translations.keys():
 				self._translations[name] = ElementTranslation(name, self)
 			self.log_message('adding new target')
 			self._translations[name].add_target(target, self._addresses[target], *args)
+			if not group is None:
+				if not group in self._translation_groups.keys():
+					self._translation_groups[group] = []
+				self._translation_groups[group].append([name, target])
+				#self.log_message('added to group ' + str(group) + ' : ' + str(self._translation_groups[group]))
 	
 
-	def enable_translation(self, name, target, enabled):
+	def enable_translation(self, name, target, enabled = True):
 		if name in self._translations.keys():
 			self._translations[name].set_enabled(target, enabled)
+	
+
+	def enable_translation_group(self, group, enabled = True):
+		if group in self._translation_groups.keys():
+			for pair in self._translation_groups[group]:
+				#self.log_message('enabling for ' + str(pair))
+				self.enable_translation(pair[0], pair[1], enabled)
 	
 
 	def receive_device(self, command, *args):
