@@ -4,8 +4,11 @@ outlets = 2;
 
 var finder;
 
+var patch_type = jsarguments[1];
+var unique = jsarguments[2];
+var wiki_addy = 'http://www.aumhaa.com/wiki/index.php?title='+patch_type;
 var script = this;
-var DEBUG = true;
+var DEBUG = false;
 var DEBUG_CB = false;
 var MONOMODULAR=new RegExp(/(monomodular)/);
 var FUNCTION = new RegExp(/(function)/);
@@ -15,11 +18,13 @@ var modFunctions = [];
 var modAddresses = [];
 var this_device_id = 0;
 var stored_messages = [];
+var legacy = false;
 
 function init()
 {
 	var found = false;
 	if(DEBUG){post('init_b996\n');}
+	assign_attributes();
 	if(!finder)
 	{
 		finder = new LiveAPI(callback, 'this_device');
@@ -76,18 +81,34 @@ function init()
 				if(DEBUG){post('addresses:', modAddresses, '\n');}
 				for(var address in modAddresses)
 				{
-					post('address length', modAddresses[address].length);
-					post('making func:', modAddresses[address], '\n');
+					if(DEBUG){post('address length', modAddresses[address].length);}
+					if(DEBUG){post('making func:', modAddresses[address], '\n');}
 					script[modAddresses[address]] = make_receive_func(modAddresses[address]);
 				}
 				for(var func in modFunctions)
 				{
 					script[modFunctions[func]] = make_func(modFunctions[func]);
 				}
+				if(legacy)
+				{
+					finder.call('set_legacy', 1);
+				}
 				outlet(1, 'init');
 				send_stored_messages();
 				return;
 			}
+		}
+	}
+}
+
+function assign_attributes()
+{
+	for(var i=0;i<jsarguments.length;i++)
+	{
+		if(jsarguments[i].toString().charAt(0) == '@')
+		{
+			var new_att = jsarguments[i].slice(1).toString();
+			script[new_att] = jsarguments[i+1];
 		}
 	}
 }
@@ -118,7 +139,7 @@ function make_func(address)
 function anything()
 {
 	var args = arrayfromargs(arguments);
-	post('anything', messagename, args, '\n');
+	if(DEBUG){post('anything', messagename, args, '\n');}
 	if(finder == null)
 	{
 		if(DEBUG){post('adding to stack:', messagename, args, '\n');}
@@ -167,7 +188,7 @@ function send_stored_messages()
 function send_explicit()
 {
 	var args = arrayfromargs(arguments);
-	post('finder.call('+args[0], args[1], args[2], args[3], args[4], args[5]+');');
+	//post('finder.call('+args[0], args[1], args[2], args[3], args[4], args[5]+');');
 	finder.call(args[0], args[1], args[2], args[3], args[4], args[5]);
 }
 	

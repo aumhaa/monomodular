@@ -16,21 +16,21 @@ majority of processes in this script are maintained between both versions.*/
 /*It should be noted that many of the processes used in "binary" are still available yet unused 
 in this script, offering some excellent prospects for the future development of this mod.*/
 
-autowatch = 1;
+var autowatch = 1;
 
-DEBUG = 0;
-DEBUG_LCD = 0;
-DEBUG_PTR = 0;
-DEBUG_STEP = 0;
-DEBUG_BLINK = 0;
-DEBUG_REC = 0;
-DEBUG_LOCK = 0;
-SHOW_POLYSELECTOR = 1;
-SHOW_STORAGE = 0;
-FORCELOAD = 1; //this doesn't work anymore, don't waste your time. -a
+var DEBUG = 0;
+var DEBUG_LCD = 0;
+var DEBUG_PTR = 0;
+var DEBUG_STEP = 0;
+var DEBUG_BLINK = 0;
+var DEBUG_REC = 0;
+var DEBUG_LOCK = 0;
+var SHOW_POLYSELECTOR = 1;
+var SHOW_STORAGE = 0;
+var FORCELOAD = 1; //this doesn't work anymore, don't waste your time. -a
 
-outlets = 4;
-inlets = 5;
+var outlets = 4;
+var inlets = 5;
 
 var unique = jsarguments[1];
 
@@ -1590,7 +1590,7 @@ function _shift(val)
 		//for(var i=0;i<16;i++)
 		//{
 			outlet(0, 'enable_translation_group', 'base_keys', Math.floor(shifted));
-			outlet(0, 'enable_translation_group', 'base_pads_', Math.floor(!shifted));
+			outlet(0, 'enable_translation_group', 'base_pads', Math.floor(!shifted));
 			outlet(0, 'enable_translation_group', 'base_keys2', Math.floor(!shifted));
 		//}/
 		//for(var i=0;i<8;i++)

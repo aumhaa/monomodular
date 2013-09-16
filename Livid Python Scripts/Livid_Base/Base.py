@@ -259,7 +259,7 @@ class BlockingMonoButtonElement(MonoButtonElement):
 			else:
 				data_byte2 = 1
 			status_byte = self._original_channel
-			status_byte +=  144
+			status_byte +=	144
 			self.send_midi((status_byte, data_byte1, data_byte2))
 			self._last_flash = value
 	
@@ -308,7 +308,7 @@ class BaseMixerComponent(MixerComponent):
 				component.set_pan_control(None)
 				component.set_volume_control(None)
 				component.set_select_button(None)
- 				if component in self._channel_strips or component in self._return_strips:
+				if component in self._channel_strips or component in self._return_strips:
 					component.set_mute_button(None)
 					component.set_send_controls(None)
 					component.set_solo_button(None)
@@ -1001,7 +1001,7 @@ class ScrollingOffsetComponent(ControlSurfaceComponent):
 					self._scroll_up_ticks_delay -= 1
 				new_offset = max(self._minimum, min(self._maximum, self._offset + offset_increment))
 				if new_offset != self._offset:
-					self._offset =  new_offset
+					self._offset =	new_offset
 					self.update()
 					self._report_change(self._offset)
 	
@@ -1168,6 +1168,13 @@ class BaseModHandler(ModHandler):
 			self._alt.send_value(value)
 	
 
+	def _receive_grid(self, x, y, value, is_id = False):
+		self.log_message('receive grid')
+		if not self._base_grid is None:
+			if (x - self.x_offset) in range(8) and (y - self.y_offset) in range(4):
+				self._base_grid.send_value(x - self.x_offset, y - self.y_offset, value, True)
+	
+
 	def _assign_base_grid(self, grid):
 		self._base_grid = grid
 		self._base_grid_value.subject = self._base_grid
@@ -1203,26 +1210,59 @@ class BaseModHandler(ModHandler):
 	def _base_grid_value(self, value, x, y, *a, **k):
 		#self.log_message('_base_grid_value ' + str(x) + str(y) + str(value))
 		if self._active_mod:
-			self._active_mod.send('base_grid', x, y, value)
+			if self._active_mod.legacy:
+				if self._shift_value.subject.is_pressed():
+					if value > 0 and x in range(3, 5) and y in range(0, 4):
+						self.set_offset((x - 3) * 8,  y * 4)
+				else:
+					self._active_mod.send('grid', x + self.x_offset, y + self.y_offset, value)
+			else:
+				self._active_mod.send('base_grid', x, y, value)
+		
 	
 
 	@subject_slot('value')
 	def _base_grid_CC_value(self, value, x, y, *a, **k):
 		#self.log_message('_base_grid_CC_value ' + str(x) + str(y) + str(value))
 		if self._active_mod:
-			self._active_mod.send('base_grid_CC', x, y, value)
+			if self._active_mod.legacy:
+				self._active_mod.send('grid_CC', x + self.x_offset , y + self.y_offset, value)
+			else:
+				self._active_mod.send('base_grid_CC', x, y, value)
 	
 
 	@subject_slot('value')
 	def _shift_value(self, value, *a, **k):
 		if self._active_mod:
 			self._active_mod.send('shift', value)
+			if self._active_mod.legacy:
+				self._display_nav_box()
 	
 
 	@subject_slot('value')
 	def _alt_value(self, value, *a, **k):
 		if self._active_mod:
 			self._active_mod.send('alt', value)
+	
+
+	def _display_nav_box(self):
+		if self._base_grid_value.subject:
+			if self._shift_value.subject and self._shift_value.subject.is_pressed():
+				for column in range(2):
+					for row in range(4):
+						if (column == int(self.x_offset/8)) and (row == int(self.y_offset/4)):
+							self._base_grid_value.subject.get_button(column +3, row).send_value(self.navbox_selected)
+						else:
+							self._base_grid_value.subject.get_button(column +3, row).send_value(self.navbox_unselected)
+	
+
+	def update(self, *a, **k):
+		if self._active_mod:
+			if self._active_mod.legacy and self._shift_value.subject and self._shift_value.subject.is_pressed():
+				self._display_nav_box()
+			else:
+				self._active_mod.restore()
+			#self.update_device()
 	
 
 
@@ -1742,7 +1782,7 @@ class Base(ControlSurface):
 					if cur_chan in CHANNELS:
 						cur_chan = (CHANNELS.index(cur_chan)%15)+1
 						self._offsets[cur_chan]['split'] = bool(mode)  #not self._offsets[cur_chan]['split'] 
-						#self.log_message('split is ' + str(self._offsets[cur_chan]['split'] ))	
+						#self.log_message('split is ' + str(self._offsets[cur_chan]['split'] )) 
 	
 
 	def _deassign_all(self):

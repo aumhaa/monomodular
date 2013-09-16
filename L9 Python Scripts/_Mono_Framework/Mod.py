@@ -41,10 +41,10 @@ def unpack_items(values):
 			converted.append(int(i))
 		except:
 			converted.append(str(i))
-	if len(converted)<2:
-		return converted[0]
-	else:
-		return converted
+	#if len(converted)<2:
+	#	return converted[0]
+	#else:
+	return converted
 
 
 class SpecialInputSignal(Signal):
@@ -87,11 +87,19 @@ class ElementTranslation(object):
 		self._script = script
 		self._name = name
 		self._targets = {}
+		self._last_received = None
 	
 
 	def set_enabled(self, name, enabled):
 		try:
 			self._targets[name]['Enabled'] = enabled > 0
+			if enabled and not self._last_received is None:
+				target = self._targets[name]
+				value_list = [i for i in target['Arguments']] + [j for j in self._last_received]
+				try:
+					getattr(target['Target'], method)(*value_list)
+				except:
+					pass
 		except:
 			pass
 	
@@ -124,6 +132,7 @@ class ElementTranslation(object):
 					getattr(target['Target'], method)(*value_list)
 				except:
 					pass
+		self._last_received = values
 	
 
 
@@ -320,6 +329,10 @@ class ModHandler(CompoundComponent):
 		self._is_enabled = False
 		self._is_connected = False
 		self._receive_methods = {}
+		self.x_offset = 0
+		self.y_offset = 0
+		self.navbox_selected = 3
+		self.navbox_unselected = 5
 		self.modrouter.register_handler(self)
 	
 
@@ -365,7 +378,7 @@ class ModHandler(CompoundComponent):
 	
 
 	def update_device(self):
-		self.log_message('update device')
+		#self.log_message('update device')
 	 	if not self._device_component is None:
 			try:
 				self._device_component.update()
@@ -375,6 +388,18 @@ class ModHandler(CompoundComponent):
 
 	def active_mod(self, *a, **k):
 		return self._active_mod
+	
+
+	def set_offset(self, x, y):
+		self.x_offset = x
+		self.y_offset = y
+		if self._active_mod and self._active_mod.legacy:
+			self._active_mod.send('offset', self.x_offset, self.y_offset)
+			self._display_nav_box()
+	
+
+	def _display_nav_box(self):
+		pass
 	
 
 
@@ -392,9 +417,10 @@ class ModClient(NotifyingControlElement):
 		self._parent = parent
 		self.log_message = parent.log_message
 		self._active_handlers = []
-		self._addresses = {}
+		self._addresses = {'grid':Grid(self.active_handlers, 'grid', 16, 16)}
 		self._translations = {}
 		self._translation_groups = {}
+		self.legacy = False
 		for handler in self._parent._handlers:
 			handler._register_addresses(self)
 		self._param_component = MonoParamComponent(self, MOD_BANK_DICT, MOD_TYPES)
@@ -427,7 +453,6 @@ class ModClient(NotifyingControlElement):
 		if hasattr(self, function_name):
 			value_list = unpack_items(values)
 			#self.log_message('distribute: ' + str(function_name) + ' ' + str(values) + ' ' + str(value_list))
-
 			try:
 				getattr(self, function_name)(*value_list)
 			except:
@@ -445,6 +470,7 @@ class ModClient(NotifyingControlElement):
 
 	def send(self, control_name, *a):
 		self.notify_value(control_name, *a)
+			
 	
 
 	def is_active(self):
@@ -518,7 +544,7 @@ class ModClient(NotifyingControlElement):
 		if target in self._addresses.keys():
 			if not name in self._translations.keys():
 				self._translations[name] = ElementTranslation(name, self)
-			self.log_message('adding new target')
+			#self.log_message('adding new target')
 			self._translations[name].add_target(target, self._addresses[target], *args)
 			if not group is None:
 				if not group in self._translation_groups.keys():
@@ -540,17 +566,23 @@ class ModClient(NotifyingControlElement):
 	
 
 	def receive_device(self, command, *args):
-		self.log_message('receive_device ' + str(command))
+		#self.log_message('receive_device ' + str(command))
 		if command in dir(self._param_component):
-			self.log_message('distributing....')
+			#self.log_message('distributing....')
 			getattr(self._param_component, command)(*args)
-			self.log_message('distributed.')
+			#self.log_message('distributed.')
 	
 
 	def update_device(self):
 		for handler in self.active_handlers():
 			handler.update_device()
 	
+
+	def set_legacy(self, value):
+		#self.log_message('set_legacy: ' + str(value))
+		self.legacy = value > 0
+	
+
 
 
 class ModRouter(CompoundComponent):
@@ -599,7 +631,7 @@ class ModRouter(CompoundComponent):
 	
 
 	def add_mod(self, device):
-		self._host.log_message('device: ' + str(device))
+		#self._host.log_message('device: ' + str(device))
 		if not device in self.devices():
 			with self._host.component_guard():
 				#self._host.log_message('its not there...')

@@ -9,14 +9,19 @@ setoutletassist(0, 'preset data grid output');
 setoutletassist(1, 'gate value output');
 setoutletassist(2, 'main data grid output');
 
+var DEBUG = true
 var args1 = jsarguments[1];
+var unique = jsarguments[2];
 var alive = 0;
 var storage;// = this.patcher.getnamed('boiingg');
 var preset_selector;// = this.patcher.getnamed('preset_selector');
 var s_offset = [0, 0];
 var preset = 0;
 var alt = 0;
-const empty = [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2];
+var empty = [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2];
+var rotate_grid = false;
+
+var FORCELOAD = 1 ; //this doesn't work anymore, don't waste your time. -a
 
 function init()
 {
@@ -64,7 +69,14 @@ function list(x, y, z)
 		}
 		else
 		{
-			outlet(2, x, y, z);
+			if(rotate_grid)
+			{
+				outlet(2, y, x, z);
+			}
+			else
+			{
+				outlet(2, x, y, z);
+			}
 		}
 	}
 }
@@ -121,7 +133,18 @@ function msg_int(key)
 
 function anything()
 {
-	return;
+	if(DEBUG){post("anything", arrayfromargs(messagename, arguments), '\n');}
+}
+
+function grid(x, y, z)
+{
+	if(DEBUG){post('grid', x, y, z, '\n');}
+	list(x, y, z);
+}
+
+function key(x, val)
+{
+	messnamed(unique+'key', x, val>0);
 }
 
 function bang()
@@ -131,3 +154,24 @@ function bang()
 		init();
 	}
 }
+
+function rotate(val)
+{
+	rotate_grid = val;
+}
+
+//used to reinitialize the script immediately on saving; 
+//can be turned on by changing FORCELOAD to 1;
+//should only be turned on while editing
+function forceload()
+{
+	if(FORCELOAD){init(1);}
+}
+
+forceload();
+
+
+
+
+
+
