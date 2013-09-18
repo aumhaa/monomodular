@@ -32,6 +32,7 @@ from _Framework.TrackFilterComponent import TrackFilterComponent # Class represe
 from _Framework.TransportComponent import TransportComponent # Class encapsulating all functions in Live's transport section
 from _Framework.PhysicalDisplayElement import PhysicalDisplayElement
 from _Framework.SubjectSlot import subject_slot, subject_slot_group
+from _Framework.Layer import Layer
 
 """Custom files, overrides, and files from other scripts"""
 from _Mono_Framework.MonoButtonElement import *
@@ -46,10 +47,14 @@ import sys
 import _Mono_Framework.modRemixNet as RemixNet
 import _Mono_Framework.modOSC
 
+from Push.Skin import *
 from Push.SessionRecordingComponent import *
 from Push.ClipCreator import ClipCreator
 from Push.ViewControlComponent import ViewControlComponent
 from Push.DrumGroupComponent import DrumGroupComponent
+from StepSeqComponent import StepSeqComponent
+
+from NoteEditorComponent import NoteEditorComponent
 
 DIRS = [47, 48, 50, 49]
 _NOTENAMES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B']
@@ -264,7 +269,11 @@ class BlockingMonoButtonElement(MonoButtonElement):
 			self._last_flash = value
 	
 
- 
+	def set_light(self, value):
+		self.send_value(value)
+	
+
+
 class BaseMixerComponent(MixerComponent):
 
 
@@ -1316,6 +1325,7 @@ class Base(ControlSurface):
 			self._setup_scale_offset_component()
 			self._setup_session_recording_component()
 			self._setup_drumgroup()
+			self._setup_step_sequencer()
 			self._device.add_device_listener(self._on_new_device_set)
 		self.schedule_message(3, self._check_connection)
 	
@@ -1508,7 +1518,8 @@ class Base(ControlSurface):
 	
 
 	def _setup_session_recording_component(self):
-		self._recorder = BaseSessionRecordingComponent(ClipCreator(), ViewControlComponent())
+		self._clip_creator = ClipCreator()
+		self._recorder = BaseSessionRecordingComponent(self._clip_creator, ViewControlComponent())
 	
 
 	def _setup_drumgroup(self):
@@ -1540,6 +1551,39 @@ class Base(ControlSurface):
 			self.oscServer.shutdown()
 		self.oscServer = RemixNet.OSCServer('localhost', self._outPrt, 'localhost', 10001)
 	
+
+	def _setup_step_sequencer(self):
+		#self._skin = make_default_skin()
+		#self._step_sequencer = StepSeqComponent(self._clip_creator, self._skin, name='Step_Sequencer')
+		#self._step_sequencer._drum_group._do_select_drum_pad = self._selector.on_select_drum_pad
+		#self._step_sequencer._drum_group._do_quantize_pitch = self._transport._quantization.quantize_pitch
+		#self._step_sequencer.set_playhead(self._c_instance.playhead)
+		#self._step_sequencer.set_enabled(False)
+		#self._step_sequencer.layer = Layer(button_matrix=self._base_grid, mute_button=self._button[4])#drum_matrix=self._base_grid.submatrix[4:8, :4], ) #loop_selector_matrix=self._matrix.submatrix[4:8, 4:8]) #touch_strip=self._touch_strip_control, quantization_buttons=self._side_buttons, mute_button=self._global_mute_button, solo_button=self._global_solo_button, select_button=self._select_button, delete_button=self._delete_button, shift_button=self._shift_button, drum_bank_up_button=self._octave_up_button, drum_bank_down_button=self._octave_down_button, quantize_button=self._quantize_button)
+		#self._step_sequencer.note_settings_layer = Layer(top_display_line=self._display_line1, bottom_display_line=self._display_line2, clear_display_line1=self._display_line3, clear_display_line2=self._display_line4, encoder_controls=self._global_param_controls, encoder_touch_buttons=self._global_param_touch_buttons, full_velocity_button=self._accent_button)
+		#self._step_sequencer.note_settings_layer.priority = consts.MODAL_DIALOG_PRIORITY
+		#self._audio_loop = LoopSelectorComponent(follow_detail_clip=True, measure_length=1.0, name='Loop_Selector')
+		#self._audio_loop.set_enabled(False)
+		#self._audio_loop.layer = Layer(loop_selector_matrix=self._matrix)
+		#self.log_message('playhead enabled ' + str(self._c_instance.playhead.enabled))
+		#self._c_instance.playhead.enabled = True
+		self._note_editor = NoteEditorComponent(self._clip_creator, self.log_message)
+		self._c_instance.playhead.velocity = 5
+		self._c_instance.set_feedback_velocity(5)
+		self._note_editor.set_playhead(self._c_instance.playhead)
+		self._note_editor.layer = Layer(button_matrix = self._base_grid.submatrix[:4, :4])
+		self._on_detail_clip_changed.subject = self.song().view
+	
+
+	@subject_slot('detail_clip')
+	def _on_detail_clip_changed(self):
+		clip = self.song().view.detail_clip
+		clip = clip if clip and clip.is_midi_clip else None
+		self._note_editor.set_detail_clip(clip)
+		self._set_controlled_track(self.song().view.selected_track)
+		#self._loop_selector.set_detail_clip(clip)
+		#self._big_loop_selector.set_detail_clip(clip)
+
 
 	"""shift/zoom methods"""
 	def pad_held(self):
@@ -2069,12 +2113,16 @@ class Base(ControlSurface):
 			self._mixer.master_strip().set_volume_control(self._fader[8])
 			for button in self._button[4:8]:
 				button.set_on_off_values(USERMODE, 0)
+			self._note_editor.set_enabled(True)
+			self._note_editor.set_button_matrix(self._base_grid.submatrix[:4, :4])
+			"""
 			self._user_mode_selector.set_enabled(True)
 			self._assign_alternate_mappings(self._user_layer+12)
 			self._send_midi(tuple([240, 0, 1, 97, 12, 61, 1, 1, 1, 1, 1, 1, 1, 1, 2, 247]))
 			#for index in range(8):
 			#	self._send_midi(tuple([191, index+10, 100]))
 			self._send_midi(tuple([191, 122, 72]))		#turn local ON for CapFaders
+			"""
 
 	
 
