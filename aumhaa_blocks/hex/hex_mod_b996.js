@@ -16,7 +16,10 @@ majority of processes in this script are maintained between both versions.*/
 /*It should be noted that many of the processes used in "binary" are still available yet unused 
 in this script, offering some excellent prospects for the future development of this mod.*/
 
-var autowatch = 1;
+autowatch = 1;
+
+outlets = 4;
+inlets = 5;
 
 var DEBUG = 0;
 var DEBUG_LCD = 0;
@@ -27,10 +30,9 @@ var DEBUG_REC = 0;
 var DEBUG_LOCK = 0;
 var SHOW_POLYSELECTOR = 1;
 var SHOW_STORAGE = 0;
-var FORCELOAD = 1; //this doesn't work anymore, don't waste your time. -a
+var FORCELOAD = false; //this doesn't work anymore, don't waste your time. -a
 
-var outlets = 4;
-var inlets = 5;
+
 
 var unique = jsarguments[1];
 
@@ -1695,6 +1697,7 @@ function _alt_in(val)
 //called by gui object, sets visible portion of live.step
 function _mode(val)
 {
+	if(DEBUG){post('mode', val, '\n');}
 	step_mode = val;
 	step.message('mode', Modes[step_mode]);
 }

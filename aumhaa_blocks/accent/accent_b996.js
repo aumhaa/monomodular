@@ -18,19 +18,19 @@ in this script, offering some excellent prospects for future development of this
 
 autowatch = 1;
 
-DEBUG = 0;
-DEBUG_LCD = 0;
-DEBUG_PTR = 0;
-DEBUG_STEP = 0;
-DEBUG_BLINK = 0;
-DEBUG_REC = 0;
-DEBUG_LOCK = 0;
-DEBUG_FRWL = 0;
-SHOW_POLYSELECTOR = 0;
-FORCELOAD = 1;
-
 outlets = 4;
 inlets = 5;
+
+var DEBUG = 0;
+var DEBUG_LCD = 0;
+var DEBUG_PTR = 0;
+var DEBUG_STEP = 0;
+var DEBUG_BLINK = 0;
+var DEBUG_REC = 0;
+var DEBUG_LOCK = 0;
+var DEBUG_FRWL = 0;
+var SHOW_POLYSELECTOR = 0;
+var FORCELOAD = 0;
 
 var unique = jsarguments[1];
 
