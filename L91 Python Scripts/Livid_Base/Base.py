@@ -202,6 +202,10 @@ LAUNCH_QUANTIZATION = (_Q.q_quarter,
  _Q.q_8_bars,
  _Q.q_8_bars)
 
+def is_device(device):
+	return (not device is None and isinstance(device, Live.Device.Device))
+
+
 def make_pad_translations(chan):
 	return tuple((x%4, int(x/4), x+16, chan) for x in range(16))
 
@@ -1500,6 +1504,12 @@ class Base(ControlSurface):
 		self._dn_button = self._nav_buttons[UDLR[1]]
 		self._lt_button = self._nav_buttons[UDLR[2]]
 		self._rt_button = self._nav_buttons[UDLR[3]]
+
+		"""We'll use this to store descriptor strings of control functions so we can send them to an LCD application"""
+		for button in self._button:
+			button._descriptor = 'None'
+		for touchpad in self._touchpad:
+			touchpad._descriptor = 'None'
 	
 
 	def _setup_mixer_control(self):
@@ -2361,6 +2371,7 @@ class Base(ControlSurface):
 	def _assign_midi_layer(self):
 		cur_track = self._mixer._selected_strip._track
 		is_midi = False
+		scale, offset, vertoffset = ' ', ' ', ' '
 		if cur_track.has_midi_input:
 			#self._send_midi(USERBUTTONMODE)
 			if AUTO_ARM_SELECTED:
@@ -2377,12 +2388,12 @@ class Base(ControlSurface):
 				offsets = self._current_device_offsets(self._offsets[cur_chan])
 
 				offset, vertoffset, scale, split, sequencer = offsets['offset'], offsets['vertoffset'], offsets['scale'], offsets['split'], offsets['sequencer']
-				if scale is 'Auto':
+				if scale == 'Auto':
 					scale = self._detect_instrument_type(cur_track)
-					#self.log_message('auto found: ' + str(scale))
-				if scale is 'Session':
+					self.log_message('auto found: ' + str(scale))
+				if scale == 'Session':
 					is_midi = False
-				elif scale is 'Mod':
+				elif scale == 'Mod':
 					is_midi = True
 				elif scale in SPLIT_SCALES or split:
 					self._send_midi(SPLITBUTTONMODE)
@@ -2497,12 +2508,19 @@ class Base(ControlSurface):
 						self._stream_pads[index].press_flash(self._last_pad_stream[index])
 			else:
 				is_midi = False
+
+		if OSC_TRANSMIT:
+			self.oscServer.sendOSC('/Base/scale/lcd_value/', str(self.generate_strip_string(scale)))
+			self.oscServer.sendOSC('/Base/offset/lcd_value/', str(self.generate_strip_string(offset)))
+			self.oscServer.sendOSC('/Base/vertoffset/lcd_value/', str(self.generate_strip_string(vertoffset)))
+
 		return is_midi	
 	
 
 	def _assign_midi_shift_layer(self):
 		cur_track = self._mixer._selected_strip._track
 		is_midi = False
+		scale, offset, vertoffset = ' ', ' ', ' '
 		if cur_track.has_midi_input:
 			self._send_midi(LIVEBUTTONMODE)
 			if AUTO_ARM_SELECTED:
@@ -2516,12 +2534,12 @@ class Base(ControlSurface):
 				cur_chan = (CHANNELS.index(cur_chan)%15)+1
 				offset, vertoffset, scale, split, sequencer = self._offsets[cur_chan]['offset'], self._offsets[cur_chan]['vertoffset'], self._offsets[cur_chan]['scale'], self._offsets[cur_chan]['split'], self._offsets[cur_chan]['sequencer']
 
-				if scale is 'Auto':
+				if scale == 'Auto':
 					scale = self._detect_instrument_type(cur_track)
 					#self.log_message('auto found: ' + str(scale))
-				if scale is 'Session':
+				if scale == 'Session':
 					is_midi = False
-				elif scale is 'Mod':
+				elif scale == 'Mod':
 					is_midi = 'Mod'
 
 				else:
@@ -2559,8 +2577,8 @@ class Base(ControlSurface):
 
 					elif scale is 'DrumPad':
 						is_midi = 'DrumSequencer'
-						self._step_sequencer.set_drum_bank_up_button(self._touchpad[6])
-						self._step_sequencer.set_drum_bank_down_button(self._touchpad[7])
+						self._step_sequencer.set_drum_bank_up_button(self._touchpad[7])
+						self._step_sequencer.set_drum_bank_down_button(self._touchpad[6])
 						for pad in self._touchpad[6:8]:
 							pad.set_on_off_values(DRUMBANK, 0)
 						self._step_sequencer.set_mute_button(self._touchpad[2])
@@ -2612,6 +2630,10 @@ class Base(ControlSurface):
 						self._note_sequencer.set_quantization_buttons(self._pad[8:15])
 						self._note_sequencer.set_follow_button(self._pad[15])
 
+		if OSC_TRANSMIT:
+			self.oscServer.sendOSC('/Base/scale/lcd_value/', str(self.generate_strip_string(scale)))
+			self.oscServer.sendOSC('/Base/offset/lcd_value/', str(self.generate_strip_string(offset)))
+			self.oscServer.sendOSC('/Base/vertoffset/lcd_value/', str(self.generate_strip_string(vertoffset)))
 		return is_midi
 	
 
@@ -2626,7 +2648,9 @@ class Base(ControlSurface):
 				if len(str(item)) and str(item)[0]=='@':
 					vals = item[1:].split(':')
 					if len(vals) < 2:
-						vals.append({'scale':'Auto', 'sequencer':False, 'split':False, 'offset':36, 'vertoffset':4, 'drumoffset':0}[vals[0]])
+						def_assignments = {'scale':'Auto', 'sequencer':False, 'split':False, 'offset':36, 'vertoffset':4, 'drumoffset':0}
+						if vals[0] in def_assignments:
+							vals.append([vals[0]])
 					if vals[0] in dict_entry.keys():
 						if vals[0] == 'scale' and vals[1] in SCALES.keys():
 							dict_entry[vals[0]] = str(vals[1])
@@ -2818,6 +2842,12 @@ class Base(ControlSurface):
 		elif self._layer is 3:
 			char2 = str(self._user_mode_selector._mode_index+1)
 		self._display_chars(char1, char2)
+		if OSC_TRANSMIT:
+			self.oscServer.sendOSC('/Base/mode/lcd_value/', str(self.generate_strip_string(['Launch', 'Sends', 'Device', 'User'][self._layer])))
+			for button in self._button:
+				self.oscServer.sendOSC('/Base/'+button.name+'/lcd_value/', str(self.generate_strip_string(button._descriptor)))
+			for touchpad in self._touchpad:
+				self.oscServer.sendOSC('/Base/'+touchpad.name+'/lcd_value/', str(self.generate_strip_string(touchpad._descriptor)))
 	
 
 	def _register_pad_pressed(self, bytes):
@@ -2939,6 +2969,8 @@ class Base(ControlSurface):
 		NUM_CHARS_PER_DISPLAY_STRIP = 12
 		if (not display_string):
 			return (' ' * NUM_CHARS_PER_DISPLAY_STRIP)
+		else:
+			display_string = str(display_string)
 		if ((len(display_string.strip()) > (NUM_CHARS_PER_DISPLAY_STRIP - 1)) and (display_string.endswith('dB') and (display_string.find('.') != -1))):
 			display_string = display_string[:-2]
 		if (len(display_string) > (NUM_CHARS_PER_DISPLAY_STRIP - 1)):
