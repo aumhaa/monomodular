@@ -271,8 +271,8 @@ class BlockingMonoButtonElement(MonoButtonElement):
 		self.display_press = False
 		self._last_flash = 0
 		self.scale_color = 0
-		self._skin_colors = {'NoteEditor.Step.Low':0, 'NoteEditor.Step.High':1, 'NoteEditor.Step.Full':2, 'NoteEditor.Step.Muted':3, 'NoteEditor.Step.Empty':0,
-								'NoteEditor.StepLow':0, 'NoteEditor.StepHigh':1, 'NoteEditor.StepFull':2, 'NoteEditor.StepMuted':3, 'NoteEditor.StepEmpty':0, 'NoteEditor.StepEditing.High':6,
+		self._skin_colors = {'NoteEditor.Step.Low':3, 'NoteEditor.Step.High':1, 'NoteEditor.Step.Full':2, 'NoteEditor.Step.Muted':3, 'NoteEditor.Step.Empty':0,
+								'NoteEditor.StepLow':3, 'NoteEditor.StepHigh':1, 'NoteEditor.StepFull':2, 'NoteEditor.StepMuted':3, 'NoteEditor.StepEmpty':0, 'NoteEditor.StepEditing.High':6,
 								'NoteEditor.StepEmptyBase':0, 'NoteEditor.StepEmptyScale':0, 'NoteEditor.StepDisabled':0, 'NoteEditor.Playhead':2, 
 								'NoteEditor.StepSelected':6, 'NoteEditor.PlayheadRecord':5, 'NoteEditor.QuantizationSelected':5, 'NoteEditor.QuantizationUnselected':4,
 								'LoopSelector.Playhead':2, 'LoopSelector.OutsideLoop':7, 'LoopSelector.InsideLoopStartBar':3, 'LoopSelector.SelectedPage':1, 
@@ -1447,6 +1447,7 @@ class Base(ControlSurface):
 			self._setup_step_sequencer()
 			self._device.add_device_listener(self._on_new_device_set)
 			self.set_feedback_channels(range(14, 15))
+			#self.reset_controlled_track()
 		self.schedule_message(3, self._check_connection)
 	
 
@@ -1690,12 +1691,12 @@ class Base(ControlSurface):
 
 	def _setup_step_sequencer(self):
 		self._grid_resolution = GridResolution()
-		self._c_instance.playhead.enabled = True
+		#self._c_instance.playhead.enabled = True
 		self._playhead_element = PlayheadElement(self._c_instance.playhead)
 		self._skin = make_default_skin()
 		self._step_sequencer = StepSeqComponent(self._clip_creator, self._skin, grid_resolution = self._grid_resolution, name='Step_Sequencer')
 		self._step_sequencer._playhead_component._notes=tuple(range(16))
-		self._step_sequencer._playhead_component._triplet_notes=tuple(chain(*starmap(range, ((0, 3), (4, 7), (8, 11), (12, 15)))))
+		self._step_sequencer._playhead_component._triplet_notes=tuple(chain(*starmap(range, ((0, 2), (4, 6), (8, 10), (12, 14)))))
 		#self._step_sequencer.set_enabled(False)
 		self._step_sequencer._drum_group._update_pad_led = self._drum_group_update_pad_led
 		self._step_sequencer._drum_group._update_control_from_script = self._update_control_from_script
@@ -1706,11 +1707,10 @@ class Base(ControlSurface):
 		self._note_sequencer = StepSeqComponent(self._clip_creator, self._skin, grid_resolution = self._grid_resolution, name='Note_Sequencer')
 		self._note_sequencer.layer = Layer(playhead=self._playhead_element)
 		self._note_sequencer._playhead_component._notes=tuple(range(16))
-		self._note_sequencer._playhead_component._triplet_notes=tuple(chain(*starmap(range, ((0, 7), (8, 15)))))
-
-
+		self._note_sequencer._playhead_component._triplet_notes=tuple(chain(*starmap(range, ((0, 6), (8, 14)))))
 	
 
+	"""Push only support full rows of 8 buttons for playhead display....this is a hack"""
 	def _visible_steps(self):
 		first_time = self._step_sequencer._note_editor.page_length * self._step_sequencer._note_editor._page_index
 		steps_per_page = self._step_sequencer._note_editor._get_step_count()
@@ -2925,6 +2925,11 @@ class Base(ControlSurface):
 		pass
 	
 
+	@subject_slot('value')
+	def _on_clip_fired(self, *a, **k):
+		pass
+	
+
 	"""called on timer"""
 	def update_display(self):
 		super(Base, self).update_display()
@@ -2945,6 +2950,8 @@ class Base(ControlSurface):
 		self._monobridge._send('Device_Name', 'lcd_name', str(self.generate_strip_string('Device')))
 		self._monobridge._send('Device_Name', 'lcd_value', str(self.generate_strip_string(name)))
 		self.touched()
+		if OSC_TRANSMIT:
+			self.oscServer.sendOSC('/Base/device/lcd_value/', str(self.generate_strip_string(name)))
 	
 
 	def _on_device_bank_changed(self):
