@@ -1,4 +1,3 @@
-#Embedded file name: /Applications/Ableton Live 9 Beta.app/Contents/App-Resources/MIDI Remote Scripts/_Mono_Framework/modstruct.py
 """
 Functions to convert between Python values and C structs.
 Python strings are used to hold the data representing the C struct
@@ -27,17 +26,19 @@ Whitespace between formats is ignored.
 The variable struct.error is an exception raised on errors.
 """
 __version__ = '0.1'
+
 from _struct import Struct, error
+
 _MAXCACHE = 100
 _cache = {}
 
 def _compile(fmt):
+    # Internal: compile struct pattern
     if len(_cache) >= _MAXCACHE:
         _cache.clear()
     s = Struct(fmt)
     _cache[fmt] = s
     return s
-
 
 def calcsize(fmt):
     """
@@ -48,9 +49,7 @@ def calcsize(fmt):
         o = _cache[fmt]
     except KeyError:
         o = _compile(fmt)
-
     return o.size
-
 
 def pack(fmt, *args):
     """
@@ -61,9 +60,7 @@ def pack(fmt, *args):
         o = _cache[fmt]
     except KeyError:
         o = _compile(fmt)
-
     return o.pack(*args)
-
 
 def pack_into(fmt, buf, offset, *args):
     """
@@ -75,9 +72,7 @@ def pack_into(fmt, buf, offset, *args):
         o = _cache[fmt]
     except KeyError:
         o = _compile(fmt)
-
     return o.pack_into(buf, offset, *args)
-
 
 def unpack(fmt, s):
     """
@@ -89,11 +84,9 @@ def unpack(fmt, s):
         o = _cache[fmt]
     except KeyError:
         o = _compile(fmt)
-
     return o.unpack(s)
 
-
-def unpack_from(fmt, buf, offset = 0):
+def unpack_from(fmt, buf, offset=0):
     """
     Unpack the buffer, containing packed C structure data, according to
     fmt starting at offset. Requires len(buffer[offset:]) >= calcsize(fmt).
@@ -103,5 +96,4 @@ def unpack_from(fmt, buf, offset = 0):
         o = _cache[fmt]
     except KeyError:
         o = _compile(fmt)
-
     return o.unpack_from(buf, offset)
