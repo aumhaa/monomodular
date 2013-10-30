@@ -203,7 +203,7 @@ LAUNCH_QUANTIZATION = (_Q.q_quarter,
  _Q.q_8_bars)
 
 def is_device(device):
-	return (not device is None and isinstance(device, Live.Device.Device))
+	return (not device is None and isinstance(device, Live.Device.Device) and hasattr(device, 'name'))
 
 
 def make_pad_translations(chan):
@@ -1700,7 +1700,7 @@ class Base(ControlSurface):
 		#self._step_sequencer.set_enabled(False)
 		self._step_sequencer._drum_group._update_pad_led = self._drum_group_update_pad_led
 		self._step_sequencer._drum_group._update_control_from_script = self._update_control_from_script
-		self._step_sequencer.layer = Layer(playhead=self._playhead_element)   #loop_selector_matrix=self._base_doublepress_grid.submatrix[:4, :4], short_loop_selector_matrix=self._base_doublepress_grid.submatrix[:4, :4]) #drum_matrix=self._base_grid.submatrix[:4, :4], #self._matrix.submatrix[:8, :4], drum_matrix=self._matrix.submatrix[:4, 4:8], loop_selector_matrix=self._double_press_matrix.submatrix[4:8, 4:8], short_loop_selector_matrix=self._double_press_event_matrix.submatrix[4:8, 4:8], touch_strip=self._touch_strip_control, detail_touch_strip=ComboElement(self._touch_strip_control, [self._shift_button]), quantization_buttons=self._side_buttons, solo_button=self._global_solo_button, select_button=self._select_button, delete_button=self._delete_button, shift_button=self._shift_button, drum_bank_up_button=self._octave_up_button, drum_bank_down_button=self._octave_down_button, quantize_button=self._quantize_button, mute_button=self._global_mute_button, drum_bank_detail_up_button=ComboElement(self._octave_up_button, [self._shift_button]), drum_bank_detail_down_button=ComboElement(self._octave_down_button, [self._shift_button]))
+		self._step_sequencer.layer = Layer(playhead=self._playhead_element)	  #loop_selector_matrix=self._base_doublepress_grid.submatrix[:4, :4], short_loop_selector_matrix=self._base_doublepress_grid.submatrix[:4, :4]) #drum_matrix=self._base_grid.submatrix[:4, :4], #self._matrix.submatrix[:8, :4], drum_matrix=self._matrix.submatrix[:4, 4:8], loop_selector_matrix=self._double_press_matrix.submatrix[4:8, 4:8], short_loop_selector_matrix=self._double_press_event_matrix.submatrix[4:8, 4:8], touch_strip=self._touch_strip_control, detail_touch_strip=ComboElement(self._touch_strip_control, [self._shift_button]), quantization_buttons=self._side_buttons, solo_button=self._global_solo_button, select_button=self._select_button, delete_button=self._delete_button, shift_button=self._shift_button, drum_bank_up_button=self._octave_up_button, drum_bank_down_button=self._octave_down_button, quantize_button=self._quantize_button, mute_button=self._global_mute_button, drum_bank_detail_up_button=ComboElement(self._octave_up_button, [self._shift_button]), drum_bank_detail_down_button=ComboElement(self._octave_down_button, [self._shift_button]))
 		self._on_detail_clip_changed.subject = self.song().view
 		self._step_sequencer._note_editor._visible_steps = self._visible_steps
 
@@ -2640,8 +2640,8 @@ class Base(ControlSurface):
 	def _current_device_offsets(self, dict_entry):
 		self.log_message('finding current device offsets')
 		selected_device = self._top_device()
-		
-		if not selected_device is None:
+
+		if not selected_device is None and hasattr(selected_device, 'name'):
 			name = selected_device.name
 			self.log_message('device name: ' + str(name.split(' ')))
 			for item in name.split(' '):
@@ -2676,8 +2676,8 @@ class Base(ControlSurface):
 	
 
 	def _top_device(self):
-		selected_device = self._device._device		
-		if not selected_device is None:
+		selected_device = self._device._device
+		if not selected_device is None and hasattr(selected_device, 'canonical_parent'):
 			while not isinstance(selected_device.canonical_parent, Live.Track.Track):
 				selected_device = selected_device.canonical_parent
 		return selected_device
