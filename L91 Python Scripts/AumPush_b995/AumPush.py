@@ -339,7 +339,7 @@ class AumPush(Push):
 	def _init_device(self, *a, **k):
 		super(AumPush, self)._init_device(*a, **k)
 		self._device = self._device_parameter_provider
-		self._device_parameter_provider._current_bank_details = self._make_current_bank_details(self._device)
+		self._device_parameter_provider._current_bank_details = self._make_current_bank_details(self._device_parameter_provider)
 		self.modhandler._device_component = self._device_parameter_provider
 		#self.modhandler.layer = Layer( lock_button = self._note_mode_button, push_grid = self._matrix, shift_button = self._shift_button, alt_button = self._select_button, key_buttons = self._track_state_buttons, device_component = self._device )
 	#	self._device_navigation._on_selected_device_changed = self._make_on_selected_device_changed(self._device_navigation)
@@ -442,7 +442,7 @@ class AumPush(Push):
 					bank = [param._parameter for param in self._host._active_client._device_component._params]
 					if device_component._alt_pressed is True:
 						bank = bank[8:]
-					#self.log_message('current mod bank details: ' + str(bank_name) + ' ' + str(bank))
+					self.log_message('current mod bank details: ' + str(bank_name) + ' ' + str(bank))
 					return (bank_name, bank)
 				else:
 					return ProviderDeviceComponent._current_bank_details(device_component)
@@ -453,8 +453,10 @@ class AumPush(Push):
 					if self.modhandler._alt_value.subject:
 						if self.modhandler._alt_value.subject.is_pressed():
 							bank = bank[8:]
-					#self.log_message('current mod bank details: ' + str(bank_name) + ' ' + str(bank))
+					self.log_message('current mod bank details: ' + str(bank_name) + ' ' + str(bank))
 					return (bank_name, bank)
+				else:
+					return ProviderDeviceComponent._current_bank_details(device_component)
 			else:
 				return ProviderDeviceComponent._current_bank_details(device_component)
 		return _current_bank_details
@@ -929,8 +931,11 @@ class PushModHandler(ModHandler):
 				self._push_grid.send_value(x, y, self._colors[value], True)
 	
 
-	def _receive_grid(self, *a, **k):
-		self._receive_push_grid(*a, **k)
+	def _receive_grid(self, x, y, value, *a, **k):
+		#self._receive_push_grid(*a, **k)
+		if not self._push_grid is None:
+			if (x - self.x_offset) in range(8) and (y - self.y_offset) in range(8):
+				self._push_grid.send_value(x - self.x_offset, y - self.y_offset, value)	
 	
 
 	def _receive_key(self, x, value):
