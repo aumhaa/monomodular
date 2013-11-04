@@ -229,9 +229,9 @@ class AumPush(Push):
 		super(AumPush, self).__init__(c_instance)
 		with self.component_guard():
 			#self._create_CC_controls()
-			self._device._alt_pressed = False
-			self._host.set_device_component(self._device)
-			self._device.add_device_listener(self._on_new_device_set)
+			self._device_parameter_provider._alt_pressed = False
+			self._host.set_device_component(self._device_parameter_provider)
+			self._device_parameter_provider.add_device_listener(self._on_new_device_set)
 			self.set_feedback_channels(FEEDBACK_CHANNELS)
 			self._hack_stepseq()
 		self.log_message('<<<<<<<<<<<<<<<<<<<<<<<< AumPush ' + str(self._monomod_version) + ' log opened >>>>>>>>>>>>>>>>>>>>>>>>') 
@@ -296,7 +296,7 @@ class AumPush(Push):
 		self._host.name = 'Monomod_Host'
 		self._host._host_name = 'AumPush'
 		self._host.layer = Layer( lock_button = self._note_mode_button, button_matrix = self._matrix, shift_button = self._shift_button, alt_button = self._select_button, key_buttons = self._track_state_buttons) #, nav_up_button = OptionalElement( self._nav_up_button, self._host._alt_pressed, False), nav_down_button = OptionalElement( self._nav_down_button, self._host._alt_pressed, False), nav_left_button = OptionalElement( self._nav_left_button, self._host._alt_pressed, False), nav_right_button = OptionalElement( self._nav_right_button, self._host._alt_pressed, False)) #name_display_line=self._display_line1, value_display_line=self._display_line2, alternating_display=self._display_line3, device_controls = self._global_param_controls, encoder_touch_buttons=self._global_param_touch_buttons, lcd_displays = self._display_line1)
-		self._host.layer.priority = 4
+		self._host.layer.priority = 5
 		self._host.alt_display_layer = Layer( name_display_line = self._display_line3, value_display_line = self._display_line4 ) #alt_controls = self._track_state_buttons, 
 		self._host.shift_display_layer = Layer( name_display_line = self._display_line3, value_display_line = self._display_line4 ) #alt_controls = self._track_state_buttons, 
 
@@ -397,10 +397,12 @@ class AumPush(Push):
 
 	def _select_note_mode(self, mod_device = None):
 		track = self.song().view.selected_track
-		current_device = self._device._device
+		drum_device = self._drum_group_finder.drum_group
+		self._step_sequencer.set_drum_group_device(drum_device)
+		current_device = self._device_parameter_provider._device
 		mod_device = self._is_mod(current_device)
 		newmod_device = self._is_newmod(current_device)
-		drum_device = find_if(lambda d: d.can_have_drum_pads, track.devices)
+		#drum_device = find_if(lambda d: d.can_have_drum_pads, track.devices)
 		channelized = False
 		#self.log_message('track has midi input: ' + str(track.has_midi_input) + ' current subrouting in CHANNELS: ' + str(track.current_input_sub_routing))
 		if track.has_midi_input and track.current_input_sub_routing in ['Ch. 2', 'Ch. 3', 'Ch. 4', 'Ch. 5', 'Ch. 6', 'Ch. 7', 'Ch. 8', 'Ch. 9', 'Ch. 10', 'Ch. 11', 'Ch. 12', 'Ch. 13', 'Ch. 14', 'Ch. 15', 'Ch. 16']:
@@ -410,12 +412,12 @@ class AumPush(Push):
 			if track == None or track.is_foldable or track in self.song().return_tracks or track == self.song().master_track:
 				self._note_modes.selected_mode = 'disabled'
 			elif not mod_device is None:
-				self._note_modes.selected_mode = 'disabled'
+				#self._note_modes.selected_mode = 'disabled'
 				self._note_modes.selected_mode = 'mod'
 				if not self._host._active_client is mod_device:
 					self._host._select_client(mod_device._number)
 			elif not newmod_device is None:
-				self._note_modes.selected_mode = 'disabled'
+				#self._note_modes.selected_mode = 'disabled'
 				self._note_modes.selected_mode = 'newmod'
 			elif track and track.has_audio_input:
 				self._note_modes.selected_mode = 'looperhack'
@@ -425,7 +427,15 @@ class AumPush(Push):
 				self._note_modes.selected_mode = 'sequencer'
 			else:
 				self._note_modes.selected_mode = 'instrument'
-		#self.log_message('selected note mode: ' + str(self._note_modes.selected_mode))
+			self.reset_controlled_track()
+	
+
+	def _on_selected_track_changed(self):
+		super(AumPush, self)._on_selected_track_changed()
+		self.reset_controlled_track()
+		self._main_modes.pop_groups(['add_effect'])
+		self._note_repeat_enabler.selected_mode = 'disabled'
+		self._select_note_mode()
 	
 
 	def disconnect(self):
@@ -442,7 +452,7 @@ class AumPush(Push):
 					bank = [param._parameter for param in self._host._active_client._device_component._params]
 					if device_component._alt_pressed is True:
 						bank = bank[8:]
-					self.log_message('current mod bank details: ' + str(bank_name) + ' ' + str(bank))
+					#self.log_message('current mod bank details: ' + str(bank_name) + ' ' + str(bank))
 					return (bank_name, bank)
 				else:
 					return ProviderDeviceComponent._current_bank_details(device_component)
@@ -453,7 +463,7 @@ class AumPush(Push):
 					if self.modhandler._alt_value.subject:
 						if self.modhandler._alt_value.subject.is_pressed():
 							bank = bank[8:]
-					self.log_message('current mod bank details: ' + str(bank_name) + ' ' + str(bank))
+					#self.log_message('current mod bank details: ' + str(bank_name) + ' ' + str(bank))
 					return (bank_name, bank)
 				else:
 					return ProviderDeviceComponent._current_bank_details(device_component)
@@ -477,6 +487,7 @@ class AumPush(Push):
 					if client.device == device:
 						mod_device = client
 						break
+		self.log_message('device is mod: ' + str(mod_device))
 		return mod_device
 	
 
@@ -498,16 +509,16 @@ class AumPush(Push):
 		return mod_device
 	
 
-	def update(self):
+	"""def update(self):
 		self._on_session_record_changed()
 		
-		"""removed @ 9124"""
+		#removed @ 9124
 		#self._on_note_repeat_mode_changed(self._note_repeat.selected_mode)
 		
 		if self._get_current_instrument_channel() < 0:
 			self.set_feedback_channels(FEEDBACK_CHANNELS)
 		self._update_calibration()
-		super(Push, self).update()
+		super(Push, self).update()"""
 	
 
 	def set_highlighting_session_component(self, session_component):
@@ -659,11 +670,6 @@ class PushMonomodComponent(MonomodComponent):
 	alt_display_layer = forward_property('_alt_display')('layer')
 	shift_display_layer = forward_property('_shift_display')('layer')
 
-	def _matrix_value(self, value, x, y, is_momentary):
-		value = int(value>0)
-		super(PushMonomodComponent, self)._matrix_value(value, x, y, is_momentary)
-	
-
 	def set_device_component(self, device_component):
 		if not device_component is self._device_component:
 			self._device_component = device_component
@@ -703,6 +709,24 @@ class PushMonomodComponent(MonomodComponent):
 
 	def set_button_matrix(self, buttons):
 		self._set_button_matrix(buttons)
+	
+
+	def _set_button_matrix(self, grid):
+		assert isinstance(grid, (ButtonMatrixElement, type(None)))
+		self._grid = grid
+		self._matrix_value.subject = grid
+		self._script.log_message('set_grid: ' + str(grid))
+		if not grid is None:
+			for button in grid:
+				button.use_default_message()
+				button.set_enabled(True)
+		self.update()
+	
+
+	@subject_slot('value')
+	def _matrix_value(self, value, x, y, is_momentary):
+		value = int(value>0)
+		super(PushMonomodComponent, self)._matrix_value(value, x, y, is_momentary)
 	
 
 	def set_lock_button(self, button):
@@ -836,7 +860,7 @@ class PushMonomodComponent(MonomodComponent):
 		super(PushMonomodComponent, self).on_enabled_changed(*a, **k)
 		if not self._is_enabled:
 			self._is_modlocked = False
-			self._script._on_selected_track_changed()
+			#self._script._on_selected_track_changed()
 		else:
 			button = self._on_lock_value.subject
 			if button:
@@ -932,10 +956,10 @@ class PushModHandler(ModHandler):
 	
 
 	def _receive_grid(self, x, y, value, *a, **k):
-		#self._receive_push_grid(*a, **k)
-		if not self._push_grid is None:
-			if (x - self.x_offset) in range(8) and (y - self.y_offset) in range(8):
-				self._push_grid.send_value(x - self.x_offset, y - self.y_offset, value)	
+		self._receive_push_grid(*a, **k)
+		#if not self._push_grid is None:
+		#	if (x - self.x_offset) in range(8) and (y - self.y_offset) in range(8):
+		#		self._push_grid.send_value(x - self.x_offset, y - self.y_offset, value)	
 	
 
 	def _receive_key(self, x, value):
