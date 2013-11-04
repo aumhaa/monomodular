@@ -658,5 +658,6 @@ class ModRouter(CompoundComponent):
 		super(ModRouter, self).disconnect()
 		self._host = None
 		self.log_message = self._log_message
-		del __builtins__['monomodular']
+		if hasattr(__builtins__, 'monomodular'):
+			del __builtins__['monomodular']
 	
