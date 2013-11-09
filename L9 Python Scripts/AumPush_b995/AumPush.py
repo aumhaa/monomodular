@@ -245,6 +245,11 @@ class AumPush(Push):
 			self._matrix_CC.add_row(self._pad_CC[(index*8):(index*8)+8])"""
 	
 
+	@subject_slot('failure')
+	def _on_handshake_failure(self):
+		pass
+	
+
 	def _init_instrument(self):
 		self._instrument = AumPushInstrumentComponent(name='Instrument_Component')
 		self._instrument.set_enabled(False)
