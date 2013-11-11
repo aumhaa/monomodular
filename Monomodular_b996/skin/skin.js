@@ -74,14 +74,14 @@ function key(num, val)
 
 function shift(val)
 {
-	//post('shift', val, '\n');
+	if(DEBUG){post('shift', val, '\n');}
 	shifted = val>0;
 	update_assignment_grid();
 }
 
 function push_grid(x, y, val)
 {
-	//post('push_grid', x, y, val, '\n');
+	if(DEBUG){post('push_grid', x, y, val, '\n');}
 	base_grid(x, y, val);
 }
 
@@ -89,7 +89,7 @@ function base_grid(x, y, val)
 {
 	if(shifted)
 	{
-		//post('base_grid', x, y, val, '\n');
+		if(DEBUG){post('base_grid', x, y, val, '\n');}
 		if((val>0))
 		{
 			if(assignments[x][y].val!=current_edit)

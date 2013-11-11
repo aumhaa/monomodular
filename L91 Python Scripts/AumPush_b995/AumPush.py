@@ -307,15 +307,12 @@ class AumPush(Push):
 
 	def _setup_newmod(self):
 		if isinstance(__builtins__, dict):
-			if not 'monomodular' in __builtins__.keys():
-				#self.log_message('make attr')
+			if not 'monomodular' in __builtins__.keys() or not isinstance(__builtins__['monomodular'], ModRouter):
 				__builtins__['monomodular'] = ModRouter()
-			self.monomodular = __builtins__['monomodular']
 		else:
-			if not hasattr(__builtins__, 'monomodular'):
-				#self.log_message('make attr2')
+			if not hasattr(__builtins__, 'monomodular') or not isinstance(__builtins__['monomodular'], ModRouter):
 				setattr(__builtins__, 'monomodular', ModRouter())
-			self.monomodular = __builtins__['monomodular']
+		self.monomodular = __builtins__['monomodular']
 		if not self.monomodular.has_host():
 			self.monomodular.set_host(self)
 		self.monomodular.name = 'monomodular_switcher'
@@ -402,6 +399,7 @@ class AumPush(Push):
 		current_device = self._device_parameter_provider._device
 		mod_device = self._is_mod(current_device)
 		newmod_device = self._is_newmod(current_device)
+		self.log_message('newmod_device = ' + str(newmod_device))
 		#drum_device = find_if(lambda d: d.can_have_drum_pads, track.devices)
 		channelized = False
 		#self.log_message('track has midi input: ' + str(track.has_midi_input) + ' current subrouting in CHANNELS: ' + str(track.current_input_sub_routing))
@@ -418,7 +416,10 @@ class AumPush(Push):
 					self._host._select_client(mod_device._number)
 			elif not newmod_device is None:
 				#self._note_modes.selected_mode = 'disabled'
+				self.log_message('selecting notemode: newmod')
 				self._note_modes.selected_mode = 'newmod'
+				self.modhandler.select_mod(newmod_device)
+				self.schedule_message(1, self.modhandler.update)
 			elif track and track.has_audio_input:
 				self._note_modes.selected_mode = 'looperhack'
 			#elif channelized:
@@ -439,8 +440,9 @@ class AumPush(Push):
 	
 
 	def disconnect(self):
-		if self.monomodular._host is self:
-			self.monomodular.disconnect()
+		#if self.monomodular._host is self:
+		#	self.monomodular.disconnect()
+		self.monomodular = None
 		super(AumPush, self).disconnect()
 	
 
@@ -505,7 +507,6 @@ class AumPush(Push):
 					if mod.device == device:
 						mod_device = mod
 						break
-		self.modhandler.select_mod(mod_device)
 		return mod_device
 	
 
@@ -691,7 +692,7 @@ class PushMonomodComponent(MonomodComponent):
 	
 
 	def udpate(self):
-		self.log_message('updating Monomodcomponent')
+		#self.log_message('updating Monomodcomponent')
 		super(PushMonomodComponent, self).update()
 		if self.is_enabled() and not self._active_client is None:
 			self._active_client._device_component.update()
@@ -932,8 +933,8 @@ class PushModHandler(ModHandler):
 			client._addresses['alt'] = StoredElement(client.active_handlers, _name = 'alt')
 	
 
-	def _receive_push_grid(self, x, y, value, is_id = False):
-		self.log_message('_receive_push_grid: %s %s %s %s' % (x, y, value, is_id))
+	def _receive_push_grid(self, x, y, value, is_id = False, *a, **k):
+		#self.log_message('_receive_push_grid: %s %s %s %s' % (x, y, value, is_id))
 		if not self._push_grid is None:
 			if is_id:
 				button = self._push_grid.get_button(x, y)
@@ -952,11 +953,14 @@ class PushModHandler(ModHandler):
 					button.set_enabled(False)
 			else:
 				#this needs to be limited to only size of the grid :(
-				self._push_grid.send_value(x, y, self._colors[value], True)
+				if x < 8 and y < 8:
+					self._push_grid.send_value(x, y, self._colors[value], True)
+				#else:
+				#	self.log_message('out of range: ' + str(x) + ' ' + str(y) + '.')
 	
 
 	def _receive_grid(self, x, y, value, *a, **k):
-		self._receive_push_grid(*a, **k)
+		self._receive_push_grid(x, y, value, *a, **k)
 		#if not self._push_grid is None:
 		#	if (x - self.x_offset) in range(8) and (y - self.y_offset) in range(8):
 		#		self._push_grid.send_value(x - self.x_offset, y - self.y_offset, value)	

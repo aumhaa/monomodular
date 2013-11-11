@@ -487,7 +487,8 @@ class AumTroll(Cntrlr):
 		#	if self._encoder[index].value_has_listener(self._client[index]._mod_dial_value):
 		#		self._encoder[index].remove_value_listener(self._client[index]._mod_dial_value)
 		#self.log_message('deassign live controls')
-		self._device_selector.set_mode_buttons(None)
+		#self._device_selector.set_mode_buttons(None)
+		self._device_selector.set_enabled(False)
 		self._device._parameter_controls = None
 		self._deassign_monomodular_controls()
 		self._device1._parameter_controls = None
@@ -836,20 +837,8 @@ class AumTroll(Cntrlr):
 				self._mixer.channel_strip(index).set_volume_control(self._fader[index])
 				self._mixer3.channel_strip(index).set_volume_control(self._fader[index+4])
 			self._mixer2.set_track_offset(TROLL_OFFSET)
-			self._device_selector.set_mode_buttons(self._grid[:15])
-			self._on_shift_button_value.subject = self._grid[15]
-			self._aumpush._host._set_bank_buttons(tuple(self._button[16:32]))
-			for index in range(4):
-				self._button[index].set_on_off_values(SELECT[self._rgb], 1)
-				self._mixer.channel_strip(index).set_select_button(self._button[index])
-				self._button[index+12].set_on_off_values(SELECT[self._rgb], 1)
-				self._mixer3.channel_strip(index).set_select_button(self._button[index+12])
-			for index in range(8):
-				self._button[index+4].set_on_off_values(SELECT[self._rgb], (5, 6)[int(index>3)])
-				self._mixer2.channel_strip(index).set_select_button(self._button[index+4])
 			for index in range(4):
 				self._mixer2.channel_strip(index).set_volume_control(self._knobs[index+8])
-				self._send_reset.set_buttons(tuple(self._encoder_button[4:8]))
 			for index in range(3):
 				self._mixer2.channel_strip(index+4).set_volume_control(self._knobs[index+20])
 			self._mixer.set_crossfader_control(self._knobs[23])
@@ -857,6 +846,19 @@ class AumTroll(Cntrlr):
 				self._mixer3.return_strip(index).set_volume_control(self._encoder[index+4])
 				self._encoder_button[index+4].send_value(127, True)
 			if self._shift_mode._mode_index is 0:
+				self._device_selector.assign_buttons(self._grid[:15])
+				self._device_selector.set_enabled(True)
+				self._on_shift_button_value.subject = self._grid[15]
+				self._aumpush._host._set_bank_buttons(tuple(self._button[16:32]))
+				for index in range(8):
+					self._button[index+4].set_on_off_values(SELECT[self._rgb], (5, 6)[int(index>3)])
+					self._mixer2.channel_strip(index).set_select_button(self._button[index+4])
+				for index in range(4):
+					self._send_reset.set_buttons(tuple(self._encoder_button[4:8]))
+					self._button[index].set_on_off_values(SELECT[self._rgb], 1)
+					self._mixer.channel_strip(index).set_select_button(self._button[index])
+					self._button[index+12].set_on_off_values(SELECT[self._rgb], 1)
+					self._mixer3.channel_strip(index).set_select_button(self._button[index+12])
 				if not self._shifted:
 					self._mixer.selected_strip().set_send_controls(self._encoder[8:12])
 					for index in range(4):
