@@ -110,6 +110,7 @@ var TRANS = {0:[[1, 1], [1, 2], [1, 4], [1, 8], [1, 16], [1, 32], [1, 64], [1, 1
 				1:[[3, 2], [3, 4], [3, 8], [3, 16], [3, 32], [3, 64], [3, 128], [1, 128]], 
 				2:[[2, 3], [1, 3], [1, 6], [1, 12], [1, 24], [1, 48], [1, 96], [1, 128]]};
 var ENC_COLORS = [5, 5, 127, 127, 6, 1, 2, 2];
+var MODE_COLORS = [2, 5, 1, 3, 6, 4, 7, 2];
 
 /*Naming the js instance as script allows us to create scoped variables 
 (properties of js.this) without specifically declaring them with var
@@ -279,6 +280,7 @@ function init(val)
 		clear_surface();
 		storage.message('recall', 1);
 		init_device();
+		refresh_extras();
 		select_pattern(0);
 		/*var i=3;do{
 			outlet(0, 'to_c_wheel', i, 2, 'mode', 0);
@@ -701,6 +703,7 @@ function refresh_grid()
 			var i=7;do{
 				outlet(0, 'grid', i, 6, ENC_COLORS[i]);
 			}while(i--);
+			refresh_extras();
 			break;
 		case 1:
 			//TR256_mode
@@ -1309,6 +1312,10 @@ function _grid(x, y, val)
 			{
 				_c_button(x%4, Math.floor(x/4), val);
 			}
+			else if ((y==7)&&(val))
+			{
+				keymodegui.message('int', x);
+			}
 			break;
 		case 1:
 			if(val>0)
@@ -1572,6 +1579,13 @@ function _grid(x, y, val)
 			break;
 				
 	}
+}
+
+function refresh_extras()
+{
+	var i=7;do{
+		outlet(0, 'grid', i, 7, MODE_COLORS[i]+(7*(i==key_mode)));
+	}while(i--);
 }
 
 //this sorts key presses
@@ -2269,6 +2283,7 @@ function change_key_mode(val)
 	}
 	keymodegui.message('set', key_mode);
 	refresh_c_keys();
+	refresh_extras();
 	update_bank();
 }
 
