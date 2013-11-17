@@ -174,9 +174,10 @@ class LaunchMod(ControlSurface):
 	
 
 	def flash(self):
-		for control in self.controls:
-			if isinstance(control, MonoButtonElement):
-				control.flash(self._timer)
+		if self._host.is_enabled():
+			for control in self.controls:
+				if isinstance(control, MonoButtonElement):
+					control.flash(self._timer)
 	
 
 	#def set_highlighting_session_component(self, session_component):

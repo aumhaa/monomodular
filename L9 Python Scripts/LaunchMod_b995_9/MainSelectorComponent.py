@@ -30,19 +30,19 @@ class MainSelectorComponent(ModeSelectorComponent):
 		ModeSelectorComponent.__init__(self)
 		self._script = script
 		self._session = SpecialSessionComponent(matrix.width(), matrix.height())
-		for scene in self._session._scenes:
+		"""for scene in self._session._scenes:
 			for slot in scene._clip_slots:
 				slot._triggered_to_play_value = 24
 				slot._triggered_to_record_value = 27
 				slot._started_value = 7
 				slot._recording_value = 9
-				slot._stopped_value = 8
+				slot._stopped_value = 8"""
 		self._zooming = SessionZoomingComponent(self._session)
 		self._session.name = 'Session_Control'
 		self._zooming.name = 'Session_Overview'
-		self._zooming._stopped_value = 9
+		"""self._zooming._stopped_value = 9
 		self._zooming._playing_value = 7
-		self._zooming._selected_value = 8
+		self._zooming._selected_value = 8"""
 		self._matrix = matrix
 		self._side_buttons = side_buttons
 		self._nav_buttons = top_buttons[:4]
@@ -150,7 +150,7 @@ class MainSelectorComponent(ModeSelectorComponent):
 				self._script._host._set_shift_button(None)
 				self._script._host._set_nav_buttons(None)
 				for button in self._modes_buttons:
-					button.set_on_off_values(5, 0)
+					button.set_on_off_values(127, 4)
 
 				if self._mode_index == 0:
 					self._setup_mixer(not as_active)
@@ -275,7 +275,7 @@ class MainSelectorComponent(ModeSelectorComponent):
 
 		if release_buttons:
 			self._config_button.send_value(2)
-		self._config_button.send_value(32, force_send=True)
+		self._config_button.send_value(32, force=True)
 
 	def _init_session(self):
 		self._session.set_stop_track_clip_value(AMBER_BLINK)
