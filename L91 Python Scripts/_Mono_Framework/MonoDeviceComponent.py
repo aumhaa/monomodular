@@ -194,19 +194,23 @@ class MonoDeviceComponent(DeviceComponent):
 			for control in host._parameter_controls:
 				control.clear_send_cache()
 			self._bank_name = ('Bank ' + str(self._bank_index + 1)) #added
-			if (self._device.class_name in self._device_banks.keys()): #modified
-				assert (self._device.class_name in self._device_best_banks.keys())
-				banks = self._device_banks[self._device.class_name]
+			if (self._device.class_name in self._device_banks.keys()):
+				class_name = self._device.class_name
+			else:
+				class_name = 'Other'
+			if (class_name in self._device_banks.keys()): #modified
+				assert (class_name in self._device_best_banks.keys())
+				banks = self._device_banks[class_name]
 				if '_alt_device_banks' in dir(host):
 					if self._type in host._alt_device_banks.keys():
-						if (self._device.class_name in host._alt_device_banks[self._type].keys()):
-							banks = host._alt_device_banks[self._type][self._device.class_name]
+						if (class_anme in host._alt_device_banks[self._type].keys()):
+							banks = host._alt_device_banks[self._type][class_name]
 				bank = None
 				if (len(banks) > self._bank_index):
 					bank = banks[self._bank_index]
 					if self._is_banking_enabled(): #added
-						if self._device.class_name in self._device_bank_names.keys(): #added
-							self._bank_name[self._bank_index] = self._device_bank_names[self._device.class_name] #added *recheck
+						if class_name in self._device_bank_names.keys(): #added
+							self._bank_name[self._bank_index] = self._device_bank_names[class_name] #added *recheck
 				#assert (bank == None)	# or (len(bank) >= len(self._parameter_controls)))
 				for index in range(len(host._parameter_controls)):
 					parameter = None
@@ -215,7 +219,7 @@ class MonoDeviceComponent(DeviceComponent):
 					if (parameter != None):
 						host._parameter_controls[index].connect_to(parameter)
 					else:
-						host._parameter_controls[index].release_parameter()
+						host._parameter_controls[index].release_parameter()			
 			else:
 				parameters = self._device_parameters_to_map(host)
 				num_controls = len(host._parameter_controls)
@@ -232,15 +236,19 @@ class MonoDeviceComponent(DeviceComponent):
 		#self._parent._host.log_message('assign params!')
 		if self._device != None and not len(self._params) is 0:
 			self._bank_name = ('ModBank ' + str(self._bank_index + 1)) #added
-			if (self._device.class_name in self._device_banks.keys()): #modified
-				assert (self._device.class_name in self._device_best_banks.keys())
-				banks = self._device_banks[self._device.class_name]
+			if (self._device.class_name in self._device_banks.keys()):
+				class_name = self._device.class_name
+			else:
+				class_name = 'Other'
+			if (class_name in self._device_banks.keys()): #modified
+				assert (class_name in self._device_best_banks.keys())
+				banks = self._device_banks[class_name]
 				bank = None
 				if (len(banks) > self._bank_index):
 					bank = banks[self._bank_index]
 					if self._is_banking_enabled(): #added
-						if self._device.class_name in self._device_bank_names.keys(): #added
-							self._bank_name[self._bank_index] = self._device_bank_names[self._device.class_name] #added *recheck
+						if class_name in self._device_bank_names.keys(): #added
+							self._bank_name[self._bank_index] = self._device_bank_names[class_name] #added *recheck
 				for index in range(len(self._params)):
 					parameter = None
 					if (bank != None) and (index in range(len(bank))):

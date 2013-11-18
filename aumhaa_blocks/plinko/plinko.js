@@ -37,9 +37,9 @@ var pot_array=[];
 var pot_array_temp=[]; 
 x_adj=[1, 0, -1, 1, -1, 1, 0, -1, 0];
 y_adj=[1, 1, 1, 0, 0, -1, -1, -1, 0];
-const cleared_program=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
-const preset_program=[0,0,1,0,4,4,0,0,3,0,4,4,0,0,5,0,4,4,0,0,7,0,4,4,0];
-const empty = [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2];
+var cleared_program=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+var preset_program=[0,0,1,0,4,4,0,0,3,0,4,4,0,0,5,0,4,4,0,0,7,0,4,4,0];
+var empty = [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2];
 var display=[];
 var prog=[];
 var cell=[];
@@ -72,7 +72,7 @@ for(var d=0;d<16;d++)
 	}																	   ///			   [velocity, duration aren't implemented] 
 }
 var pot_insert_coll=[];
-const monomap = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+var monomap = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
 var timer = 0;
 var alive = 0;
 var last = 0;
