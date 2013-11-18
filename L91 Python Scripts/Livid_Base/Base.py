@@ -7,7 +7,7 @@ from __future__ import with_statement
 import Live
 import math
 import sys
-
+from _Tools.re import *
 from itertools import imap, chain, starmap
 
 """ _Framework files """
@@ -62,7 +62,7 @@ from Push.ConfigurableButtonElement import ConfigurableButtonElement
 from Push.LoopSelectorComponent import LoopSelectorComponent
 from Push.ComboElement import ComboElement, DoublePressElement, MultiElement, DoublePressContext
 from Push.Actions import CreateInstrumentTrackComponent, CreateDefaultTrackComponent, CaptureAndInsertSceneComponent, DuplicateDetailClipComponent, DuplicateLoopComponent, SelectComponent, DeleteComponent, DeleteSelectedClipComponent, DeleteSelectedSceneComponent, CreateDeviceComponent
-
+from Push.M4LInterfaceComponent import M4LInterfaceComponent
 
 #from NoteEditorComponent import NoteEditorComponent
 
@@ -1422,7 +1422,6 @@ class Base(ControlSurface):
 						self._set_layer1, 
 						self._set_layer2, 
 						self._set_layer3]
-
 		with self.component_guard():
 			self.set_pad_translations(make_pad_translations(15))
 			self._setup_monobridge()
@@ -1443,6 +1442,7 @@ class Base(ControlSurface):
 			self._setup_vertical_offset_component()
 			self._setup_scale_offset_component()
 			self._setup_session_recording_component()
+			self._setup_m4l_interface()
 			self._setup_drumgroup()
 			self._setup_step_sequencer()
 			self._device.add_device_listener(self._on_new_device_set)
@@ -1661,30 +1661,44 @@ class Base(ControlSurface):
 		self._recorder = BaseSessionRecordingComponent(self._clip_creator, ViewControlComponent())
 	
 
+	def _setup_m4l_interface(self):
+		self._m4l_interface = M4LInterfaceComponent(controls=self.controls, component_guard=self.component_guard)
+		self.get_control_names = self._m4l_interface.get_control_names
+		self.get_control = self._m4l_interface.get_control
+		self.grab_control = self._m4l_interface.grab_control
+		self.release_control = self._m4l_interface.release_control
+	
+
 	def _setup_drumgroup(self):
 		self._drumgroup = DrumGroupComponent()
 	
 
 	def _setup_mod(self):
 		if isinstance(__builtins__, dict):
-			if not 'monomodular' in __builtins__.keys():
-				#self.log_message('make attr')
+			if not 'monomodular' in __builtins__.keys() or not isinstance(__builtins__['monomodular'], ModRouter):
 				__builtins__['monomodular'] = ModRouter()
-			self.monomodular = __builtins__['monomodular']
 		else:
-			if not hasattr(__builtins__, 'monomodular'):
-				#self.log_message('make attr2')
+			if not hasattr(__builtins__, 'monomodular') or not isinstance(__builtins__['monomodular'], ModRouter):
 				setattr(__builtins__, 'monomodular', ModRouter())
-			self.monomodular = __builtins__['monomodular']
+		self.monomodular = __builtins__['monomodular']
 		if not self.monomodular.has_host():
 			self.monomodular.set_host(self)
 		self.monomodular.name = 'monomodular_switcher'
 		self.modhandler = BaseModHandler(script = self, detect_mod = self._on_new_device_set)
+		self.modhandler.name = 'ModHandler'
 		# self.log_message('mod is: ' + str(self.monomodular) + ' ' + str(__builtins__['monomodular']))
 	
 
 	def _setup_OSC_layer(self):
-		self._prefix = '/Base'
+		self._OSC_id = 0
+		if hasattr(__builtins__, 'control_surfaces') or (isinstance(__builtins__, dict) and 'control_surfaces' in __builtins__.keys()):
+			for cs in __builtins__['control_surfaces']:
+				if cs is self:
+					break
+				elif isinstance(cs, Base):
+					self._OSC_id += 1
+
+		self._prefix = '/Live/Base/'+str(self._OSC_id)
 		self._outPrt = OSC_OUTPORT
 		if not self.oscServer is None:
 			self.oscServer.shutdown()
@@ -2375,9 +2389,33 @@ class Base(ControlSurface):
 			self._user_mode_selector.set_enabled(True)
 			self._assign_alternate_mappings(self._user_layer+12)
 			self._send_midi(tuple([240, 0, 1, 97, 12, 61, 1, 1, 1, 1, 1, 1, 1, 1, 2, 247]))
-			#for index in range(8):
-			#	self._send_midi(tuple([191, index+10, 100]))
 			self._send_midi(tuple([191, 122, 72]))		#turn local ON for CapFaders
+
+			#self.set_chain_selector(self._user_mode_selector._mode_index)
+	
+
+	def set_chain_selector(self, mode):
+		key = str('@userChain')
+		preset = None
+		for track in range(len(self.song().tracks)):
+			for device in range(len(self.song().tracks[track].devices)):
+				if match(key, str(self.song().tracks[track].devices[device].name)) != None:
+					preset = self.song().tracks[track].devices[device]
+
+		for return_track in range(len(self.song().return_tracks)):
+			for device in range(len(self.song().return_tracks[return_track].devices)):
+				if match(key, str(self.song().return_tracks[return_track].devices[device].name)) != None:
+					preset = self.song().return_tracks[return_track].devices[device]
+
+		for device in range(len(self.song().master_track.devices)):
+			if match(key, str(self.song().master_track.devices[device].name)) != None:
+				preset = self.song().master_track.devices[device]
+
+		if preset != None:
+			for parameter in preset.parameters:
+				if parameter.name == 'Chain Selector':
+					parameter.value = max(min((128/3)*mode, 127),0)
+					break
 	
 
 	def _assign_midi_layer(self):
@@ -2528,15 +2566,15 @@ class Base(ControlSurface):
 				is_midi = False
 
 		if OSC_TRANSMIT:
-			self.oscServer.sendOSC('/Base/scale/lcd_value/', str(self.generate_strip_string(scale)))
-			self.oscServer.sendOSC('/Base/offset/lcd_value/', str(self.generate_strip_string(offset)))
-			self.oscServer.sendOSC('/Base/vertoffset/lcd_value/', str(self.generate_strip_string(vertoffset)))
+			self.oscServer.sendOSC(self._prefix+'/scale/lcd_value/', str(self.generate_strip_string(scale)))
+			self.oscServer.sendOSC(self._prefix+'/offset/lcd_value/', str(self.generate_strip_string(offset)))
+			self.oscServer.sendOSC(self._prefix+'/vertoffset/lcd_value/', str(self.generate_strip_string(vertoffset)))
 			for pad in self._pad:
-				self.oscServer.sendOSC('/Base/'+pad.name+'/lcd_value/', str(self.generate_strip_string(pad._descriptor)))
+				self.oscServer.sendOSC(self._prefix+'/'+pad.name+'/lcd_value/', str(self.generate_strip_string(pad._descriptor)))
 			for touchpad in self._touchpad:
-				self.oscServer.sendOSC('/Base/'+touchpad.name+'/lcd_value/', str(self.generate_strip_string(touchpad._descriptor)))
+				self.oscServer.sendOSC(self._prefix+'/'+touchpad.name+'/lcd_value/', str(self.generate_strip_string(touchpad._descriptor)))
 			for button in self._button:
-				self.oscServer.sendOSC('/Base/'+button.name+'/lcd_value/', str(self.generate_strip_string(button._descriptor)))
+				self.oscServer.sendOSC(self._prefix+'/'+button.name+'/lcd_value/', str(self.generate_strip_string(button._descriptor)))
 
 		return is_midi	
 	
@@ -2680,15 +2718,15 @@ class Base(ControlSurface):
 						self._pad[15]._descriptor = 'Follow'
 
 		if OSC_TRANSMIT:
-			self.oscServer.sendOSC('/Base/scale/lcd_value/', str(self.generate_strip_string(scale)))
-			self.oscServer.sendOSC('/Base/offset/lcd_value/', str(self.generate_strip_string(offset)))
-			self.oscServer.sendOSC('/Base/vertoffset/lcd_value/', str(self.generate_strip_string(vertoffset)))
+			self.oscServer.sendOSC(self._prefix+'/scale/lcd_value/', str(self.generate_strip_string(scale)))
+			self.oscServer.sendOSC(self._prefix+'/offset/lcd_value/', str(self.generate_strip_string(offset)))
+			self.oscServer.sendOSC(self._prefix+'/vertoffset/lcd_value/', str(self.generate_strip_string(vertoffset)))
 			for pad in self._pad:
-				self.oscServer.sendOSC('/Base/'+pad.name+'/lcd_value/', str(self.generate_strip_string(pad._descriptor)))
+				self.oscServer.sendOSC(self._prefix+'/'+pad.name+'/lcd_value/', str(self.generate_strip_string(pad._descriptor)))
 			for touchpad in self._touchpad:
-				self.oscServer.sendOSC('/Base/'+touchpad.name+'/lcd_value/', str(self.generate_strip_string(touchpad._descriptor)))
+				self.oscServer.sendOSC(self._prefix+'/'+touchpad.name+'/lcd_value/', str(self.generate_strip_string(touchpad._descriptor)))
 			for button in self._button:
-				self.oscServer.sendOSC('/Base/'+button.name+'/lcd_value/', str(self.generate_strip_string(button._descriptor)))
+				self.oscServer.sendOSC(self._prefix+'/'+button.name+'/lcd_value/', str(self.generate_strip_string(button._descriptor)))
 		return is_midi
 	
 
@@ -2899,11 +2937,11 @@ class Base(ControlSurface):
 			char2 = str(self._user_mode_selector._mode_index+1)
 		self._display_chars(char1, char2)
 		if OSC_TRANSMIT:
-			self.oscServer.sendOSC('/Base/mode/lcd_value/', str(self.generate_strip_string(['Launch', 'Sends', 'Device', 'User'][self._layer])))
+			self.oscServer.sendOSC(self._prefix+'/mode/lcd_value/', str(self.generate_strip_string(['Launch', 'Sends', 'Device', 'User'][self._layer])))
 			for button in self._button:
-				self.oscServer.sendOSC('/Base/'+button.name+'/lcd_value/', str(self.generate_strip_string(button._descriptor)))
+				self.oscServer.sendOSC(self._prefix+'/'+button.name+'/lcd_value/', str(self.generate_strip_string(button._descriptor)))
 			for touchpad in self._touchpad:
-				self.oscServer.sendOSC('/Base/'+touchpad.name+'/lcd_value/', str(self.generate_strip_string(touchpad._descriptor)))
+				self.oscServer.sendOSC(self._prefix+'/'+touchpad.name+'/lcd_value/', str(self.generate_strip_string(touchpad._descriptor)))
 	
 
 	def _register_pad_pressed(self, bytes):
@@ -3007,7 +3045,7 @@ class Base(ControlSurface):
 		self._monobridge._send('Device_Name', 'lcd_value', str(self.generate_strip_string(name)))
 		self.touched()
 		if OSC_TRANSMIT:
-			self.oscServer.sendOSC('/Base/device/lcd_value/', str(self.generate_strip_string(name)))
+			self.oscServer.sendOSC(self._prefix+'/device/lcd_value/', str(self.generate_strip_string(name)))
 	
 
 	def _on_device_bank_changed(self):
@@ -3065,16 +3103,16 @@ class Base(ControlSurface):
 		#self.log_message('monobridge:' + str(name) + str(value))
 		if isinstance(sender, MonoEncoderElement):
 			if OSC_TRANSMIT:
-				self.oscServer.sendOSC('/Base/'+sender.name+'/lcd_name/', str(self.generate_strip_string(name)))
-				self.oscServer.sendOSC('/Base/'+sender.name+'/lcd_value/', str(self.generate_strip_string(value)))
+				self.oscServer.sendOSC(self._prefix+'/'+sender.name+'/lcd_name/', str(self.generate_strip_string(name)))
+				self.oscServer.sendOSC(self._prefix+'/'+sender.name+'/lcd_value/', str(self.generate_strip_string(value)))
 			self._monobridge._send(sender.name, 'lcd_name', str(self.generate_strip_string(name)))
 			self._monobridge._send(sender.name, 'lcd_value', str(self.generate_strip_string(value)))
 		else:
 			self._monobridge._send(name, 'lcd_name', str(self.generate_strip_string(name)))
 			self._monobridge._send(name, 'lcd_value', str(self.generate_strip_string(value)))
 			if OSC_TRANSMIT:
-				self.oscServer.sendOSC('/Base/'+name+'/lcd_name/', str(self.generate_strip_string(name)))
-				self.oscServer.sendOSC('/Base/'+name+'/lcd_value/', str(self.generate_strip_string(value)))
+				self.oscServer.sendOSC(self._prefix+'/'+name+'/lcd_name/', str(self.generate_strip_string(name)))
+				self.oscServer.sendOSC(self._prefix+'/'+name+'/lcd_value/', str(self.generate_strip_string(value)))
 	
 
 	def touched(self):
