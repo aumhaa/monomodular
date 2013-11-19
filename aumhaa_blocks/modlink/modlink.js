@@ -2,7 +2,7 @@ autowatch=1;
 
 outlets=2;
 
-const DEBUG = false;
+var DEBUG = true;
 
 var unique = jsarguments[1];
 var protocol = 1;
@@ -12,7 +12,9 @@ var out_port = 8080;
 var slash=new RegExp(/^\//);
 var space=new RegExp(/^\S/);
 
-const quads = [{'X':0, 'Y':0}, {'X':8, 'Y':0}, {'X':0, 'Y':8}, {'X':8, 'Y':8}];
+var quads = [{'X':0, 'Y':0}, {'X':8, 'Y':0}, {'X':0, 'Y':8}, {'X':8, 'Y':8}];
+
+post('newmodjs');
 
 function loadbang()
 {
@@ -62,10 +64,12 @@ function change_protocol(val)
     }
 }
 
+
 function anything()
 {
     var args=arrayfromargs(arguments);
     var str=messagename.split("/");
+	post('str:', str);
     for (i in str)
     {
         str[i].replace(space, "");
@@ -95,17 +99,17 @@ function anything()
                     }
                 }
             case "led_col":
-                var dec1=deciToBin(args[1]);
+                var dec1=dectobin(args[1]);
                 for(var i=0;i<dec1.length;i++)
                 {
-                    outlet(0, parseInt(args[0]), i, parseInt(dec1.charAt(dec1.length-i-1)));
+                    outlet(0, parseInt(args[0]), i, dec1[i]);
                 }
                 break;
             case "led_row":
-                var dec1=deciToBin(args[1]);
+                var dec1=dectobin(args[1]);
                 for(var i=0;i<dec1.length;i++)
                 {
-                    outlet(0,  i, parseInt(args[0]), parseInt(dec1.charAt(dec1.length-i-1)));
+                    outlet(0,  i, parseInt(args[0]), dec1[i]);
                 }
                 break;
             case "prefix":
@@ -151,12 +155,12 @@ function anything()
                                         var yOff = args.shift();
                                         for(var index=0;index<8;index++)
                                         {
-                                            var dec1=deciToBin(args.shift());
+                                            var dec1=dectobin(args.shift());
                                             for(var i=0;i<dec1.length;i++)
                                             {
                                                 X = xOff+index;
                                                 Y = yOff+i;
-                                                outlet(0, X%16, Y%16, parseInt(dec1.charAt(dec1.length-i-1)));
+                                                outlet(0, X%16, Y%16, dec1[i]);
                                             }
                                         }
                                     }
@@ -168,12 +172,12 @@ function anything()
                                         var yOff = args.shift();
                                         for(var index=0;index<args.length;index++)
                                         {
-                                            var dec1=deciToBin(args.shift());
+                                            var dec1=dectobin(args[index]);
                                             for(var i=0;i<dec1.length;i++)
                                             {
                                                 X = xOff+i+quads[index].X;
                                                 Y = yOff+quads[index].Y;
-                                                outlet(0, X%16, Y%16, parseInt(dec1.charAt(dec1.length-i-1)));
+                                                outlet(0, X%16, Y%16, dec1[i]);
                                             }
                                         }
                                     }
@@ -185,12 +189,12 @@ function anything()
                                         var yOff = args.shift();
                                         for(var index=0;index<args.length;index++)
                                         {
-                                            var dec1=deciToBin(args.shift());
+                                            var dec1=dectobin(args[index]);
                                             for(var i=0;i<dec1.length;i++)
                                             {
                                                 X = xOff+quads[index].X;
                                                 Y = yOff+i+quads[index].Y;
-                                                outlet(0, X%16, Y%16, parseInt(dec1.charAt(dec1.length-i-1)));
+                                                outlet(0, X%16, Y%16, dec1[i]);
                                             }
                                         }
                                     }
@@ -240,44 +244,18 @@ function anything()
     }
 }
 
-function deciToBin(arg)
+function dectobin(arg)
 {
-    res1 = 999;
-    args = arg;
-    while(args>1)
-    {
-        arg1 = parseInt(args/2);
-        arg2 = args%2;
-        args = arg1;
-        if(res1 == 999)
-        {
-            res1 = arg2.toString();
-        }
-        else
-        {
-            res1 = arg2.toString()+res1.toString();
-        }
-    }
-    if(args == 1 && res1 != 999)
-    {
-        res1 = args.toString()+res1.toString();
-    }
-    else if(args == 0 && res1 == 999)
-    {
-        res1 = 0;
-    }
-    else if(res1 == 999)
-    {
-        res1 = 1;
-    }
-    var ll = res1.length;
-    while(ll%16 != 0)
-    {
-        res1 = "0"+res1;
-        ll = res1.length;
-    }    
-    return res1;
+	var dec = [];
+	for(var i=0;i<8;i++)
+	{
+		dec.unshift(arg&1);
+		arg = arg>>>1;
+	}
+	return dec;
 }
+
+
 
 
 
