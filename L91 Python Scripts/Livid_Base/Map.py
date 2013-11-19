@@ -27,6 +27,7 @@ BASE_LCDS = [34, 35]
 
 FOLLOW = True		#this sets whether or not the last selected device on a track is selected for editing when you select a new track
 
+TRACK_BANKING_INCREMENT = 8
 
 """ The default assignment of colors within the OhmRGB is:
 Note 2 = white

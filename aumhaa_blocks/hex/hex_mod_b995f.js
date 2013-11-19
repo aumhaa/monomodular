@@ -25,7 +25,7 @@ DEBUG_STEP = 0;
 DEBUG_BLINK = 0;
 DEBUG_REC = 0;
 DEBUG_LOCK = 0;
-SHOW_POLYSELECTOR = 1;
+SHOW_POLYSELECTOR = 0;
 SHOW_STORAGE = 0;
 FORCELOAD = 0; //this doesn't work anymore, don't waste your time. -a
 
@@ -98,7 +98,7 @@ var modes = [[0, 2, 4, 5, 7, 9, 11, 12], [0, 2, 3, 5, 7, 9, 10, 12], [0, 1, 3, 5
 var Colors = [0, 1, 2, 3, 4, 5, 6, 127];
 var StepColors = [127, 3, 3, 3, 127, 3, 3, 3, 127, 3, 3, 3, 127, 3, 3, 3 ];
 var SelectColors = [1, 5, 4, 6];
-var AddColors = [6, 1];
+var AddColors = [5, 6];
 var Blinks=[-1, 2];
 var modColor = 5;
 var TVEL_COLORS = [1,2,3,4];
@@ -161,6 +161,8 @@ var grid_pressed = -1;
 var current_step = 0;
 var autoclip;
 var dirty = 0;
+var keymodeenables = [0, 1, 2, 3, 4, 5, 6, 7];
+var padmodeenables = [0, 1, 2, 3, 4, 5];
 
 //new props
 var sel_vel = 0;
@@ -545,11 +547,21 @@ function refresh_pads()
 				padgui.message(x, y, v);
 			}while(i--);
 			break;
-		case 6:
+		case 7:
 			var i=15;do{
 				var x=i%4;
 				var y=Math.floor(i/4);
 				var v=(selected.triggered.indexOf(i)>-1) + 7;
+				outlet(0, 'c_grid', x, y, v);
+				grid_out('default', 'grid', x, y, v);
+				padgui.message(x, y, v);
+			}while(i--);
+			break;
+		case 6:
+			var i=15;do{
+				var x=i%4;
+				var y=Math.floor(i/4);
+				var v=3;
 				outlet(0, 'c_grid', x, y, v);
 				grid_out('default', 'grid', x, y, v);
 				padgui.message(x, y, v);
@@ -1248,7 +1260,7 @@ function _c_grid(x, y, val)
 				sync_wheels(selected, part[x + (y*4)]);
 			}
 			break;			
-		case 6:
+		case 7:
 			//post('pad_play', x, y, val);
 			var num = x + (y*4);
 			if(val>0)
@@ -1288,6 +1300,14 @@ function _c_grid(x, y, val)
 			}
 			//part[num].obj.polyenable.message('int', part[num].polyenable);
 			refresh_pads();
+			break;
+		case 6:
+			if(val>0)
+			{
+				var p = x+(y*4);
+				play_note(part[p]);
+				
+			}
 			break;
 	}
 }
@@ -1711,10 +1731,26 @@ function _guibuttons(num, val)
 	switch(num)
 	{
 		case 0:
-			padmodegui.message('int', RemotePModes[Math.max((RemotePModes.indexOf(pad_mode)+1)%3, 0)]);
+			//padmodegui.message('int', RemotePModes[Math.max((RemotePModes.indexOf(pad_mode)+1)%3, 0)]);
+			if(padmodeenables.length)
+			{
+				while(padmodeenables.indexOf(pad_mode)==-1)
+				{
+					pad_mode = (pad_mode+1)%7;
+				}
+				padmodegui.message('int', padmodeenables[(padmodeenables.indexOf(pad_mode)+1)%padmodeenables.length]);
+			}
 			break;
 		case 1:
-			keymodegui.message('int', (key_mode+1)%8);
+			//keymodegui.message('int', (key_mode+1)%8);
+			if(keymodeenables.length)
+			{
+				while(keymodeenables.indexOf(key_mode)==-1)
+				{
+					key_mode = (key_mode+1)%8;
+				}
+				keymodegui.message('int', keymodeenables[(keymodeenables.indexOf(key_mode)+1)%keymodeenables.length]);
+			}
 			break;
 		case 2:
 			rotate_pattern(selected, rot_length, -1);
@@ -1811,6 +1847,7 @@ function _guibuttons(num, val)
 //distributes input from gui grid element
 function _padgui_in(val)
 {
+	post('padguiin', val, '\n');
 	if(DEBUG){post('padguiin', val, '\n');}
 	_c_grid(val%4, Math.floor(val/4), 1);
 	_c_grid(val%4, Math.floor(val/4), 0);
@@ -1852,6 +1889,9 @@ function _vblink(num, val)
 //evaluate and distribute data recieved from the settings menu
 function _settingsgui(num, val)
 {
+	args = arrayfromargs(arguments);
+	num = args[0];
+	val = args[1];
 	switch(num)
 	{
 		case 0:
@@ -1899,6 +1939,31 @@ function _settingsgui(num, val)
 			break;
 		case 13:
 			randomize_rules();
+			break;
+		case 14:
+			vals = args.slice(1, 9);
+			keymodeenables = [];
+			for(var i=0;i<8;i++)
+			{
+				if(vals[i])
+				{
+					keymodeenables.push(i);
+				}
+			}
+			post('keymodeenables', keymodeenables, '\n');
+			break;
+		case 15:
+			vals = args.slice(1, 8);
+			padmodeenables = args.slice(1, 8);
+			padmodeenables = [];
+			for(var i=0;i<7;i++)
+			{
+				if(vals[i])
+				{
+					padmodeenables.push(i);
+				}
+			}
+			post('padmodeenables', padmodeenables, '\n');
 			break;
 	}
 }
@@ -2388,6 +2453,12 @@ function add_note(part)
 		refresh_c_keys();
 		outlet(0, 'to_c_wheel', selected.num%4, Math.floor(selected.num/4)%2, 'custom', 'x'+(selected.pattern.join('')));
 	}
+}
+
+function play_note(part)
+{
+	if(DEBUG){post('play_note', part.num, '\n');}
+	part.obj.addnote.message('bang');
 }
 
 /*//add new notes received from poly to the appropriate place and update display

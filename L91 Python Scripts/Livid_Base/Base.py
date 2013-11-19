@@ -1548,6 +1548,7 @@ class Base(ControlSurface):
 				clip_slot.set_started_value(CLIP_STARTED)
 				clip_slot.set_recording_value(CLIP_RECORDING)
 		self._session.set_mixer(self._mixer)
+		self._session.set_track_banking_increment(TRACK_BANKING_INCREMENT)
 		self.set_highlighting_session_component(self._session)
 		self._session._do_show_highlight()
 	
