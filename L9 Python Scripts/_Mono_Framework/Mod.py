@@ -593,6 +593,7 @@ class ModRouter(CompoundComponent):
 		self._host = None
 		self._handlers = []
 		self._mods = []
+		self.log_message = self._log_message
 		return None
 	
 
@@ -610,6 +611,10 @@ class ModRouter(CompoundComponent):
 		if hasattr(self._host, '_task_group'):
 			result = self._host._task_group.find(self.timer)
 		return result
+	
+
+	def _log_message(self, *a, **k):
+		pass
 	
 
 	def register_handler(self, handler):
@@ -651,5 +656,8 @@ class ModRouter(CompoundComponent):
 
 	def disconnect(self):
 		super(ModRouter, self).disconnect()
-		del __builtins__['monomodular']
+		self._host = None
+		self.log_message = self._log_message
+		if hasattr(__builtins__, 'monomodular'):
+			del __builtins__['monomodular']
 	

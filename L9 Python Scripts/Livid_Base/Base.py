@@ -1975,7 +1975,7 @@ class Base(ControlSurface):
 						self._set_device_attribute(self._top_device(), 'drumoffset', offset)
 						self.show_message('New drum root is ' + str(self._offsets[cur_chan]['drumoffset']))
 						if OSC_TRANSMIT:
-							self.oscServer.sendOSC(self._prefix+'/glob/offset/lcd_value/', str(self.generate_strip_string(offset)))
+							self.oscServer.sendOSC(self._prefix+'/glob/offset/', str(self.generate_strip_string(offset)))
 
 						newval = list(str(offset))
 						if len(newval)==2:
@@ -1988,7 +1988,7 @@ class Base(ControlSurface):
 						self._set_device_attribute(self._top_device(), 'offset', offset)
 						self.show_message('New root is Note# ' + str(self._offsets[cur_chan]['offset']) + ', ' + str(NOTENAMES[self._offsets[cur_chan]['offset']]))
 						if OSC_TRANSMIT:
-							self.oscServer.sendOSC(self._prefix+'/glob/offset/lcd_value/', str(self.generate_strip_string(offset)))
+							self.oscServer.sendOSC(self._prefix+'/glob/offset/', str(self.generate_strip_string(offset)))
 
 						newval = list(str(offset))
 						if len(newval)>=2:
@@ -2018,7 +2018,7 @@ class Base(ControlSurface):
 
 					self.show_message('New vertical offset is ' + str(self._offsets[cur_chan]['vertoffset']))
 					if OSC_TRANSMIT:
-						self.oscServer.sendOSC(self._prefix+'/glob/vertoffset/lcd_value/', str(self.generate_strip_string(offset)))
+						self.oscServer.sendOSC(self._prefix+'/glob/vertoffset/', str(self.generate_strip_string(offset)))
 					newval = list(str(offset))
 					if len(newval)>=2:
 						self._display_chars(newval[0], newval[1])
@@ -2634,9 +2634,9 @@ class Base(ControlSurface):
 				is_midi = False
 
 		if OSC_TRANSMIT:
-			self.oscServer.sendOSC(self._prefix+'/glob/scale/lcd_value/', str(self.generate_strip_string(scale)))
-			self.oscServer.sendOSC(self._prefix+'/glob/offset/lcd_value/', str(self.generate_strip_string(offset)))
-			self.oscServer.sendOSC(self._prefix+'/glob/vertoffset/lcd_value/', str(self.generate_strip_string(vertoffset)))
+			self.oscServer.sendOSC(self._prefix+'/glob/scale/', str(self.generate_strip_string(scale)))
+			self.oscServer.sendOSC(self._prefix+'/glob/offset/', str(self.generate_strip_string(offset)))
+			self.oscServer.sendOSC(self._prefix+'/glob/vertoffset/', str(self.generate_strip_string(vertoffset)))
 
 		return is_midi	
 	
@@ -2780,18 +2780,18 @@ class Base(ControlSurface):
 						self._pad[15]._descriptor = 'Follow'
 
 		if OSC_TRANSMIT:
-			self.oscServer.sendOSC(self._prefix+'/glob/scale/lcd_value/', str(self.generate_strip_string(scale)))
-			self.oscServer.sendOSC(self._prefix+'/glob/offset/lcd_value/', str(self.generate_strip_string(offset)))
-			self.oscServer.sendOSC(self._prefix+'/glob/vertoffset/lcd_value/', str(self.generate_strip_string(vertoffset)))
+			self.oscServer.sendOSC(self._prefix+'/glob/scale/', str(self.generate_strip_string(scale)))
+			self.oscServer.sendOSC(self._prefix+'/glob/offset/', str(self.generate_strip_string(offset)))
+			self.oscServer.sendOSC(self._prefix+'/glob/vertoffset/', str(self.generate_strip_string(vertoffset)))
 		return is_midi
 	
 
 	def _notify_descriptors(self):
 		if OSC_TRANSMIT:
 			for pad in self._pad:
-				self.oscServer.sendOSC(self._prefix+'/'+pad.name+'/lcd_value/', str(self.generate_strip_string(pad._descriptor)))
+				self.oscServer.sendOSC(self._prefix+'/'+pad.name+'/lcd_name/', str(self.generate_strip_string(pad._descriptor)))
 			for touchpad in self._touchpad:
-				self.oscServer.sendOSC(self._prefix+'/'+touchpad.name+'/lcd_value/', str(self.generate_strip_string(touchpad._descriptor)))
+				self.oscServer.sendOSC(self._prefix+'/'+touchpad.name+'/lcd_name/', str(self.generate_strip_string(touchpad._descriptor)))
 			for button in self._button:
 				self.oscServer.sendOSC(self._prefix+'/'+button.name+'/lcd_name/', str(self.generate_strip_string(button._descriptor)))
 	
@@ -3003,7 +3003,7 @@ class Base(ControlSurface):
 			char2 = str(self._user_mode_selector._mode_index+1)
 		self._display_chars(char1, char2)
 		if OSC_TRANSMIT:
-			self.oscServer.sendOSC(self._prefix+'/glob/mode/lcd_value/', str(self.generate_strip_string(['Launch', 'Sends', 'Device', 'User'][self._layer])))
+			self.oscServer.sendOSC(self._prefix+'/glob/mode/', str(self.generate_strip_string(['Launch', 'Sends', 'Device', 'User'][self._layer])))
 			#for button in self._button:
 			#	self.oscServer.sendOSC(self._prefix+'/'+button.name+'/lcd_value/', str(self.generate_strip_string(button._descriptor)))
 			#for touchpad in self._touchpad:
@@ -3111,7 +3111,7 @@ class Base(ControlSurface):
 		self._monobridge._send('Device_Name', 'lcd_value', str(self.generate_strip_string(name)))
 		self.touched()
 		if OSC_TRANSMIT:
-			self.oscServer.sendOSC(self._prefix+'/glob/device/lcd_value/', str(self.generate_strip_string(name)))
+			self.oscServer.sendOSC(self._prefix+'/glob/device/', str(self.generate_strip_string(name)))
 	
 
 	def _on_device_bank_changed(self):
