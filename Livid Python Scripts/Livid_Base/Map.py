@@ -7,7 +7,7 @@ Created by amounra on 2012-12-30.
 This file allows the reassignment of the controls from their default arrangement.  The order is from left to right; 
 Buttons are Note #'s and Faders/Rotaries are Controller #'s
 """
-OSC_TRANSMIT = False
+OSC_TRANSMIT = True
 
 OSC_OUTPORT = 9001
 
@@ -27,6 +27,7 @@ BASE_LCDS = [34, 35]
 
 FOLLOW = True		#this sets whether or not the last selected device on a track is selected for editing when you select a new track
 
+TRACK_BANKING_INCREMENT = 8
 
 """ The default assignment of colors within the OhmRGB is:
 Note 2 = white
@@ -75,6 +76,8 @@ DRUMCOLORS = [4, 6]
 
 CHAN_SELECT = 7
 
+MUTE = 2
+SOLO = 3
 OFFSET = 6
 SHIFT_OFFSET = 13
 VERTOFFSET = 7
@@ -82,10 +85,13 @@ MIDIMODE = 14
 USERMODE = 13
 SCALEOFFSET = 5
 SPLITMODE = 1
+SEQUENCERMODE = 6
+DRUMBANK = 7
 OVERDUB = 5
 RECORD = 6
 NEW = 2
 LENGTH = 3
+SELECTED_NOTE = 6
 
 """[non-banked, banked]"""
 SESSION_NAV = [127, 3]
@@ -134,25 +140,25 @@ SCALES = 	{'Mod':[0,1,2,3,4,5,6,7,8,9,10,11],
 			'Locrian':[0,1,3,4,7,8,10],
 			'Diminished':[0,1,3,4,6,7,9,10],
 			'Whole-half':[0,2,3,5,6,8,9,11],
-			'Whole Tone':[0,2,4,6,8,10],
-			'Minor Blues':[0,3,5,6,7,10],
-			'Minor Pentatonic':[0,3,5,7,10],
-			'Major Pentatonic':[0,2,4,7,9],
-			'Harmonic Minor':[0,2,3,5,7,8,11],
-			'Melodic Minor':[0,2,3,5,7,9,11],
-			'Dominant Sus':[0,2,5,7,9,10],
-			'Super Locrian':[0,1,3,4,6,8,10],
-			'Neopolitan Minor':[0,1,3,5,7,8,11],
-			'Neopolitan Major':[0,1,3,5,7,9,11],
-			'Enigmatic Minor':[0,1,3,6,7,10,11],
+			'Whole_Tone':[0,2,4,6,8,10],
+			'Minor_Blues':[0,3,5,6,7,10],
+			'Minor_Pentatonic':[0,3,5,7,10],
+			'Major_Pentatonic':[0,2,4,7,9],
+			'Harmonic_Minor':[0,2,3,5,7,8,11],
+			'Melodic_Minor':[0,2,3,5,7,9,11],
+			'Dominant_Sus':[0,2,5,7,9,10],
+			'Super_Locrian':[0,1,3,4,6,8,10],
+			'Neopolitan_Minor':[0,1,3,5,7,8,11],
+			'Neopolitan_Major':[0,1,3,5,7,9,11],
+			'Enigmatic_Minor':[0,1,3,6,7,10,11],
 			'Enigmatic':[0,1,4,6,8,10,11],
 			'Composite':[0,1,4,6,7,8,11],
-			'Bebop Locrian':[0,2,3,5,6,8,10,11],
-			'Bebop Dominant':[0,2,4,5,7,9,10,11],
-			'Bebop Major':[0,2,4,5,7,8,9,11],
+			'Bebop_Locrian':[0,2,3,5,6,8,10,11],
+			'Bebop_Dominant':[0,2,4,5,7,9,10,11],
+			'Bebop_Major':[0,2,4,5,7,8,9,11],
 			'Bhairav':[0,1,4,5,7,8,11],
-			'Hungarian Minor':[0,2,3,6,7,8,11],
-			'Minor Gypsy':[0,1,4,5,7,8,10],
+			'Hungarian_Minor':[0,2,3,6,7,8,11],
+			'Minor_Gypsy':[0,1,4,5,7,8,10],
 			'Persian':[0,1,4,5,6,8,11],
 			'Hirojoshi':[0,2,3,7,8],
 			'In-Sen':[0,1,5,7,10],
