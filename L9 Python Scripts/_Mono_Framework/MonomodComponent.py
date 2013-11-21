@@ -356,6 +356,8 @@ class MonomodComponent(CompoundComponent):
 					self.toggle_mute_active_client()
 				elif self._keys.index(sender) == 4:
 					self.display_active_client()
+				else:
+					self._active_client._send_key(self._keys.index(sender), int(value!=0))
 			else:
 				self._active_client._send_key(self._keys.index(sender), int(value!=0))
 			#self._active_client._send_key(self._keys.index(sender), int(value!=0))
