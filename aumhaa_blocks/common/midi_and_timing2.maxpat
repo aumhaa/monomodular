@@ -4,11 +4,11 @@
 		"appversion" : 		{
 			"major" : 6,
 			"minor" : 1,
-			"revision" : 4,
+			"revision" : 5,
 			"architecture" : "x86"
 		}
 ,
-		"rect" : [ 5.0, 46.0, 299.0, 104.0 ],
+		"rect" : [ 5.0, 46.0, 299.0, 102.0 ],
 		"bgcolor" : [ 0.168627, 0.168627, 0.168627, 1.0 ],
 		"bglocked" : 0,
 		"openinpresentation" : 1,
@@ -30,6 +30,74 @@
 		"tags" : "",
 		"title" : "plinko",
 		"boxes" : [ 			{
+				"box" : 				{
+					"fontname" : "Arial",
+					"fontsize" : 9.0,
+					"id" : "obj-10",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 3,
+					"outlettype" : [ "", "", "" ],
+					"patching_rect" : [ 662.0, 376.5, 46.0, 17.0 ],
+					"saved_attribute_attributes" : 					{
+						"valueof" : 						{
+							"parameter_initial" : [ "Off" ],
+							"parameter_initial_enable" : 1,
+							"parameter_invisible" : 1,
+							"parameter_linknames" : 1,
+							"parameter_longname" : "outport",
+							"parameter_shortname" : "outport",
+							"parameter_type" : 3
+						}
+
+					}
+,
+					"saved_object_attributes" : 					{
+						"annotation_name" : "",
+						"initial" : [ "Off" ],
+						"parameter_enable" : 1
+					}
+,
+					"text" : "pattr",
+					"varname" : "outport"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"fontname" : "Arial",
+					"fontsize" : 9.0,
+					"id" : "obj-7",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 3,
+					"outlettype" : [ "", "", "" ],
+					"patching_rect" : [ 271.0, 99.5, 46.0, 17.0 ],
+					"saved_attribute_attributes" : 					{
+						"valueof" : 						{
+							"parameter_initial" : [ "Off" ],
+							"parameter_initial_enable" : 1,
+							"parameter_invisible" : 1,
+							"parameter_linknames" : 1,
+							"parameter_longname" : "inport",
+							"parameter_shortname" : "inport",
+							"parameter_type" : 3
+						}
+
+					}
+,
+					"saved_object_attributes" : 					{
+						"annotation_name" : "",
+						"initial" : [ "Off" ],
+						"parameter_enable" : 1
+					}
+,
+					"text" : "pattr",
+					"varname" : "inport"
+				}
+
+			}
+, 			{
 				"box" : 				{
 					"fontname" : "Arial",
 					"fontsize" : 9.0,
@@ -557,7 +625,7 @@
 					"numinlets" : 1,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 645.0, 424.0, 78.0, 17.0 ],
+					"patching_rect" : [ 613.5, 433.0, 78.0, 17.0 ],
 					"text" : "prepend midiport"
 				}
 
@@ -569,27 +637,17 @@
 					"fontname" : "Arial",
 					"fontsize" : 10.0,
 					"id" : "obj-78",
-					"items" : [ "Off", ",", "IAC Driver Bus 1", ",", "Ableton Push Live Port", ",", "Ableton Push User Port", ",", "IAC Driver IAC Bus 2", ",", "Daemon Output 0", ",", "Daemon Output 1", ",", "Daemon Output 2", ",", "Daemon Output 3", ",", "Daemon Output 4", ",", "Daemon Output 5", ",", "Daemon Output 6", ",", "Daemon Output 7" ],
+					"items" : [ "Off", ",", "IAC Driver Bus 1", ",", "Daemon Output 0", ",", "Daemon Output 1", ",", "Daemon Output 2", ",", "Daemon Output 3", ",", "Daemon Output 4", ",", "Daemon Output 5", ",", "Daemon Output 6", ",", "Daemon Output 7", ",", "to Max 1", ",", "to Max 2" ],
 					"maxclass" : "umenu",
 					"numinlets" : 1,
 					"numoutlets" : 3,
 					"outlettype" : [ "int", "", "" ],
-					"parameter_enable" : 1,
-					"patching_rect" : [ 604.0, 401.5, 100.0, 18.0 ],
+					"parameter_enable" : 0,
+					"patching_rect" : [ 573.0, 406.0, 100.0, 18.0 ],
 					"pattrmode" : 1,
 					"presentation" : 1,
 					"presentation_rect" : [ 205.0, 49.5, 84.0, 18.0 ],
 					"rounded" : 0,
-					"saved_attribute_attributes" : 					{
-						"valueof" : 						{
-							"parameter_longname" : "lh_output_port",
-							"parameter_shortname" : "lh_output_port",
-							"parameter_type" : 3,
-							"parameter_invisible" : 1
-						}
-
-					}
-,
 					"varname" : "lh_output_port"
 				}
 
@@ -1072,7 +1130,7 @@
 						"appversion" : 						{
 							"major" : 6,
 							"minor" : 1,
-							"revision" : 4,
+							"revision" : 5,
 							"architecture" : "x86"
 						}
 ,
@@ -2326,27 +2384,17 @@
 					"fontname" : "Arial",
 					"fontsize" : 10.0,
 					"id" : "obj-33",
-					"items" : [ "Off", ",", "IAC Driver Bus 1", ",", "Ableton Push Live Port", ",", "Ableton Push User Port", ",", "IAC Driver IAC Bus 2", ",", "Daemon Input 0", ",", "Daemon Input 1", ",", "Daemon Input 2", ",", "Daemon Input 3", ",", "Daemon Input 4", ",", "Daemon Input 5", ",", "Daemon Input 6", ",", "Daemon Input 7" ],
+					"items" : [ "Off", ",", "IAC Driver Bus 1", ",", "Daemon Input 0", ",", "Daemon Input 1", ",", "Daemon Input 2", ",", "Daemon Input 3", ",", "Daemon Input 4", ",", "Daemon Input 5", ",", "Daemon Input 6", ",", "Daemon Input 7", ",", "from Max 1", ",", "from Max 2" ],
 					"maxclass" : "umenu",
 					"numinlets" : 1,
 					"numoutlets" : 3,
 					"outlettype" : [ "int", "", "" ],
-					"parameter_enable" : 1,
+					"parameter_enable" : 0,
 					"patching_rect" : [ 230.0, 122.5, 100.0, 18.0 ],
 					"pattrmode" : 1,
 					"presentation" : 1,
 					"presentation_rect" : [ 9.0, 49.5, 85.0, 18.0 ],
 					"rounded" : 0,
-					"saved_attribute_attributes" : 					{
-						"valueof" : 						{
-							"parameter_longname" : "lh_input_port",
-							"parameter_shortname" : "lh_input_port",
-							"parameter_type" : 3,
-							"parameter_invisible" : 1
-						}
-
-					}
-,
 					"varname" : "lh_input_port"
 				}
 
@@ -2589,6 +2637,15 @@
 					"disabled" : 0,
 					"hidden" : 0,
 					"source" : [ "obj-1", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-78", 0 ],
+					"disabled" : 0,
+					"hidden" : 0,
+					"source" : [ "obj-10", 1 ]
 				}
 
 			}
@@ -3221,7 +3278,7 @@
 					"destination" : [ "obj-99", 0 ],
 					"disabled" : 0,
 					"hidden" : 0,
-					"midpoints" : [ 654.5, 450.0, 738.5, 450.0, 738.5, 366.5, 582.5, 366.5 ],
+					"midpoints" : [ 623.0, 458.0, 738.5, 458.0, 738.5, 366.5, 582.5, 366.5 ],
 					"source" : [ "obj-64", 0 ]
 				}
 
@@ -3279,6 +3336,15 @@
 					"disabled" : 0,
 					"hidden" : 0,
 					"source" : [ "obj-69", 1 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-33", 0 ],
+					"disabled" : 0,
+					"hidden" : 0,
+					"source" : [ "obj-7", 1 ]
 				}
 
 			}
@@ -3586,29 +3652,31 @@
 					"destination" : [ "obj-78", 0 ],
 					"disabled" : 0,
 					"hidden" : 0,
-					"midpoints" : [ 582.5, 398.5, 613.5, 398.5 ],
+					"midpoints" : [ 582.5, 398.5, 582.5, 398.5 ],
 					"source" : [ "obj-99", 0 ]
 				}
 
 			}
  ],
 		"parameters" : 		{
+			"obj-80" : [ "swing[2]", "swing", 3 ],
+			"obj-58" : [ "midi_output_menu[1]", "midi_input_menu", 100 ],
+			"obj-44" : [ "midi_input_menu", "midi_input_menu", 409 ],
+			"obj-10" : [ "outport", "outport", 0 ],
+			"obj-29" : [ "in_channel", "in_channel", 406 ],
+			"obj-28" : [ "start", "start", 414 ],
+			"obj-61" : [ "nomechan[1]", "nomechan", 100 ],
+			"obj-40" : [ "midi_thru", "midi_thru", 411 ],
+			"obj-7" : [ "inport", "inport", 0 ],
 			"obj-83::obj-143" : [ "timing[2]", "timing", 2 ],
 			"obj-159" : [ "beat", "beat", 416 ],
-			"obj-58" : [ "midi_output_menu[1]", "midi_input_menu", 100 ],
-			"obj-78" : [ "lh_output_port", "lh_output_port", 0 ],
-			"obj-187" : [ "timing_master[1]", "timing_master", 415 ],
-			"obj-61" : [ "nomechan[1]", "nomechan", 100 ],
-			"obj-28" : [ "start", "start", 414 ],
-			"obj-29" : [ "in_channel", "in_channel", 406 ],
-			"obj-33" : [ "lh_input_port", "lh_input_port", 0 ],
-			"obj-44" : [ "midi_input_menu", "midi_input_menu", 409 ],
-			"obj-40" : [ "midi_thru", "midi_thru", 411 ],
-			"obj-80" : [ "swing[2]", "swing", 3 ]
+			"obj-187" : [ "timing_master[1]", "timing_master", 415 ]
 		}
 ,
 		"dependency_cache" : [ 			{
 				"name" : "timing_b992.maxpat",
+				"bootpath" : "/Users/amounra/monomodular_git/aumhaa_blocks/common",
+				"patcherrelativepath" : ".",
 				"type" : "JSON",
 				"implicit" : 1
 			}

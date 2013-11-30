@@ -448,33 +448,38 @@ class AumPushDeviceSelectorComponent(DeviceSelectorComponent):
 		if self._mode_index != mode:
 			self._mode_index = mode
 
-			if self.is_enabled():
-				#self._script.log_message('mode_index: ' + str(mode))
-				key = str('p' + str(self._mode_index + 1 + self._offset) + ' ')
-				preset = None
-				for track in range(len(self.song().tracks)):
-					for device in range(len(self.song().tracks[track].devices)):
-						if match(key, str(self.song().tracks[track].devices[device].name)) != None:
-							preset = self.song().tracks[track].devices[device]
+		if self.is_enabled():
+			key = str('p' + str(self._mode_index + 1 + self._offset) + ' ')
+			preset = None
+			for track in self.song().tracks:
+				for device in self.enumerate_track_device(track):
+					if(match(key, str(device.name)) != None):
+						preset = device
+						break
+			for return_track in self.song().return_tracks:
+				for device in self.enumerate_track_device(return_track):
+					if(match(key, str(device.name)) != None):
+						preset = device
+						break
+			for device in self.enumerate_track_device(self.song().master_track):
+				if(match(key, str(device.name)) != None):
+					preset = device
+					break
 
-				for return_track in range(len(self.song().return_tracks)):
-					for device in range(len(self.song().return_tracks[return_track].devices)):
-						if match(key, str(self.song().return_tracks[return_track].devices[device].name)) != None:
-							preset = self.song().return_tracks[return_track].devices[device]
+			if preset != None:
+				#self._script.log_message('preset found: ' + str(preset.name))
+				self._script.set_appointed_device(preset)
+				self.song().view.select_device(preset)
+				self._last_preset = self._mode_index + self._offset
 
-				for device in range(len(self.song().master_track.devices)):
-					if match(key, str(self.song().master_track.devices[device].name)) != None:
-						preset = self.song().master_track.devices[device]
-
-				if preset != None:
-					#self._script.log_message('preset found: ' + str(preset.name))
-					self._script.set_appointed_device(preset)
-					self.song().view.select_device(preset)
-					self._last_preset = self._mode_index + self._offset
-
-				self.update()
+			self.update()
 	
 
+	def set_mode(self, mode):
+		self._clean_heap()
+		self._modes_heap = [(mode, None, None)]
+		self._update_mode()
+	
 
 class AumPushSpecialMixerComponent(SpecialMixerComponent):
 

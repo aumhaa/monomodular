@@ -81,17 +81,20 @@ class DeviceSelectorComponent(ModeSelectorComponent):
 				#self.set_mode_buttons(self._modes_buttons
 		key = str('p'+ str(self._mode_index + 1 + self._offset))
 		preset = None
+
 		for track in range(len(self.song().tracks)):
-			for device in range(len(self.song().tracks[track].devices)):
-				if(match(key, str(self.song().tracks[track].devices[device].name)) != None):
-					preset = self.song().tracks[track].devices[device]
+			self._script.log_message(self.enumerate_track_device(self.song().tracks[track]))
+			for device in self.enumerate_track_device(self.song().tracks[track]):
+				if(match(key, str(device.name)) != None):
+					preset = device
 		for return_track in range(len(self.song().return_tracks)):
-			for device in range(len(self.song().return_tracks[return_track].devices)):
-				if(match(key, str(self.song().return_tracks[return_track].devices[device].name)) != None):
-					preset = self.song().return_tracks[return_track].devices[device]
-		for device in range(len(self.song().master_track.devices)):
-			if(match(key, str(self.song().master_track.devices[device].name)) != None):
-				preset = self.song().master_track.devices[device]	
+			for device in self.enumerate_track_device(self.song().return_tracks[return_track]):
+				if(match(key, str(device)) != None):
+					preset = device
+		for device in self.enumerate_track_device(self.song().master_track.devices):
+			if(match(key, str(device)) != None):
+				preset = device
+
 		if(preset != None):
 			#self._script._device.set_device(preset)
 			self._script.set_appointed_device(preset)
@@ -102,6 +105,18 @@ class DeviceSelectorComponent(ModeSelectorComponent):
 				self._modes_buttons[button].turn_on()
 			else:
 				self._modes_buttons[button].turn_off()
+	
+
+	def enumerate_track_device(self, track):
+		devices = []
+		if hasattr(track, 'devices'):
+			for device in track.devices:
+				devices.append(device)
+				if device.can_have_chains:
+					for chain in device.chains:
+						for chain_device in self.enumerate_track_device(chain):
+							devices.append(chain_device)
+		return devices
 	
 
 	def on_enabled_changed(self):

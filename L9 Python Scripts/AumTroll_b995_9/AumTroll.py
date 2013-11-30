@@ -773,8 +773,9 @@ class AumTroll(Cntrlr):
 			self._host.set_enabled(False)				#disable the Monomod Component
 			#self.set_local_ring_control(1)				#send sysex to the CNTRLR to put it in local ring mode
 			self.deassign_live_controls()
-			self.assign_live_controls()					#assign our top level control assignments
-			self._host._display_mod_colors()
+			#self.assign_live_controls()					#assign our top level control assignments
+			self.schedule_message(1, self.assign_live_controls)
+			self.schedule_message(1, self._host._display_mod_colors)
 		elif CHOPPER_ENABLE and not self._host._client is None and not self._host._client[3].is_connected() and self._shift_mode._mode_index == 4:		#if the fourth mod button has been pressed and there is no mod installed
 			self.deassign_live_controls()				#deassign the top level assignments
 			#self.schedule_message(4, self._host._assign_mod_dials)

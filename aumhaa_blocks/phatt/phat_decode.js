@@ -42,6 +42,14 @@ var funcs = [['lfosource', 47, 'div16', 68],
 var cntl_funcs = [[7, 'volume', 'ret'],
 				[65, 'glideenable', 'div64']];
 
+var ladder = {'alive':false};
+var ladder_obj = ['ladder_key_follow', 'ladder_cutoff', 'ladder_filter_envelope', 'ladder_filter_attack', 'ladder_filter_decay',
+				'ladder_filter_sustain', 'ladder_filter_release', 'ladder_amp_attack', 'ladder_amp_decay',
+				'ladder_amp_sustain', 'ladder_amp_release', 'ladder_resonance', 'ladder_shape', 
+				'ladder_osc1_wave', 'ladder_osc1_volume', 'ladder_osc1_octave', 'ladder_oscsync',
+				'ladder_osc2_wave', 'ladder_osc2_volume', 'ladder_osc2_octave', 'ladder_osc2_tune',
+				'ladder_port', 'ladder_volume'];
+
 var assgns = [];
 for(var i=0;i<193;i++)
 {
@@ -64,7 +72,6 @@ for(var i in cntl_funcs)
 {
 	cntls[cntl_funcs[i][0]] = [cntl_funcs[i][1], funcs[i][2]];
 }
-
 
 
 function list()
@@ -120,19 +127,21 @@ function decode_pgm(args)
 	this.patcher.getnamed('patchname').set(name.join(''));
 }
 
-
 function osc1_out(num, val)
 {
 	switch(num)
 	{
 		case 0:
 			outlet(0, 176, 74, (val*16) + 16);
+			if(ladder.alive){ladder.ladder_osc1_octave.message('float', val);}
 			break;
 		case 1:
 			outlet(0, 176, 9, val);
+			if(ladder.alive){ladder.ladder_osc1_wave.message('float', ((val/127)*100));}
 			break;
 		case 2:
 			outlet(0, 176, 15, val);
+			if(ladder.alive){ladder.ladder_osc1_volume.message('float', ((val/127)*100));}
 			break;
 	}
 }
@@ -143,15 +152,19 @@ function osc2_out(num, val)
 	{
 		case 0:
 			outlet(0, 176, 75, (val*16) + 16);
+			if(ladder.alive){ladder.ladder_osc2_octave.message('float', val);}
 			break;
 		case 1:
 			outlet(0, 176, 11, val);
+			if(ladder.alive){ladder.ladder_osc2_wave.message('float', ((val/127)*100));}
 			break;
 		case 2:
 			outlet(0, 176, 16, val);
+			if(ladder.alive){ladder.ladder_osc2_volume.message('float', ((val/127)*100));}
 			break;
 		case 3:
 			outlet(0, 176, 10, val);
+			if(ladder.alive){ladder.ladder_osc2_tune.message('float', ((val/127)*200)-100);}
 			break;
 	}
 }
@@ -162,15 +175,19 @@ function filter_out(num, val)
 	{
 		case 0:
 			outlet(0, 176, 19, val);
+			if(ladder.alive){ladder.ladder_cutoff.message('float', val-32);}
 			break;
 		case 1:
 			outlet(0, 176, 21, val);
+			if(ladder.alive){ladder.ladder_resonance.message('float', (val/127)*100);}
 			break;
 		case 2:
 			outlet(0, 176, 22, val);
+			if(ladder.alive){ladder.ladder_key_follow.message('float', (val/127)*100);}
 			break;
 		case 3:
 			outlet(0, 176, 27, val);
+			if(ladder.alive){ladder.ladder_filter_envelope.message('float', val-36);}
 			break;
 		case 4:
 			outlet(0, 176, 18, val);
@@ -221,15 +238,19 @@ function vol_env_out(num, val)
 	{
 		case 0:
 			outlet(0, 176, 28, val);
+			if(ladder.alive){ladder.ladder_amp_attack.message('float', (val/127)*10000);}
 			break;
 		case 1:
 			outlet(0, 176, 29, val);
+			if(ladder.alive){ladder.ladder_amp_decay.message('float', (val/127)*10000);}
 			break;
 		case 2:
 			outlet(0, 176, 30, val);
+			if(ladder.alive){ladder.ladder_amp_sustain.message('float', (val/127)*100);}
 			break;
 		case 3:
 			outlet(0, 176, 31, val);
+			if(ladder.alive){ladder.ladder_amp_release.message('float', (val/127)*10000);}
 			break;
 	}
 }
@@ -240,15 +261,19 @@ function filt_env_out(num, val)
 	{
 		case 0:
 			outlet(0, 176, 23, val);
+			if(ladder.alive){ladder.ladder_filter_attack.message('float', (val/127)*10000);}
 			break;
 		case 1:
 			outlet(0, 176, 24, val);
+			if(ladder.alive){ladder.ladder_filter_decay.message('float', (val/127)*10000);}
 			break;
 		case 2:
 			outlet(0, 176, 25, val);
+			if(ladder.alive){ladder.ladder_filter_sustain.message('float', (val/127)*100);}
 			break;
 		case 3:
 			outlet(0, 176, 26, val);
+			if(ladder.alive){ladder.ladder_filter_release.message('float', (val/127)*10000);}
 			break;
 	}
 }
@@ -415,6 +440,34 @@ function div64(val)
 	return temp;
 }
 
-function glideenable(){}
+function glideenable_out(val){}
 
-function volume(){}
+function volume_out(val){
+	if(ladder.alive){ladder.ladder_volume.message('float', (val/127)*100);}
+}
+
+function syncosc_out(val){
+	if(ladder.alive){ladder.ladder_oscsync.message('float', val);}
+}
+
+function glide_out(val){
+	if(ladder.alive){ladder.ladder_port.message('float', (val/127)*100);}
+}
+
+function init_ladder(val)
+{
+	if(val)
+	{
+		ladder = {};
+		var ladder_patcher = this.patcher.getnamed('ladder');
+		for(var i = 0;i<ladder_obj.length;i++)
+		{
+			ladder[ladder_obj[i]] = ladder_patcher.subpatcher().getnamed(ladder_obj[i]);
+		}
+		ladder.alive = true;
+	}
+	else
+	{
+		ladder.alive = false;
+	}
+}
