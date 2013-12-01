@@ -18,16 +18,17 @@ in this script, offering some excellent prospects for the future development of 
 
 autowatch = 1;
 
-DEBUG = 1;
+DEBUG = 0;
 DEBUG_LCD = 0;
 DEBUG_PTR = 0;
 DEBUG_STEP = 0;
 DEBUG_BLINK = 0;
 DEBUG_REC = 0;
 DEBUG_LOCK = 0;
+DEBUGPOLY = 0;
 SHOW_POLYSELECTOR = 0;
 SHOW_STORAGE = 0;
-FORCELOAD = 1; //this doesn't work anymore, don't waste your time. -a
+FORCELOAD = 0; //this doesn't work anymore, don't waste your time. -a
 
 outlets = 4;
 inlets = 5;
@@ -1558,12 +1559,15 @@ function _grid(x, y, val)
 						var pset = presets[x];
 						var Part = part[x];
 						if(Part.direction!=2){
+							//Part.obj.direction.message(2);
 							Part.obj.set.direction(2);
 						}
 						if(Part.nudge!=0){
+							//Part.obj.nudge.message(0);
 							Part.obj.set.nudge(0);
 						}
 						if(Part.pattern.join('')!='1000000000000000'){
+							//Part.obj.pattern.message([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
 							Part.obj.set.pattern([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
 						}
 						Part.obj.restartcount.message(0);
@@ -2023,13 +2027,14 @@ function _receive_automation(num, val)
 function _grid_play(x, y, voice, val, poly)
 {
 	//var args = arrayfromargs(arguments);
-	if(DEBUG){post('_grid_play', x, y, voice, val, poly, '\n');}
+	if(DEBUGPOLY){post('_grid_play', x, y, voice, val, poly, '\n');}
 	switch(grid_mode)
 	{
 		case 2:
 			if(DEBUG){post('sel:', selected.num, poly, '\n');}
 			if(alt>0)
 			{
+				
 				if((voice==0)&&((poly-1)==selected.num))
 				{
 					outlet(0, 'mask', 'grid', Math.max(Math.min(x, 15), 0), Math.max(Math.min(y, 15), 0), val);
