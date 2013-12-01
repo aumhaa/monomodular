@@ -12,6 +12,9 @@ setoutletassist(1,"note out");
 setoutletassist(2,"to preset");
 
 var script = this;
+
+var DEBUG = true;
+
 var alt = 0;
 var loop=1;
 var part_limit=8;
@@ -104,16 +107,24 @@ function make_cell_function(cell)
 function update_storage(cell, prog)
 {
 	storage.message('pattrs::'+cell._name, prog); //prog[0], prog[1], prog[2], prog[3], prog[4], prog[5], prog[6], prog[7], prog[8], prog[9],prog[10], prog[11], prog[12], prog[13], prog[14], prog[15], prog[16],prog[17], prog[18], prog[19], prog[20], prog[21], prog[22], prog[23], prog[24]);
+	storage.setstoredvalue('pattrs::'+cell._name, preset, prog);
 }
 
-function recall()
+function recall(val)
 {
+	preset = val;
+	this.patcher.getnamed('storage_preset').set(parseInt(preset));
+	if(DEBUG){post('new preset# is:', val, '\n');}
 	if(alive > 0)
 	{
 		update_bound_view();
 	}
 }
 
+function last_preset(val)
+{
+	preset = val;
+}
 
 //////////////////////////////////////////////////////////////////////
 //////////////	   This is the Engine Itself	  ////////////////////
@@ -121,7 +132,7 @@ function recall()
 
 function init_plinko()
 {	
-	storage = this.patcher.getnamed('plinko_store');
+	storage = this.patcher.getnamed('plinko_preset');
 	preset_selector = this.patcher.getnamed('preset_selector');
 	//if(from_pattr!='none')
 	//{
@@ -160,6 +171,7 @@ function init_plinko()
 	alive = 1;
 	//this.patcher.getnamed('timer').message('bang');
 	update_bound_view();
+	preset_selector.message('int', preset);
 	//outlet(1, 'offset', 1);
 }
 
@@ -363,7 +375,7 @@ function list(x,y,z)
 
 function slot(val)
 {
-	preset = val;
+	if(DEBUG){post('new slot# is:', val, '\n');}
 }
 
 function slotlist()
