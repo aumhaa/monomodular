@@ -1,8 +1,8 @@
 autowatch = 1;
 
-const NEW_FORWARD = true;
-const DEBUG = 0;
-const DEBUGX = 0;
+var NEW_FORWARD = true;
+var DEBUG = 0;
+var DEBUGX = 0;
 
 
 var prefix = jsarguments[1];
@@ -47,14 +47,14 @@ var track_data;
 var samps_per_ms = quantize_record.samples/quantize_record.ms;
 
 var looper = [];
-const POBJ = ['buffetloop', 'buffetundo', 'bufferloop', 'bufferundo', 'pokeloop', 'groove', 
+var POBJ = ['buffetloop', 'buffetundo', 'bufferloop', 'bufferundo', 'pokeloop', 'groove', 
 				'groovespeed', 'grooveend', 'quantization', 'recphase',
 				'offsetui', 'tapeinertia', 'volout', 'feedbackui', 'inputui', 'inloopui', 
 				'overdubui', 'reverseui', 'undoui', 'clearui', 'overdubui', 'speedui', 'inertiaui', 'muteui',
 				'quantizerecordui', 'loopui', 'quantizemenuui', 'frommaster', 'fadein', 'fadetime', 
 				'copybuffer', 'relativerecordui', 'calc_record', 'drivesource'];  // 'record', 'buffetin', 'bufferin', 'groovelength', 'latency'
-const TOBJ = ['relativetimer',  'metro'];
-const LENGTHS = [1, 2, 4, 8, 16, 32, 64];
+var TOBJ = ['relativetimer',  'metro'];
+var LENGTHS = [1, 2, 4, 8, 16, 32, 64];
 
 //var del_chan = new Task(change_poke_channel, this);
 

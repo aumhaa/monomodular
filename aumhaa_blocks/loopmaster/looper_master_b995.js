@@ -3,12 +3,12 @@ autowatch = 1;
 inlets = 2;
 outlets = 2;
 
-const DEBUG = 0;
+var DEBUG = 0;
 
-const MONOPEDAL=new RegExp(/(MonOhm)/);
-const AUMTROLL = new RegExp(/(AumTroll)/);
-const MONOHM = new RegExp(/(MonOhm)/);
-const wiki_page_addy = 'http://www.aumhaa.com/wiki/index.php?title=LoopMaster';
+var MONOPEDAL=new RegExp(/(MonOhm)/);
+var AUMTROLL = new RegExp(/(AumTroll)/);
+var MONOHM = new RegExp(/(MonOhm)/);
+var wiki_page_addy = 'http://www.aumhaa.com/wiki/index.php?title=LoopMaster';
 ////this section is necessary for basic operations
 undefined = (function(){var u; return u;})();	 ///required to return an actual 'undefined', in case its variable name gets reassigned
 var elements=[];	///array that holds all elements(MAX API Objects) in the script
@@ -35,11 +35,11 @@ var displays;
 var feedback = [];
 var fb_sample = [0, 0, 0];
 var fb_last = -1;
-const POBJ = ['waveform', 'muteui', 'speedui', 'quantizemenuui', 'offsetui', 'autohideui', 'lcdui', 'remoteui',
+var POBJ = ['waveform', 'muteui', 'speedui', 'quantizemenuui', 'offsetui', 'autohideui', 'lcdui', 'remoteui',
  				'muteui', 'feedbackui', 'inputui', 'inloopui', 'inertiaui', 'autoselectui', 'selectedui', 'relativeui',
  				'loopui', 'clearui', 'reverseui', 'undoui', 'overdubui', 'quantizerecordui', 'beatui', 'timer'];
-const state_color={'mute':[1, 1, 1], 'recording':[1, 0, 0], 'empty':[.45, .45, .45], 'playing':[0, 1, 0], 'overdubbing':[0, 0, 1], 'awaiting_record':[.5, .0, .3], 'muted':[0, 0, 0]};
-const sync_color=[[0, 0, 0], [.3, .3, .3], [.6, .6, .6], [1, 1, 1]];
+var state_color={'mute':[1, 1, 1], 'recording':[1, 0, 0], 'empty':[.45, .45, .45], 'playing':[0, 1, 0], 'overdubbing':[0, 0, 1], 'awaiting_record':[.5, .0, .3], 'muted':[0, 0, 0]};
+var sync_color=[[0, 0, 0], [.3, .3, .3], [.6, .6, .6], [1, 1, 1]];
 var front=0;
 var auto=1;
 var auto_delay=5;
@@ -60,13 +60,13 @@ var	expression;
 var hold = 0;
 var connected = false;
 
-const speed_values = [2, 1, 0, -1, -2];
-const inertia_values = [0, 50, 90, 300, 600];
-const circle = [[[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [4, 1], [4, 2], [4, 3], [4, 4], [3, 4], [2, 4], [1, 4], [0, 4], [0, 3], [0, 2], [0, 1]],
+var speed_values = [2, 1, 0, -1, -2];
+var inertia_values = [0, 50, 90, 300, 600];
+var circle = [[[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [4, 1], [4, 2], [4, 3], [4, 4], [3, 4], [2, 4], [1, 4], [0, 4], [0, 3], [0, 2], [0, 1]],
 				[[8, 0], [9, 0], [10, 0], [11, 0], [12, 0], [12, 1], [12, 2], [12, 3], [12, 4], [11, 4], [10, 4], [9, 4], [8, 4], [8, 3], [8, 2], [8, 1]],
 				[[0, 8], [1, 8], [2, 8], [3, 8], [4, 8], [4, 9], [4, 10], [4, 11], [4, 12], [3, 12], [2, 12], [1, 12], [0, 12], [0, 11], [0, 10], [0, 9]],
 				[[8, 8], [9, 8], [10, 8], [11, 8], [12, 8], [12, 9], [12, 10], [12, 11], [12, 12], [11, 12], [10, 12], [9, 12], [8, 12], [8, 11], [8, 10], [8, 9]]];
-const offsets = [[0, 0], [8, 0], [0, 8], [8, 8]];
+var offsets = [[0, 0], [8, 0], [0, 8], [8, 8]];
 var cell_fire = [];
 for(var i=0;i<16;i++)
 {

@@ -399,9 +399,10 @@ class Codec(ControlSurface):
 
 	"""script initialization methods"""
 	def _initialize_code(self):
-		self._send_midi(factoryreset)
-		self._send_midi(btn_channels)
-		self._send_midi(enc_channels)	
+		if FACTORY_RESET:
+			self._send_midi(factoryreset)
+			self._send_midi(btn_channels)
+			self._send_midi(enc_channels)	
 	
 
 	def _setup_monobridge(self):

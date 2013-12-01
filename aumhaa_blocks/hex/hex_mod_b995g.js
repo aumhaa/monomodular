@@ -18,7 +18,7 @@ in this script, offering some excellent prospects for the future development of 
 
 autowatch = 1;
 
-DEBUG = 1;
+DEBUG = 0;
 DEBUG_LCD = 0;
 DEBUG_PTR = 0;
 DEBUG_STEP = 0;
@@ -27,7 +27,7 @@ DEBUG_REC = 0;
 DEBUG_LOCK = 0;
 SHOW_POLYSELECTOR = 0;
 SHOW_STORAGE = 0;
-FORCELOAD = 1; //this doesn't work anymore, don't waste your time. -a
+FORCELOAD = false; //this doesn't work anymore, don't waste your time. -a
 
 outlets = 4;
 inlets = 5;
@@ -864,6 +864,31 @@ function anything()
 					break;
 				case 4:
 					transpose_steps = args[1];
+					break;
+				case 14:
+					vals = args.slice(1, 9);
+					keymodeenables = [];
+					for(var i=0;i<8;i++)
+					{
+						if(vals[i])
+						{
+							keymodeenables.push(i);
+						}
+					}
+					if(DEBUG){post('keymodeenables', keymodeenables, '\n');}
+					break;
+				case 15:
+					vals = args.slice(1, 8);
+					padmodeenables = args.slice(1, 8);
+					padmodeenables = [];
+					for(var i=0;i<7;i++)
+					{
+						if(vals[i])
+						{
+							padmodeenables.push(i);
+						}
+					}
+					if(DEBUG){post('padmodeenables', padmodeenables, '\n');}
 					break;
 			}
 			break;
@@ -1950,7 +1975,7 @@ function _settingsgui(num, val)
 					keymodeenables.push(i);
 				}
 			}
-			post('keymodeenables', keymodeenables, '\n');
+			if(DEBUG){post('keymodeenables', keymodeenables, '\n');}
 			break;
 		case 15:
 			vals = args.slice(1, 8);
@@ -1963,7 +1988,7 @@ function _settingsgui(num, val)
 					padmodeenables.push(i);
 				}
 			}
-			post('padmodeenables', padmodeenables, '\n');
+			if(DEBUG){post('padmodeenables', padmodeenables, '\n');}
 			break;
 	}
 }
@@ -1994,7 +2019,7 @@ function _remote(num, val)
 //distribute 
 function _receive_automation(num, val)
 {
-	/*if((play_enabled>0)&&(num>110)&&(val!==0))
+	if((play_enabled>0)&&(num>110)&&(val!==0))
 	{
 		num-=111;
 		if(DEBUG_REC){post('receive auto:', num, val, '\n');}
@@ -2017,7 +2042,7 @@ function _receive_automation(num, val)
 				refresh_c_keys();
 			}
 		}
-	}*/
+	}
 }
 
 function _grid_play(x, y, voice, val, poly)

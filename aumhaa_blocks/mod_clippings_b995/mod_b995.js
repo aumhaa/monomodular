@@ -34,17 +34,17 @@ setoutletassist(2, 'dial output');
 setoutletassist(3, 'button output');
 setoutletassist(4, 'status and raw output');
 
-const DEBUG = 0;
-const DEBUGCNX = 0;
+var DEBUG = 0;
+var DEBUGCNX = 0;
 
-const version = 'b995';
-const CLIENT_NUMBERS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];	  //the api object numbers of the Client class instances that this script will connect (part of surface)
-const SWITCHBOARD = 16;
-const color_maps = ['OhmRGB', 'Monochrome', 'AumPad', 'Launchpad'];
-const MONOMOD=new RegExp(/(Monomodular)/);
-const NUMBER = new RegExp(/(\D)/);
-const wheel_param = {'value':0, 'mode':1, 'green':2, 'white':3, 'custom':4}
-const popmess = ['close', 'open'];
+var version = 'b995';
+var CLIENT_NUMBERS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];	  //the api object numbers of the Client class instances that this script will connect (part of surface)
+var SWITCHBOARD = 16;
+var color_maps = ['OhmRGB', 'Monochrome', 'AumPad', 'Launchpad'];
+var MONOMOD=new RegExp(/(Monomodular)/);
+var NUMBER = new RegExp(/(\D)/);
+var wheel_param = {'value':0, 'mode':1, 'green':2, 'white':3, 'custom':4}
+var popmess = ['close', 'open'];
 var patch_type = jsarguments[1];
 var unique = jsarguments[2];
 var wiki_addy = 'http://www.aumhaa.com/wiki/index.php?title='+patch_type;
