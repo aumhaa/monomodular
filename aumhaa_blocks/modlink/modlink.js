@@ -2,7 +2,7 @@ autowatch=1;
 
 outlets=2;
 
-var DEBUG = false;
+var DEBUG = true;
 
 var unique = jsarguments[1];
 var protocol = 1;
