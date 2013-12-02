@@ -1320,20 +1320,22 @@ function lcd(args)
 
 function autohide(args)
 {
-	//post('autohide', args, '\n');
 	auto=args;
-	switch(args)
+	//post('autohide', args, '\n');
+	if(alive)
 	{
-		case 1:
-			master.lcdui.message('int', 1);
-			//if((alive > 0)&&(front==0))
-			//{
-			//	front=1;
-			//	viewer.front();
-			//}
-			break;
+		switch(args)
+		{
+			case 1:
+				master.lcdui.message('int', 1);
+				//if((alive > 0)&&(front==0))
+				//{
+				//	front=1;
+				//	viewer.front();
+				//}
+				break;
+		}
 	}
-	//set_invert_pedal(args);
 }
 
 function show_lcd()

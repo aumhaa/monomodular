@@ -8,7 +8,7 @@
 			"architecture" : "x86"
 		}
 ,
-		"rect" : [ 5.0, 46.0, 299.0, 102.0 ],
+		"rect" : [ 5.0, 46.0, 300.0, 102.0 ],
 		"bgcolor" : [ 0.168627, 0.168627, 0.168627, 1.0 ],
 		"bglocked" : 0,
 		"openinpresentation" : 1,
@@ -59,7 +59,7 @@
 					}
 ,
 					"text" : "pattr",
-					"varname" : "outport"
+					"varname" : "u780000013"
 				}
 
 			}
@@ -93,7 +93,7 @@
 					}
 ,
 					"text" : "pattr",
-					"varname" : "inport"
+					"varname" : "u893000017"
 				}
 
 			}
@@ -1847,16 +1847,6 @@
 									"disabled" : 0,
 									"hidden" : 0,
 									"source" : [ "obj-193", 0 ]
-								}
-
-							}
-, 							{
-								"patchline" : 								{
-									"destination" : [ "obj-1", 0 ],
-									"disabled" : 0,
-									"hidden" : 0,
-									"midpoints" : [ 159.5, 384.0, 111.0, 384.0, 111.0, 248.0, 142.5, 248.0 ],
-									"source" : [ "obj-2", 0 ]
 								}
 
 							}
@@ -3659,18 +3649,18 @@
 			}
  ],
 		"parameters" : 		{
-			"obj-80" : [ "swing[2]", "swing", 3 ],
-			"obj-58" : [ "midi_output_menu[1]", "midi_input_menu", 100 ],
+			"obj-159" : [ "beat", "beat", 416 ],
 			"obj-44" : [ "midi_input_menu", "midi_input_menu", 409 ],
-			"obj-10" : [ "outport", "outport", 0 ],
-			"obj-29" : [ "in_channel", "in_channel", 406 ],
+			"obj-83::obj-143" : [ "timing[2]", "timing", 2 ],
+			"obj-58" : [ "midi_output_menu[1]", "midi_input_menu", 100 ],
+			"obj-80" : [ "swing[2]", "swing", 3 ],
 			"obj-28" : [ "start", "start", 414 ],
+			"obj-187" : [ "timing_master[1]", "timing_master", 415 ],
 			"obj-61" : [ "nomechan[1]", "nomechan", 100 ],
 			"obj-40" : [ "midi_thru", "midi_thru", 411 ],
+			"obj-10" : [ "outport", "outport", 0 ],
 			"obj-7" : [ "inport", "inport", 0 ],
-			"obj-83::obj-143" : [ "timing[2]", "timing", 2 ],
-			"obj-159" : [ "beat", "beat", 416 ],
-			"obj-187" : [ "timing_master[1]", "timing_master", 415 ]
+			"obj-29" : [ "in_channel", "in_channel", 406 ]
 		}
 ,
 		"dependency_cache" : [ 			{

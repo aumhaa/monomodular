@@ -105,7 +105,7 @@ function last_preset(val)
 //////////////	   This is the Engine Itself	  ////////////////////
 //////////////////////////////////////////////////////////////////////
 
-function init_plinko()
+function init_plinko() 
 {
 
 	storage = this.patcher.getnamed('plinko_preset');
@@ -185,7 +185,7 @@ function init_plinko()
 	//outlet(1, 'offset', 1);
 }
 
-//function init_plinko(){}
+///function init_plinko(){}
 
 function fire_node()
 {	///place potential in a cell for inclusion on next turn:  this is where we play plinko in realtime
