@@ -27,7 +27,7 @@ DEBUG_REC = 0;
 DEBUG_LOCK = 0;
 SHOW_POLYSELECTOR = 0;
 SHOW_STORAGE = 0;
-FORCELOAD = false; //this doesn't work anymore, don't waste your time. -a
+FORCELOAD = true; //this doesn't work anymore, don't waste your time. -a
 
 outlets = 4;
 inlets = 5;
@@ -185,7 +185,9 @@ for(var i=0;i<7;i++){
 		behavegraph[i][j]=0;
 	}
 }
-		
+
+var current_rule = 0;
+	
 /*/////////////////////////////////////////
 ///// script initialization routines //////
 /////////////////////////////////////////*/
@@ -751,6 +753,9 @@ function refresh_grid()
 				var j=6;do{
 					outlet(0, 'grid', j, i, BEHAVE_COLORS[behavegraph[j][i]]);
 				}while(j--);
+			}while(i--);
+			var i=6;do{
+					outlet(0, 'grid', 7, i, BEHAVE_COLORS[i] * Math.floor(i==current_rule));
 			}while(i--);
 			break;
 	}	
@@ -1619,7 +1624,19 @@ function _grid(x, y, val)
 			//Behavior_Grid_mode
 			if((val>0)&&(x<7))
 			{
-				rulemap.message('list', x, y, (behavegraph[x][y]+1)%7);
+				if(current_rule == 0)
+				{
+					rulemap.message('list', x, y, (behavegraph[x][y]+1)%7);
+				}
+				else
+				{
+					rulemap.message('list', x, y, current_rule);
+				}
+			}
+			else if((val>0)&&(x==7))
+			{
+				current_rule = y;
+				refresh_grid();
 			}
 			break;
 				

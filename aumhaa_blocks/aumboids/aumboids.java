@@ -1,109 +1,64 @@
 import com.cycling74.max.*;
-//import java.util.Random
-//import java.util.Stack; 
+import java.util.Arrays;
 
 public class aumboids extends MaxObject
 {
-	
-	public int loop = 1;
-	public int part_limit = 8;
-	public int[] dump = new int[4];
-	//public int[] bound_cell = new int[];
-	public int linked = 0;
-	public int mode = 0;
-	public int active = -1;
-	public int pressed = -1;   //changed from 0 to -1 to get first button in
-	public int offset= 0;
-	public int random = 0;
-	//public int x_display_offset = 0;
-	//public int y_display_offset = 0;
-	public int waiting_for_wormhole = 0;
-	public int note = 0;
-	public int wormhole = 0;
-	public int probability = 0;
-	public int plane = 8;
-	public int[] x_adj = {0, -1, 0, 1, -1, 1, -1, 0, 1};
-	public int[] y_adj = {0, -1, -1, -1, 0, 0, 1, 1, 1};
-	//public int[] pot_insert_coll = new int[];
-	public int[] monomap = {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
-	public int[][] display = new int[16][16];
-	public int[][] last_display = new int[16][16];
-	public int[][] editor = new int[16][16];
-	public int[][][] prog = new int[16][16][25];
-	public int[] def_prog = {0,0,2,0,4,4,0,0,4,0,4,4,0,0,6,0,4,4,0,0,8,0,4,4,0};
-	public int[][] pot_array_temp = new int[part_limit][3];
-	public int pot_array_temp_pos = 0;
-	public int[][] pot_array = new int[part_limit][3];
-	public int pot_array_pos = 0;
-	public String bin_on = "1";
-
 	public int[][] modes = new int[8][4];
 	public int[] notes = {0, 5, 7, 10, 12, 17, 19, 24};
-	public int[] durations ={8000, 4000, 2000, 1000};
-	public int sixteenth = 1./16;
-	public int centroid_x = 0.;
-	public int centroid_y = 0.;
-	public int avgvelocity_x = 0.;
-	public int avgvelocity_y = 0.;
+	public int[] durations = {8000, 4000, 2000, 1000};
+	public double[] weights = {1., 1., 1., 1., 1., 1., 1., 1.}; 
+	public double sixteenth = 1./16;
+	public double centroid_x = 0.;
+	public double centroid_y = 0.;
+	public double avgvelocity_x = 0.;
+	public double avgvelocity_y = 0.;
 	public int tick = 0;
 	public int myprime = 0;
 	public int[] primes = new int[128];
-	public int[] distarray;
-	public int mywind_x = 0;
-	public int mywind_y = 0;
-	public int myseparation = .1;
-	public int myalignment = .07;
-	public int mycoherence = .1;
-	public int myobedience = .5;
-	public int myinertia = .5;
-	public int myfriction = .5;
-	public int mysepthresh = .3;
-	public int mymaxvel = .1;
-	public int mygravity = .1;
-	public int mygravpoint_x = .5;
-	public int mygravpoint_y = 0.;
-	public int myslip = 0;
+	public double[] dist_array;
+	public double mywind_x = 0.;
+	public double mywind_y = 0.;
+	public double myseparation = .1;
+	public double myalignment = .07;
+	public double mycoherence = .1;
+	public double myobedience = .5;
+	public double myinertia = .5;
+	public double myfriction = .5;
+	public double mysepthresh = .3;
+	public double mymaxvel = .1;
+	public double mygravity = .1;
+	public double mygravpoint_x = .5;
+	public double mygravpoint_y = 0.;
+	public double myslip = 0.;
+	public double mywind = 0.;
+	//public long rand = System.nanoTime();
 	
 	public int myagentcount = 8;
 	public int leader = 0;
 	
-	public int[] agents = new int[8];
+	public Agent[] agents;
 	
 	private static final String[] INLET_ASSIST = new String[]{
-		"pulse input", "grid input", "key input", "program input", "plane input", "particle limit input"
+		"main input"
 	};
 	private static final String[] OUTLET_ASSIST = new String[]{
-		"display output", "note output", "to preset"
+		"old 1", "old 2", "old 3", "grid output", "note output", "cc output"
 	};
 	
 	public aumboids(Atom[] args)
 	{
-
-		//Random generator = new Random();
-		
-		declareInlets(new int[]{DataTypes.ALL, DataTypes.ALL, DataTypes.ALL, DataTypes.ALL, DataTypes.ALL, DataTypes.ALL});
-		declareOutlets(new int[]{DataTypes.ALL, DataTypes.ALL, DataTypes.ALL});
+		declareInlets(new int[]{DataTypes.ALL});
+		declareOutlets(new int[]{DataTypes.ALL, DataTypes.ALL, DataTypes.ALL, DataTypes.ALL, DataTypes.ALL, DataTypes.ALL});
 		
 		setInletAssist(INLET_ASSIST);
 		setOutletAssist(OUTLET_ASSIST);
-		createInfoOutlet(false); 
-		
-		///init();
-
+		createInfoOutlet(false);
+		init();
 	}
 	
 	
 	public void inlet(int i)
 	{
-		if(getInlet()==4)
-		{
-			set_plane(i);
-		}
-		if(getInlet()==5)
-		{
-			set_particle_limit(i);
-		}
-			
 	}
 	
 	public void inlet(float f)
@@ -112,65 +67,115 @@ public class aumboids extends MaxObject
 	
 	
 	public void list(Atom[] args) 
-	{ 
-		//post("Received list message at inlet "+getInlet()); 
-		//loop through all the atoms in the list 
-		//Atom a; 
-		//for(int i = 0; i < args.length; i++) 
-		//{ 
-		//	a = args[i]; 
-		//	if(a.isFloat()) 
-		//		post("List element "+i+" is a floating point atom with a value of "+a.getFloat()); 
-		//	else if(a.isInt()) 
-		//		post("List element "+i+" is an integer atom with a value of "+a.getInt()); 
-		//	else if(a.isString()) 
-		//		post("List element "+i+" is a String atom with a value of "+a.getString()); 
-		//} 
+	{
 	}
 	
-	public void init()
-	{														
-		/*for(int d=0;d<16;d++)																	  
-		{  
-			for(int dd=0;dd<16;dd++)
-			{
-				display[d][dd]=0;		///create the display arrays:16x16x3, one for each cell:edit, program, node
-				for(int dddd=0;dddd<25;dddd++)
-				{
-					prog[d][dd][dddd] = def_prog[dddd];	  ///cells are : (direction, wormhole, probability, note)
-				}
-			}											///				[velocity, duration aren't implemented] 
-		}											   ///matrix containing all program data: 6 cells per plane, 25 is start
-		for(int p=0;p<part_limit;p++)
+	public class Agent
+	{
+		public double num;
+		public double x;
+		public double y;
+		public double vx;
+		public double vy;
+		public double px;
+		public double py;
+		public int prime;
+		public double dist;
+		public int order;
+		public int rulecount;
+		public double weight;
+	
+		public Agent(int num, double x, double y, double vx, double vy, double px, double py, int prime, int order)
 		{
-			pot_array_temp[p][0] = -2;
-			pot_array[p][0] = -2;
-		}*/
-		///post("matrices instantiated");	
+			this.num = num;
+			this.x = x;
+			this.y = y;
+			this.vx = vx;
+			this.vy = vy;
+			this.px = px;
+			this.py = py;
+			this.prime = prime;
+			this.order = order;
+			this.dist = 0.;
+			this.rulecount = 0;
+			this.weight = 1.;
+		}
+	}
+	
+	/*public long randomLong() 
+	{
+		rand ^= (rand << 21);
+		rand ^= (rand >>> 35);
+		rand ^= (rand << 4);
+		//post("random" + rand);
+		return rand;
+	}*/
+
+	public void init()
+	{
+		//rand = System.nanoTime();
 		agentcount(myagentcount);
-		
 	}
 
 	public void agentcount(int v)
 	{
-		myagentcount = clip(v,1,8);
-		//dist_array
-		for(int i=0;i<myagentcount;i++)
+		int i;
+		//myagentcount = clip(v,1,8);
+		dist_array = new double[myagentcount];
+		agents = new Agent[myagentcount];
+		for(i=0;i<myagentcount;i++)
 		{
 			dist_array[i] = 0.;
-			int x = (int)(Math.random());
-			int y = (int)(Math.random());
-			int vx = (int)(Math.random()-.5)*.1;
-			int vy = (int)(Math.random()-.5)*.1;
-			int px = 0;
-			int py = 0;
+			int num = i;
+			double x = (Math.random());
+			double y = (Math.random());
+			double vx = (Math.random()-.5)*.1;
+			double vy = (Math.random()-.5)*.1;
+			double px = 0;
+			double py = 0;
 			int prime = i;
 			int order = i;
 			
-			agents[i] = new Agent(x, y, vx, vy, px, py, prime, dist, order);
+			agents[i] = new Agent(num, x, y, vx, vy, px, py, prime, order);
+			agents[i].rulecount = 5;
 		}
 	}
+
+	private void tick(Agent a)
+	{
+		int i;
 		
+		//save current velocity for inertia calc
+		double px = a.px;
+		double py = a.py;
+		
+		//apply rules
+		//for (i=0;i<a.rulecount;i++)
+		//{
+		separate(a);
+		align(a);
+		cohere(a);
+		gravitate(a);
+		follow(a);
+		//}
+		
+		//inertia
+		a.vx = px*myinertia + a.vx*(1.-myinertia);
+		a.vy = py*myinertia + a.vy*(1.-myinertia);
+		
+		//velocity limit
+		a.vx = clip(a.vx, -mymaxvel, mymaxvel);
+		a.vy = clip(a.vy, -mymaxvel, mymaxvel);
+		
+		//update position based on velocity and friction
+		a.x += a.vx*(1.-myfriction);
+		a.y += a.vy*(1.-myfriction);
+		
+		//slip(this);
+		wrap(a);  //torus space
+		//bounce(this);
+	}		
+	
 	public void leader_in(int v)
 	{
 		leader = v;
@@ -223,7 +228,7 @@ public class aumboids extends MaxObject
 	
 	public void gravity(double v)
 	{
-		my gravity = clip(v, 0, 1)*.1;
+		mygravity = clip(v, 0, 1)*.1;
 	}
 	
 	public void gravpoint(double x, double y)
@@ -242,54 +247,61 @@ public class aumboids extends MaxObject
 	{
 		int i;
 		tick += 1;
-		mywind_x = ((Math.random()-.5)*.05)*mywind_x;
-		mywind_y = ((Math.random()-.5)*.05)*mywind_y;	
+		//mywind_x = ((Math.random()-.5)*.05)*mywind_x;
+		//mywind_y = ((Math.random()-.5)*.05)*mywind_y;	
 		//circle();
 		//for (i=0;i<myagentcount;i++) {
 		//    outlet(3,Math.round(agents[i].x*15),Math.round(agents[i].y*15), 0);
 		//}
-		outlet(3, 'clear');
+		outlet(3, Atom.newAtom("clear"));
 		outlet(3, new Atom[]{ Atom.newAtom(mygravpoint_x*15), Atom.newAtom(mygravpoint_y*15), Atom.newAtom(20)});
 		lead();
-		cx = 0;
-		cy = 0;
-		cvx = 0;
-		cvy = 0;
+		double cx = 0;
+		double cy = 0;
+		double cvx = 0;
+		double cvy = 0;
+		Agent agent;
 		for(i=0;i<myagentcount;i++)
 		{
-			agents[i].tick();
+			agent = agents[i];
+			tick(agent);
 			
 			//calculate current frame's average position/velocity
-			cx += agents[i].x;
-			cy += agents[i].y;
-			cvx += agents[i].vx;
-			cvy += agents[i].vy;
+			cx += agent.x;
+			cy += agent.y;
+			cvx += agent.vx;
+			cvy += agent.vy;
 		}
 		centroid_x = cx/myagentcount;
 		centroid_y = cy/myagentcount;
 		avgvelocity_x = cvx/myagentcount;
 		avgvelocity_y = cvy/myagentcount;
-		outlet(2, "bang");
-		outlet(1, new Atom[]{ Atom.newAtom(centroid_x), Atom.newAtom(centroid_y), Atom.newAtom(avgvelocity_x), Atom.newAtom(avgvelocity_y)});
+		//outlet(2, Atom.newAtom("bang"));
+		//outlet(1, new Atom[]{ Atom.newAtom(centroid_x), Atom.newAtom(centroid_y), Atom.newAtom(avgvelocity_x), Atom.newAtom(avgvelocity_y)});
 	
 		for(i=0;i<myagentcount;i++)
 		{
-			outlet(3, new Atom[]{ Atom.newAtom(Math.round(agents[i].x*15)), Atom.newAtom(Math.round(agents[i].y*15)), Atom.newAtom((i==leader)+(agents[i].order<4)+1)});
-			if(agents[i].order < 4)
+		 	agent = agents[i];
+			int order = agent.order;
+			outlet(3, new Atom[]{ Atom.newAtom(Math.round(agent.x*15)), Atom.newAtom(Math.round(agent.y*15)), Atom.newAtom(((i==leader)?1:0)+((order<4)?1:0)+1)});
+			if(order< 4)
 			{
-				outlet(4, new Atom[]{ Atom.newAtom(i), Atom.newAtom(notes[leader] + modes[i][agents[i].order]), Atom.newAtom(120 - (agents[i].order*30)), Atom.newAtom(durations[agents[i].order])});
+				outlet(4, new Atom[]{ Atom.newAtom(i), Atom.newAtom(notes[leader] + modes[i][order]), Atom.newAtom(120 - (order*30)), Atom.newAtom(durations[order]), Atom.newAtom(agent.weight)});
 			}
 			else
 			{
-				outlet(4, new Atom[]{ Atom.newAtom(i), Atom.newAtom('off')});
+				outlet(4, new Atom[]{ Atom.newAtom(i), Atom.newAtom("off")});
 			}
+			outlet(5, new Atom[]{ Atom.newAtom(i), Atom.newAtom(agent.dist)});
+			//outlet(0, new Atom[]{ Atom.newAtom(agent.x), Atom.newAtom(agent.y), Atom.newAtom(agent.vx), Atom.newAtom(agent.vy)});
 		}
 	}
 	
-	public void circle()
+	private void circle()
 	{
-		double double = Math.floor((tick%64.)/16.);
-		switch(phase){
+		int phase = (int)(Math.floor((tick%64.)/16.));
+		switch(phase)
+		{
 			case 0: mygravpoint_x += sixteenth;
 					break;
 			case 1: mygravpoint_y += sixteenth;
@@ -298,73 +310,10 @@ public class aumboids extends MaxObject
 					break;
 			case 3: mygravpoint_y -= sixteenth;
 					break;
+		}
 	}
 
-	public class Agent
-	{
-		public int x;
-		public int y;
-		public int vx;
-		public int vy;
-		public int px;
-		public int py;
-		public int prime;
-		//public int[] f;
-		public int dist;
-		public int order;
-		public int rulecount;
-		public int[] rules;
-		public int tick;
-		
-		public Agent(int x, int y, int vx, int vy, int px, int py, int prime, int dist, int order, int tick)
-		{
-			this.x = x;
-			this.y = y;
-			this.vx = vx;
-			this.vy = vy;
-			this.px = px;
-			this.py = py;
-			this.prime = prime;
-			this.dist = dist;
-			this.order = order;
-			this.rulecount = 0;
-		}
-		
-		public void tick()
-		{
-			int i;
-			
-			//save current velocity for inertia calc
-			int px = this.px;
-			int py = this.py;
-			
-			//apply rules
-			for (i=0;i<this.rulecount;i++)
-			{
-				this.rules[i](this);
-			}
-			
-			//inertia
-			this.vx = px*myinertia + this.vx*(1.-myinertia);
-			this.vy = py*myinertia + this.py*(1.-myinertia);
-			
-			//velocity limit
-			this.vx = clip(this.vx, -mymaxvel, mymaxvel);
-			this.vy = clip(this.vx, -mymaxvel, mymaxvel);
-			
-			//update position based on velocity and friction
-			this.x += this.vx*(1.-myfriction);
-			this.y += this.vy*(1.-myfriction);
-			
-			//slip(this);
-			wrap(this);  //torus space
-			//bounce(this);
-		}
-	}
-	
-	//rules
-	
-	public void separate(Object a)
+	private void separate(Agent a)
 	{
 		int i;
 		double dx;
@@ -381,10 +330,10 @@ public class aumboids extends MaxObject
 				
 				//torus space
 				if (dx>.5){dx -= 1.;}
-				else if (dy<.5){dx += 1.;}
+				else if (dx<.5){dx += 1.;}
 				
 				//torus space
-				if (dx>.5){dy -= 1.;}
+				if (dy>.5){dy -= 1.;}
 				else if (dy<.5){dy += 1.;}
 				
 				if ((Math.abs(dx)>.0001)&&(Math.abs(dy)>.0001))
@@ -396,7 +345,7 @@ public class aumboids extends MaxObject
 					mag = .01;
 				}
 				
-				if (mag>mysepthresh)
+				if (mag<mysepthresh)
 				{
 					if (mag<.0001)
 					{
@@ -413,7 +362,7 @@ public class aumboids extends MaxObject
 		}
 	}
 	
-	public void align(Object a)
+	private void align(Agent a)
 	{
 		double dvx;
 		double dvy;
@@ -425,7 +374,7 @@ public class aumboids extends MaxObject
 		a.vy += dvy*myalignment;
 	}
 	
-	public void cohere(Object a)
+	private void cohere(Agent a)
 	{
 		double dx;
 		double dy;
@@ -437,16 +386,15 @@ public class aumboids extends MaxObject
 		a.vy +=dy*mycoherence;
 	}
 	
-	public void gravitate(Object a)
+	private void gravitate(Agent a)
 	{
 		double dx;
 		double dy;
-		
-		dx = mygravpoint_x - a.x;
-		dy = mygravpoint_y - a.y;
-		
+
 		if(a.num == leader)
 		{
+			dx = mygravpoint_x - a.x;
+			dy = mygravpoint_y - a.y;
 			a.vx += dx*mygravity;// + mywind_x;
 			a.vy += dy*mygravity;// + mywind_y;
 		}
@@ -457,40 +405,50 @@ public class aumboids extends MaxObject
 		//}
 	}
 	
-	public void slip(Object a)
+	private void slip(Agent a)
 	{
 		a.y += myslip;
 	}
 	
-	public void lead()
+	private void lead()
 	{
-		dist_array = new int[agents.length];
+		dist_array = new double[myagentcount];
+		double[] dist_sort = new double[myagentcount];
 		int a;
 		double lead_x_off;
 		double lead_y_off;
-		int dist_sort[] = new int[16];
-		
-		for(a=0;a<agents.length;a++)
+
+		lead_x_off = agents[leader].x;
+		lead_y_off = agents[leader].y;	
+	
+		for(a=0;a<myagentcount;a++)
 		{
-			lead_x_off = agents[leader].x;
-			lead_y_off = agents[leader].y;
 			agents[a].dist = Math.sqrt(Math.pow(Math.abs(lead_x_off - (agents[a].x)), 2) + Math.pow(Math.abs(lead_y_off - (agents[a].y)), 2));
 			dist_array[a] = agents[a].dist;
 		}
-		dist_sort = dist_array.sort(sort_num);   ///this definitely won't work ... we need to create a new array for temp purposes.
+		System.arraycopy(dist_array, 0, dist_sort, 0, dist_array.length);
+		Arrays.sort(dist_sort);   ///this definitely won't work ... we need to create a new array for temp purposes.
 		
-		for (a=0;a<agents.length;a++)
+		for (a=0;a<myagentcount;a++)
 		{
-			agents[a].order = dist_sort.indexOf(agents[a].dist);
+			//for(int j=0;j<myagentcount;j++)
+			//{
+			//	if(dist_sort[j]==agents[a].dist)
+			//	{
+			//		agents[a].order = j;
+			//		break;
+			//	}
+			//}
+			agents[a].order = Arrays.binarySearch(dist_sort, agents[a].dist);
 		}
 	}
 	
-	public int calculate_leader()
+	private int calculate_leader()
 	{
-		int min = 100;
+		double min = 100;
 		int lead = 0;
 		int a;
-		for(a=0;a<agents.length;a++)
+		for(a=0;a<myagentcount;a++)
 		{
 			if(agents[a].dist < min)
 			{
@@ -501,7 +459,7 @@ public class aumboids extends MaxObject
 		return lead;
 	}
 	
-	public void follow(Object a)
+	private void follow(Agent a)
 	{
 		double dx;
 		double dy;
@@ -511,12 +469,12 @@ public class aumboids extends MaxObject
 		dy = mygravpoint_y - agents[leader].y;
 		if(a.num != leader)
 		{
-			a.vw += dx*myobedience;
+			a.vx += dx*myobedience;
 			a.vy += dy*myobedience;
 		}
 	}
 	
-	public void wrap(Object a)
+	private void wrap(Agent a)
 	{
 		if (a.x<0.)
 		{
@@ -537,7 +495,7 @@ public class aumboids extends MaxObject
 		}
 	}
 
-	public void bounce(Object a)
+	private void bounce(Agent a)
 	{
 		if ((a.x>0.)||(a.x>1.))
 		{
@@ -550,42 +508,64 @@ public class aumboids extends MaxObject
 			a.y = clip(a.y, 0., 1.);
 		}
 	}
-	
-	public int clip(int x, int min, int max)
+		
+	private double clip(double x, double min, double max)
 	{
 		return Math.min(Math.max(x, min), max);
 	}
-	
-	public double clip(double x, double min, double max)
-	{
-		return Math.min(Math.max(x, min), max);
-	}
-	
-	function int sort_num(int a, int b)
-	{
-		return a - b;
-	}
-	
-	function double sort_num(double a, double b)
-	{
-		return a - b;
-	}
-	
-	function void assign_mode(int x, int y, int val)
+		
+	public void assign_mode(int x, int y, int val)
 	{
 		modes[x][y]=val;
 	}
 	
-	function void assign_note(int x, int val)
+	public void assign_note(int x, int val)
 	{
 		notes[x]=val;
 	}
 	
-	function void assign duration(int x, int val)
+	public void assign_duration(int x, int val)
 	{
 		durations[x] = val;
 	}
+	
+	public void assign_weight(int x, double val)
+	{
+		//weights[x] = val;
+		agents[x].weight = val;
+	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
