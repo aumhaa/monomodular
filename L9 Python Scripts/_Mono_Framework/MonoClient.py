@@ -172,8 +172,8 @@ class MonoClient(NotifyingControlElement):
 		self._device_parent = device.canonical_parent
 		if not self._device_parent.devices_has_listener(self._device_listener):
 			self._device_parent.add_devices_listener(self._device_listener)
-		self._mute = 0
-		self._send('toggle_mute', self._mute)
+		#self._mute = 0
+		#self._send('toggle_mute', self._mute)
 		for host in self._active_host:
 			host.update()
 		for host in self._host._hosts:
