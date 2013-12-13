@@ -590,7 +590,7 @@ class AumTroll(Cntrlr):
 		self._host._assign_mod_dials()
 
 		"""here we assign the left side of our mixer's buttons on the lower 32 keys"""
-		if self._monohm is None and self._aumpush is None:
+		if self._monohm == None and self._aumpush == None:
 			for index in range(4):															#we set up a recursive loop to assign all four of our track channel strips' controls
 				self._button[index].set_on_value(SOLO[self._rgb])							#set the solo color from the Map.py
 				self._mixer.channel_strip(index).set_solo_button(self._button[index])		#assign the solo buttons to our mixer channel strips
@@ -642,7 +642,7 @@ class AumTroll(Cntrlr):
 			self._session.set_enabled(True)													#enable the Session Component
 			self._session_zoom.set_enabled(True)											#enable the Session Zoom
 
-		elif self._monohm:
+		elif not self._monohm == None:
 			for index in range(8):
 				self._mixer2.channel_strip(index).set_volume_control(self._fader[index])
 			self._mixer2.set_track_offset(TROLL_OFFSET)
@@ -659,11 +659,11 @@ class AumTroll(Cntrlr):
 			self._device1.update()
 			self._device2.update()
 
-		elif self._aumpush:
+		elif not self._aumpush == None:
 			self.assign_aumpush_controls()
 
 		"""this section assigns the encoders and encoder buttons"""
-		if not self._aumpush:
+		if self._aumpush == None:
 			self._device.set_parameter_controls(tuple([self._encoder[index+4] for index in range(8)]))			#assign the encoders from the device component controls - we are doing this here b
 			self._encoder_button[7].set_on_value(DEVICE_LOCK[self._rgb])					#set the on color for the Device lock encoder button
 			self._device.set_lock_button(self._encoder_button[7])							#assign encoder button 7 to the device lock control
@@ -791,7 +791,7 @@ class AumTroll(Cntrlr):
 			self._shift_mode._modes_buttons[3].send_value(8)		#turn on the LED below the modButton
 		else:											#otherwise, if we are in modMode
 			self.deassign_live_controls()				#remove all of our assignments from the controls and refresh their caches
-			if self._aumpush is None:
+			if self._aumpush == None:
 				for index in range(8):
 					self._mixer2.channel_strip(index).set_volume_control(self._fader[index])
 				self._mixer2.set_track_offset(TROLL_OFFSET)
@@ -832,17 +832,44 @@ class AumTroll(Cntrlr):
 				self._host._display_mod_colors()
 	
 
+	def find_inputs(self):
+		found_device = None
+		tracks = self.song().tracks
+		for track in tracks:
+			if track.name == 'Inputs':
+				for device in track.devices:
+					if bool(device.can_have_chains) and device.name == 'Inputs':
+						found_device = device
+		return found_device
+	
+
+	def find_perc_crossfader(self):
+		found_parameter = None
+		tracks = self.song().tracks
+		for track in tracks:
+			if track.name == 'Perc':
+				for device in track.devices:
+					if bool(device.can_have_chains) and device.name == 'Perc':
+						for parameter in device.parameters:
+							if parameter.name == 'XFade':
+								found_parameter = parameter
+		return found_parameter
+	
+
 	def assign_aumpush_controls(self):
 		if self._aumpush:
-			for index in range(4):
-				self._mixer.channel_strip(index).set_volume_control(self._fader[index])
-				self._mixer3.channel_strip(index).set_volume_control(self._fader[index+4])
 			self._mixer2.set_track_offset(TROLL_OFFSET)
-			for index in range(4):
-				self._mixer2.channel_strip(index).set_volume_control(self._knobs[index+8])
-			for index in range(3):
-				self._mixer2.channel_strip(index+4).set_volume_control(self._knobs[index+20])
+			inputs = self.find_inputs()
+			if not inputs is None:
+				for index in range(4):
+					self._knobs[index+8].connect_to(inputs.parameters[index+1])
+
+			#for index in range(3):
+			#	self._mixer2.channel_strip(index+4).set_volume_control(self._knobs[index+20])
 			self._mixer.set_crossfader_control(self._knobs[23])
+			xfade = self.find_perc_crossfader()
+			if not xfade is None:
+				self._knobs[20].connect_to(xfade)
 			for index in range(4):
 				self._mixer3.return_strip(index).set_volume_control(self._encoder[index+4])
 				self._encoder_button[index+4].send_value(127, True)
@@ -850,16 +877,19 @@ class AumTroll(Cntrlr):
 				self._device_selector.assign_buttons(self._grid[:15])
 				self._device_selector.set_enabled(True)
 				self._on_shift_button_value.subject = self._grid[15]
-				self._aumpush._host._set_bank_buttons(tuple(self._button[16:32]))
-				for index in range(8):
-					self._button[index+4].set_on_off_values(SELECT[self._rgb], (5, 6)[int(index>3)])
-					self._mixer2.channel_strip(index).set_select_button(self._button[index+4])
+				if self._aumpush._host._is_connected:
+					self._aumpush._host._set_bank_buttons(tuple(self._button[4:12]+self._button[20:28]))
+				#for index in range(8):
+				#	self._button[index+4].set_on_off_values(SELECT[self._rgb], (5, 6)[int(index>3)])
+				#	self._mixer2.channel_strip(index).set_select_button(self._button[index+4])
 				for index in range(4):
 					self._send_reset.set_buttons(tuple(self._encoder_button[4:8]))
 					self._button[index].set_on_off_values(SELECT[self._rgb], 1)
 					self._mixer.channel_strip(index).set_select_button(self._button[index])
+					self._mixer.channel_strip(index).set_mute_button(self._button[index+16])
 					self._button[index+12].set_on_off_values(SELECT[self._rgb], 1)
-					self._mixer3.channel_strip(index).set_select_button(self._button[index+12])
+					self._mixer2.channel_strip(index).set_select_button(self._button[index+12])
+					self._mixer2.channel_strip(index).set_mute_button(self._button[index+28])
 				if not self._shifted:
 					self._mixer.selected_strip().set_send_controls(self._encoder[8:12])
 					for index in range(4):
@@ -868,10 +898,13 @@ class AumTroll(Cntrlr):
 					self._mixer.return_strip(0).set_send_controls(tuple([None, self._encoder[8]]))
 					self._mixer.return_strip(1).set_send_controls(tuple([self._encoder[9], None]))
 					#self._mixer.set_crossfader_control(self._encoder[11])
-					self._mixer2.channel_strip(4).set_volume_control(self._encoder[11])
+					self._mixer3.channel_strip(0).set_volume_control(self._encoder[11])
 					self._encoder_button[8].send_value(5, True)
 					self._encoder_button[9].send_value(5, True)
 					self._encoder_button[11].send_value(1, True)
+			for index in range(4):
+				self._mixer.channel_strip(index).set_volume_control(self._fader[index])
+				self._mixer2.channel_strip(index).set_volume_control(self._fader[index+4])
 
 			self._device1.set_parameter_controls(tuple([self._knobs[index] for index in range(8)]))
 			self._device2.set_parameter_controls(tuple([self._knobs[index+12] for index in range(8)]))
@@ -880,6 +913,7 @@ class AumTroll(Cntrlr):
 			self._find_devices()
 			self._device1.update()
 			self._device2.update()
+			self.request_rebuild_midi_map()
 	
 
 	"""used to connect different control_surfaces so that they can communicate"""
@@ -936,7 +970,7 @@ class AumTroll(Cntrlr):
 					is_monodevice = client
 			if is_monodevice != False:
 				#device = client._device_component._device
-				self.log_message('is monodevice' + str(device.name))
+				#self.log_message('is monodevice' + str(device.name))
 				assert ((device == None) or isinstance(device, Live.Device.Device))
 				if ((not device_component._locked_to_device) and (device != device_component._device)):
 					if (device_component._device != None):
@@ -1065,7 +1099,7 @@ class AumTroll(Cntrlr):
 
 	def display_active_client(self):
 		if(not self._device._device is None):
-			self.log_message('selecting....')
+			#self.log_message('selecting....')
 			self.song().view.select_device(self._device._device)
 			if ((not self.application().view.is_view_visible('Detail')) or (not self.application().view.is_view_visible('Detail/DeviceChain'))):
 				self.application().view.show_view('Detail')
@@ -1111,7 +1145,7 @@ class AumTroll(Cntrlr):
 			self._mixer2.channel_strip(index)._invert_mute_feedback = True
 		self._mixer3 = MixerComponent(4, 4, False, False)
 		self._mixer3.name = 'Mixer_3'
-		self._mixer3.set_track_offset(12) #Sets start point for mixer strip (offset from left)
+		self._mixer3.set_track_offset(8) #Sets start point for mixer strip (offset from left)
 		for index in range(4):
 			self._mixer3.channel_strip(index).name = 'Mixer_3_ChannelStrip_' + str(index)
 			self._mixer3.channel_strip(index)._invert_mute_feedback = True

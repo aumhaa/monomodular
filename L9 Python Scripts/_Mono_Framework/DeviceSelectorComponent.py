@@ -83,7 +83,7 @@ class DeviceSelectorComponent(ModeSelectorComponent):
 		preset = None
 
 		for track in range(len(self.song().tracks)):
-			self._script.log_message(self.enumerate_track_device(self.song().tracks[track]))
+			#self._script.log_message(self.enumerate_track_device(self.song().tracks[track]))
 			for device in self.enumerate_track_device(self.song().tracks[track]):
 				if(match(key, str(device.name)) != None):
 					preset = device
