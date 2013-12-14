@@ -334,7 +334,7 @@ function make_loop(rotate)
 	//	looper.buffetloop.message('rotatetozero', offset);
 	//}
 	looper.grooveend.message('float', loop_end);//ms
-	looper.groove.message('pos', offset * samps_per_ms);
+	//looper.groove.message('pos', offset * samps_per_ms);
 	//looper.pokeloop.message('end', loop_end);
 	//looper.calc_record.message('len', loop_end);//ms
 	//looper.groove.message(offset);//samples, pretty sure
