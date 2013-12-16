@@ -144,7 +144,7 @@ class MonoDeviceComponent(DeviceComponent):
 
 	def get_parameter_by_name(self, device, name):
 		""" Find the given device's parameter that belongs to the given name """
-		#self._parent._host.log_message('get paramameter: device-' + str(device) + ' name-' + str(name))
+		#self._parent._host.log_message('get parameter: device-' + str(device) + ' name-' + str(name))
 		result = None
 		for i in device.parameters:
 			if (i.original_name == name):
@@ -166,7 +166,6 @@ class MonoDeviceComponent(DeviceComponent):
 						break	
 			elif match('CustomParameter_', name):
 				index = int(name.replace('CustomParameter_', ''))
-				#self._parent._host.log_message('index='+str(index)+' type:'+str(type(index))+' len:'+str(len(self._custom_device)))
 				if len(self._custom_parameter)>index:
 					 if isinstance(self._custom_parameter[index], Live.DeviceParameter.DeviceParameter):
 						result = self._custom_parameter[index]
@@ -185,7 +184,7 @@ class MonoDeviceComponent(DeviceComponent):
 			self.update()
 	
 
-	def _assign_parameters(self, host):
+	def _assign_parameters(self, host, *a):
 		#self._parent._host.log_message('assign_parameters '+str(host))
 		assert self.is_enabled()
 		assert (self._device != None)
@@ -203,7 +202,7 @@ class MonoDeviceComponent(DeviceComponent):
 				banks = self._device_banks[class_name]
 				if '_alt_device_banks' in dir(host):
 					if self._type in host._alt_device_banks.keys():
-						if (class_anme in host._alt_device_banks[self._type].keys()):
+						if (class_name in host._alt_device_banks[self._type].keys()):
 							banks = host._alt_device_banks[self._type][class_name]
 				bank = None
 				if (len(banks) > self._bank_index):
@@ -422,7 +421,7 @@ class MonoDeviceComponent(DeviceComponent):
 						old_bank_name = self._bank_name
 						self._assign_parameters(host)
 						if self._bank_name != old_bank_name:
-							self._show_msg_callback(self._device.name + ' Bank: ' + self._bank_name)
+							self._show_msg_callback(str(self._device.name) + ' Bank: ' + str(self._bank_name))
 			else:
 				for host in self._parent._active_host:
 					if host._parameter_controls != None:
@@ -437,27 +436,23 @@ class MonoDeviceComponent(DeviceComponent):
 						host._script.request_rebuild_midi_map()
 					if hasattr(host, '_device_component'):
 						if host._device_component != None:
-							#host._device_component.update()
-							self._parent._host.schedule_message(1, host._device_component.update)
+							try:
+								#host._device_component.update()
+								self._parent._host.schedule_message(1, host._device_component.update)
+							except:
+								pass
 	
 
 	#major hack here....this will need to be changed to a constant based on the length of the MOD_TYPES bank used
 	def _update_params(self):
 		count = self._number_params
-		#count = 0  ##this is old value, changed for use with new methods
-		used_host = None
-		if self._number_params > 0:
-			count = self._number_params
-		else:
-			for host in self._parent._host._hosts:
-				if len(host._parameter_controls) > count:
-					count = len(host._parameter_controls)
-					used_host = host
+		for host in self._parent._host._hosts:
+			if len(host._parameter_controls) > count:
+				count = len(host._parameter_controls)
 		if count != len(self._params):
+			self._number_params = count
 			if self._number_params > 0:
 				self._params = [ParamHolder(self, None, index) for index in range(self._number_params)]
-			elif used_host != None:
-				self._params = [ParamHolder(self, None, index) for index in range(len(used_host._parameter_controls))]
 			else:
 				for param in self._params:
 					self._connect_param(param, None)

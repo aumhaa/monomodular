@@ -263,6 +263,10 @@ class CodecMonomodComponent(MonomodComponent):
 		pass
 	
 
+	def _send_nav_box(self):
+		pass
+	
+
 
 class MonomodModeComponent(ModeSelectorComponent):
 
@@ -371,6 +375,7 @@ class Codec(ControlSurface):
 		self._shift_thresh = SHIFT_THRESH
 		self._use_device_selector = USE_DEVICE_SELECTOR
 		self._device_selection_follows_track_selection=FOLLOW
+		self._leds_last = 0
 		with self.component_guard():
 			#self.local_ring_control(True)
 			#self.set_absolute_mode(True)
@@ -419,6 +424,7 @@ class Codec(ControlSurface):
 			self._dial[column] = [None for index in range(4)]
 			for row in range(4):
 				self._dial[column][row] = CodecEncoderElement(MIDI_CC_TYPE, CHANNEL, CODE_DIALS[row][column], Live.MidiMap.MapMode.absolute, 'Dial_' + str(column) + '_' +	str(row), (column + (row*8)), self)	#CODE_DIALS[row][column]
+				#self._dial[column][row]._report_output = True
 				
 		self._button = [None for index in range(8)]
 		for column in range(8):
@@ -836,17 +842,18 @@ class Codec(ControlSurface):
 	
 
 	def send_ring_leds(self):
-		leds = [240, 0, 1, 97, 4, 31]
-		for column in range(8):
-			for row in range(4):
-				wheel = self._dial[column][row]
-				bytes = wheel._get_ring()
-				leds.append(bytes[0])
-				leds.append(int(bytes[1]) + int(bytes[2]))
-				#if(row == 1 and column == 0):
-				#	self.log_message(str(leds) + ' ' + str(bytes[0]) + ' ' + str(bytes[1]) + ' ' + str(bytes[2]))
-		leds.append(247)
-		self._send_midi(tuple(leds))
+		if self._host._is_enabled == True:
+			leds = [240, 0, 1, 97, 4, 31]
+			for column in range(8):
+				for row in range(4):
+					wheel = self._dial[column][row]
+					bytes = wheel._get_ring()
+					leds.append(bytes[0])
+					leds.append(int(bytes[1]) + int(bytes[2]))
+			leds.append(247)
+			if not leds==self._leds_last:
+				self._send_midi(tuple(leds))
+				self._leds_last = leds
 	
 
 	def set_absolute_mode(self, val = 1):

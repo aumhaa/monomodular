@@ -4,6 +4,7 @@ import Live
 from _Framework.EncoderElement import EncoderElement
 from _Framework.InputControlElement import InputControlElement
 from _Framework.NotifyingControlElement import NotifyingControlElement
+from _Framework.SubjectSlot import subject_slot, subject_slot_group
 
 MIDI_NOTE_TYPE = 0
 MIDI_CC_TYPE = 1
@@ -46,6 +47,7 @@ class CodecEncoderElement(EncoderElement):
 		#self._report_output = True
 		self._paramter_lcd_name = ' '
 		self._parameter_last_value = None
+		self._parameter_last_num_value = 0
 		self._mapped_to_midi_velocity = False
 		self.set_report_values(True, False)
 
@@ -96,11 +98,19 @@ class CodecEncoderElement(EncoderElement):
 
 	def _get_ring(self):
 		if self._ring_mode < 4:
-			byte1 = RING_MODE[self._ring_mode][self._ring_value % len(RING_MODE[self._ring_mode])][0]
-			byte2 = RING_MODE[self._ring_mode][self._ring_value % len(RING_MODE[self._ring_mode])][1]
+			mode = RING_MODE[self._ring_mode]
+			length = len(mode)
+			byte1 = mode[self._ring_value % length][0]
+			byte2 = mode[self._ring_value % length][1]
+			bytes = [byte1, byte2]
+		elif self._ring_mode == 5:
+			mode = RING_MODE[0]
+			length = max(0, len(mode)-1)
+			byte1 = mode[int(self._parameter_last_num_value*length)][0]
+			byte2 = mode[int(self._parameter_last_num_value*length)][1]
 			bytes = [byte1, byte2]
 		else:
-			bytes = self._ring_custom[self._ring_value % len(self._ring_custom)]
+			bytes = self._ring_custom[self._ring_value % len(self._ring_custom) * len(RING_MODE[0])]
 		bytes.append(self._ring_green * 32)
 		return bytes
 	
@@ -129,6 +139,8 @@ class CodecEncoderElement(EncoderElement):
 						self._mapped_to_midi_velocity = True
 		self._parameter_to_map_to = assignment
 		self.add_parameter_listener(self._parameter_to_map_to)
+		if(not (type(self._parameter) is type(None))):
+			self._parameter_last_num_value = (self._parameter.value - self._parameter.min) / (self._parameter.max - self._parameter.min)
 	
 
 	def release_parameter(self):
@@ -136,6 +148,7 @@ class CodecEncoderElement(EncoderElement):
 			self.remove_parameter_listener(self._parameter_to_map_to)
 		self.send_value(0, True)
 		InputControlElement.release_parameter(self)
+		self._parameter_last_num_value = 0
 		#self._parameter_to_map_to = None
 	
 
@@ -153,6 +166,7 @@ class CodecEncoderElement(EncoderElement):
 	def forward_parameter_value(self):
 		if(not (type(self._parameter) is type(None))):
 			#new_value=int(((self._parameter.value - self._parameter.min) / (self._parameter.max - self._parameter.min))  * 127)
+			self._parameter_last_num_value = (self._parameter.value - self._parameter.min) / (self._parameter.max - self._parameter.min)
 			try:
 				parameter = str(self.mapped_parameter())
 			except:

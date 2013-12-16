@@ -47,7 +47,7 @@ from _Mono_Framework.LiveUtils import *
 
 """Custom files, overrides, and files from other scripts"""
 from CNTRLR_9.Cntrlr import Cntrlr
-#from ModDevices import *
+from ModDevices import *
 from Map import *
 
 from _Tools.re import *
@@ -138,7 +138,12 @@ class AumTrollMonomodComponent(MonomodComponent):
 
 	def __init__(self, *a, **k):
 		super(AumTrollMonomodComponent, self).__init__(*a, **k)
+		self._alt_device_banks = MOD_TYPES
 		self._host_name = 'AumTroll'
+		"""for device in self._alt_device_banks.keys():
+			for Type in self._alt_device_banks[device].keys():
+				for bank in self._alt_device_banks[device][Type]:
+					self._script.log_message(bank)"""
 	
 
 	def disconnect(self, *a, **k):
@@ -308,6 +313,10 @@ class AumTrollMonomodComponent(MonomodComponent):
 						#self._script.log_message('dial value update' +str(column) + str(row) + str(self._active_client._wheel[column][row]['value']))
 	
 
+	def _update_wheel(self):
+		self._update_c_wheel()
+	
+
 	def set_c_local_ring_control(self, val = 1):
 		self._c_local_ring_control = (val!=0)
 		self._script.set_local_ring_control(self._c_local_ring_control)
@@ -348,6 +357,10 @@ class AumTrollMonomodComponent(MonomodComponent):
 		else:
 			for index in range(4):
 				self._script._shift_mode._modes_buttons[index].send_value(0)
+	
+
+	def _send_nav_box(self):
+		pass
 	
 
 
@@ -488,6 +501,8 @@ class AumTroll(Cntrlr):
 		#		self._encoder[index].remove_value_listener(self._client[index]._mod_dial_value)
 		#self.log_message('deassign live controls')
 		#self._device_selector.set_mode_buttons(None)
+
+		self._leds_last = None
 		self._device_selector.set_enabled(False)
 		self._device._parameter_controls = None
 		self._deassign_monomodular_controls()

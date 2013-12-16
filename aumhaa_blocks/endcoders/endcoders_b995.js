@@ -50,12 +50,13 @@ function alive(val)
 
 function init()
 {
+	if(DEBUG){post('new...')};
 	outlet(0, 'set_local_ring_control', 0);
 	for(var k=0;k<4;k++)
 	{
 		for(var l=0;l<8;l++)
 		{
-			outlet(0, 'to_wheel', l, k, 'mode', 0);
+			outlet(0, 'to_wheel', l, k, 'mode', 5);
 			outlet(0, 'to_wheel', l, k, 'white', 0);
 			outlet(0, 'to_wheel', l, k, 'green', 0);
 			outlet(0, 'to_wheel', l, k, 'value', 0);
@@ -64,7 +65,7 @@ function init()
 	outlet(0, 'set_c_local_ring_control', 0);
 	var l=3;do{
 		var k=2;do{
-			outlet(0, 'to_c_wheel', l, k, 'mode', 0);
+			outlet(0, 'to_c_wheel', l, k, 'mode', 5);
 			outlet(0, 'to_c_wheel', l, k, 'white', 0);
 			outlet(0, 'to_c_wheel', l, k, 'green', 0);
 			outlet(0, 'to_c_wheel', l, k, 'value', 0);
@@ -382,7 +383,7 @@ function _row(num, val)
 	if(num < 3)
 	{
 		rows[num].pressed = (val!=0);
-		outlet(0, 'row', num, val * 127);
+		outlet(0, 'row', num, (val>0) * 127);
 	}
 	else if((num ==3)&&(val>0))
 	{
@@ -430,7 +431,7 @@ function _c_key(num, val)
 		}
 		else
 		{
-			selected.knob.message('int', Math.floor(((num-16)/16)*100));
+			selected.knob.message('int', Math.floor(((num-16)/15)*100));
 		}
 
 	}
@@ -443,7 +444,7 @@ function _c_grid(x, y, val)
 	if(num<4)
 	{
 		c_rows[num].pressed=val;
-		outlet(0, 'c_grid', num, 0, val * 127);
+		outlet(0, 'c_grid', num, 0, (val>0) * 127);
 	}
 	else if((num>7)&&(val>0))
 	{
@@ -451,13 +452,16 @@ function _c_grid(x, y, val)
 		{
 			select_knob(num-8);
 			this.patcher.getnamed('breakpoints').message('wclose');
-			this.patcher.getnamed('breakpoints').message('open', x+1);
+			this.patcher.getnamed('breakpoints').message('open', num-7);
 		}
 		else if(c_rows[1].pressed>0)
 		{
 			for(var i=0;i<24;i++)
 			{
-				set_breakpoint(i);
+				if(selected.id_numbers[i]>0)
+				{
+					set_breakpoint(i);
+				}
 			}
 		}
 		else if(c_rows[2].pressed>0)
@@ -722,7 +726,7 @@ function clear_surface()
 		outlet(0, 'column', i, 0);
 		for(var j = 0; j < 4; j ++)
 		{
-			outlet(0, 'wheel', i, j, 'mode', 0);
+			outlet(0, 'wheel', i, j, 'mode', 5);
 			outlet(0, 'wheel', i, j, 'white', 0);
 			outlet(0, 'wheel', i, j, 'green', 0);
 			outlet(0, 'wheel', i, j, 'value', 0);
@@ -734,7 +738,7 @@ function clear_surface()
 	}
 	var i=3;do{
 		var j=2;do{
-			outlet(0, 'to_wheel', i, j, 'mode', 0);
+			outlet(0, 'to_wheel', i, j, 'mode', 5);
 			outlet(0, 'to_wheel', i, j, 'white', 0);
 			outlet(0, 'to_c_wheel', i, j, 'value', 0);
 		}while(j--);
