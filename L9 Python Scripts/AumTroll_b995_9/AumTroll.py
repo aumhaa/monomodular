@@ -57,7 +57,7 @@ switchxfaderrgb = (240, 00, 01, 97, 07, 15, 01, 247)
 assigncolors = (240, 00, 01, 97, 07, 34, 00, 07, 03, 06, 05, 01, 02, 04, 247)
 assign_default_colors = (240, 00, 01, 97, 07, 34, 00, 07, 06, 05, 01, 04, 03, 02, 247)
 check_model = (240, 126, 127, 6, 1, 247)
-
+request_snapshot = (240, 00, 01, 97, 08, 07, 06, 247)
 
 factoryreset = (240,0,1,97,8,6,247)
 btn_channels = (240, 0, 1, 97, 8, 19, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, CHANNEL, 0, 247);
@@ -458,6 +458,7 @@ class AumTroll(Cntrlr):
 			self._setup_pedal()
 			#self._setup_alt_device_control()
 		#self.schedule_message(3, self._session._do_show_highlight)
+		self.send_midi(tuple(request_snapshot))
 	
 
 	"""script initialization methods"""

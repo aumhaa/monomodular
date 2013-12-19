@@ -10,6 +10,7 @@ var SHOW_STORAGE = 0;
 
 var modColor=6;
 
+var FUNCTION_COLORS = [3, 6, 5, 0];
 var ACCEL_FACTORS = [.15, .05];
 var knob_ids=[];
 var knob=[];
@@ -19,6 +20,7 @@ var rows=[];
 var columns=[];
 var c_rows=[];
 var c_keys=[];
+var grid_rows=[];
 var keys=[];
 var accel = .1;
 var	Alive = 0;
@@ -100,6 +102,11 @@ function init()
 	{
 		c_keys[i]=[];
 		c_keys[i].pressed = false;
+	}
+	for(var i=0;i<4;i++)
+	{
+		grid_rows[i]=[];
+		grid_rows[i].pressed = false;
 	}
 	for(var i=0;i<8;i++)
 	{
@@ -283,7 +290,7 @@ function _list()
 	switch(inlet)
 	{
 		case 0:
-			_c_grid(args[0], args[1], args[2]);
+			_grid(args[0], args[1], args[2]);
 			break;
 		case 1:
 			_key(args[0], args[1]);
@@ -444,7 +451,7 @@ function _c_grid(x, y, val)
 	if(num<4)
 	{
 		c_rows[num].pressed=val;
-		outlet(0, 'c_grid', num, 0, (val>0) * 127);
+		outlet(0, 'c_grid', num, 0, FUNCTION_COLORS[x] + ((val>0)*7));
 	}
 	else if((num>7)&&(val>0))
 	{
@@ -502,6 +509,73 @@ function _c_button(x, y, val)
 	}
 }
 
+function _grid(x, y, val)
+{
+	var num = x+(y*8);
+	if(DEBUG){post('grid', x, y, val, '\n');}
+	if((num>7)&&(num<11))
+	{
+		grid_rows[num-8].pressed = val>0;
+		outlet(0, 'grid', x, y, FUNCTION_COLORS[x]+((val>0)*7));
+	}
+	else if((num>15)&&(num<40))
+	{
+		if(val>0)
+		{
+			if(grid_rows[0].pressed>0)
+			{
+				select_parameter(((y-2)*8)+x);
+			}
+			if(grid_rows[1].pressed>0)
+			{
+				set_breakpoint(((y-2)*8)+x);
+			}
+			else if(grid_rows[2].pressed>0)
+			{
+				clear_breakpoint(((y-2)*8)+x);
+			}
+			else
+			{
+				toggle_active(selected[((y-2)*8)+x]);
+			}
+		}
+	}
+	else if((num>=56)&&(num<64))
+	{
+		_column(x, val);
+	}
+	else if((num<8)&&(val>0))
+	{
+		if(grid_rows[0].pressed>0)
+		{
+			select_knob(num);
+			this.patcher.getnamed('breakpoints').message('wclose');
+			this.patcher.getnamed('breakpoints').message('open', num+1);
+		}
+		else if(grid_rows[1].pressed>0)
+		{
+			for(var i=0;i<24;i++)
+			{
+				if(selected.id_numbers[i]>0)
+				{
+					set_breakpoint(i);
+				}
+			}
+		}
+		else if(grid_rows[2].pressed>0)
+		{
+			for(var i=0;i<24;i++)
+			{
+				clear_breakpoint(i);
+			}
+		}
+		else
+		{
+			select_knob(num);
+		}
+	}
+}
+
 /*function _dial(x, y, val)
 {
 	//post('dial', x, y, val, '\n');
@@ -555,11 +629,13 @@ function clear_breakpoint(num)
 
 function select_knob(num)
 {
+	if(DEBUG){post('select knob', num, '\n');}
 	selected = knob[num];
 	outlet(0, 'set_device_bank', num);
 	gui_selected.message('set', num);
 	var i=7;do{
 		outlet(0, 'wheel', i, 0, 'white', (num == i)*127);
+		outlet(0, 'grid', i, 0, (num == i)*127);
 	}while(i--);
 	var i=3;do{
 		var j=1;do{
@@ -579,6 +655,7 @@ function select_knob(num)
 				outlet(0, 'to_c_wheel', cur_param.c_x_c, cur_param.c_y_c,  'value', Math.floor(encs['Encoder_'+cur_param.num].val/10)*assigned);
 				outlet(0, 'to_c_wheel', cur_param.c_x_c, cur_param.c_y_c, 'white', (cur_param.parameter.id>0)*((cur_param.active*5)+1));
 			}
+			outlet(0, 'grid', j, i+2, assigned*((cur_param.active*5)+1));
 		}
 	}	
 }
@@ -626,6 +703,7 @@ function select_parameter(num)
 		{
 			outlet(0, 'to_c_wheel', selected[num].c_x_c, selected[num].c_y_c, 'white',  (selected[num].parameter.id>0)*((selected[num].active*5)+1));
 		}
+		outlet(0, 'grid', selected[num].x_c, selected[num].y_c + 1, (selected[num].parameter.id>0)*((selected[num].active*5)+1));
 		if(to_active>0)
 		{
 			set_active(num, 1);
@@ -650,6 +728,7 @@ function set_active(num, state)
 				if(i == selected.num)
 				{
 					outlet(0, 'wheel', Knob.x_c, Knob.y_c, 'green', 0);
+					outlet(0, 'grid', Knob.x_c, Knob.y_c + 2, 0);
 					if(Knob.cntrlr)
 					{
 						outlet(0, 'to_c_wheel', Knob.c_x_c, Knob.c_y_c, 'white', (Knob.parameter.id>0)*((Knob.active*5)+1));
@@ -672,6 +751,7 @@ function set_active(num, state)
 		selected[num].gui_active.message('fgcolor', .15, .45, .15, 1.);
 	}
 	outlet(0, 'wheel', selected[num].x_c, selected[num].y_c, 'green', selected[num].active);
+	outlet(0, 'grid', selected[num].x_c, selected[num].y_c+1, (selected[num].parameter.id>0)*((selected[num].active*5)+1));
 	if(selected[num].cntrlr)
 	{
 		if(DEBUG){post('sending white', selected[num].c_x_c, selected[num].c_y_c, selected[num].active, '\n');}
@@ -743,6 +823,12 @@ function clear_surface()
 			outlet(0, 'to_c_wheel', i, j, 'value', 0);
 		}while(j--);
 	}while(i--);
+	outlet(0, 'batch', 'grid', 0);
+	for(var i=0;i<4;i++)
+	{
+		outlet(0, 'c_grid', i, 0, FUNCTION_COLORS[i]);
+		outlet(0, 'grid', i, 1, FUNCTION_COLORS[i]);
+	}
 }
 
 function _lcd()
@@ -763,6 +849,7 @@ function _lcd()
 			var new_val = Math.round(args[2]/18.14);
 			var i=7;do{
 				outlet(0, 'column', i, (new_val>=i)*127);
+				outlet(0, 'grid', i, 7, (new_val>=i)*6);
 			}while(i--);
 		}	
 	}

@@ -1,11 +1,9 @@
-//binary_steppr, aka Hexadecimal
+//Hexadecimal
 //by amounra
 //aumhaa@gmail.com --- http://www.aumhaa.com
 
 
-/*This script is the result of collaboration with Peter Nyboer @ Livid Instruments and 
-represents a great deal of effort to gain some speed and stability from the original Stepp:r
-without sacrificing too much readability.  The majority of the functionality for the entire patch 
+/*This patch is the evolution of the binary mod;  The majority of the functionality for the entire patch 
 can be modified in this js or the accompanying poly~ object, "steppr_wheel", without ever opening 
 the actual containing patch in the m4l editor (this was crucial for speeding up the development process).  
 Because of this, the functionality of the patch can be radically altered merely by modifying the 
@@ -26,8 +24,8 @@ DEBUG_BLINK = 0;
 DEBUG_REC = 0;
 DEBUG_LOCK = 0;
 SHOW_POLYSELECTOR = 0;
-SHOW_STORAGE = 0;
-FORCELOAD = true; //this doesn't work anymore, don't waste your time. -a
+SHOW_STORAGE = false;
+FORCELOAD = false; //this doesn't work anymore, don't waste your time. -a
 
 outlets = 4;
 inlets = 5;
@@ -77,6 +75,7 @@ var Objs = {'pattern':{'Name':'pattern', 'Type':'list', 'pattr':'pattern'},
 			'basetime':{'Name':'basetime', 'Type':'int', 'pattr':'basetimepattr'},
 			'timedivisor':{'Name':'timedivisor', 'Type':'int', 'pattr':'timedivisorpattr'},
 			'nexttime':{'Name':'nexttime', 'Type':'set', 'pattr':'object'},
+			'behavior_enable':{'Name':'behavior_enable', 'Type':'int', 'pattr':'hidden'},
 			};
 
 /*			'phasor':{'Name':'phasor', 'Type':'float', 'pattr':'object'},
@@ -237,7 +236,7 @@ function init(val)
 						'jitter':0, 'active':1, 'swing':.5, 'lock':1, 'ticks':480, 'notevalues':3, 'notetype':0, 
 						'pushed':0, 'direction':0, 'noteoffset':i, 'root':i, 'octave':0, 'add':0, 'quantize':1, 'repeat':6, 'clutch':1,
 						'random':0, 'note':i, 'steps':15, 'mode':0, 'polyenable':0, 'polyoffset':36, 'mode':0,
-						'hold':0, 'held':[], 'triggered':[], 'recdirty':0, 'timedivisor':16, 'basetime':1};//'speed':480,'notevalue':'4n'
+						'hold':0, 'held':[], 'triggered':[], 'recdirty':0, 'timedivisor':16, 'basetime':1, 'behavior_enable':1};//'speed':480,'notevalue':'4n'
 			part[i].num = parseInt(i);
 			part[i].pattern = default_pattern.slice();
 			part[i].edit_buffer = default_pattern.slice();
@@ -292,7 +291,7 @@ function init(val)
 		outlet(0, 'set_mod_color', modColor);
 		outlet(0, 'set_color_map', 'Monochrome', 127, 127, 127, 15, 22, 29, 36, 43);
 		outlet(0, 'set_report_offset', 1);
-		outlet(0, 'set_number_params', 12);
+		outlet(0, 'set_number_params', 16);
 		var i=7;do{
 			outlet(0, 'key', i, (i==grid_mode)*8);
 			outlet(0, 'grid', i, 6, ENC_COLORS[i]);
@@ -457,6 +456,7 @@ function init_poly()
 		part[i].obj.notetype.message('int', part[i].notetype);
 		part[i].obj.notevalues.message('int', part[i].notevalues);
 		part[i].obj.channel.message('int', part[i].channel);
+		part[i].obj.behavior_enable.message('int', part[i].behavior_enable);
 		//update_note_pattr(part[i]);
 		
 	}
@@ -1069,7 +1069,6 @@ function _c_button(x, y, val)
 	}	 
 }
 
-
 //from mod.js
 function _c_key(num, val)
 {
@@ -1134,23 +1133,49 @@ function _c_key(num, val)
 					break;
 				}
 			case 3:
-				if(val>0)
+				if((val>0)&&(key_pressed<0))
 				{
-					presets[selected.num] = num+1;
-					storage.message('recall', 'poly.'+(selected.num+1), presets[selected.num]);
-					add_automation(selected, 'preset', presets[selected.num]);
+					key_pressed = num;
+					if(val>0)
+					{
+						presets[selected.num] = num+1;
+						storage.message('recall', 'poly.'+(selected.num+1), presets[selected.num]);
+						add_automation(selected, 'preset', presets[selected.num]);
+					}
+				}
+				else if(val>0)
+				{
+					key_pressed = -1;
+					copy_preset(selected, num+1);
+				}
+				else
+				{
+					key_pressed = -1;
 				}
 				break;
 			case 4:
-				if(val>0)
+				if((val>0)&&(pad_pressed<0))
 				{
-					for(var i=0;i<16;i++)
+					key_pressed = num;
+					if(val>0)
 					{
-						presets[i] = num+1;
+						for(var i=0;i<16;i++)
+						{
+							presets[i] = num+1;
+						}
+						preset = num+1;
+						storage.message(presets[selected.num]);
 					}
-					preset = num+1;
-					storage.message(presets[selected.num]);
 				}
+				else if(val>0)
+				{
+					key_pressed = -1;
+					copy_global_preset(preset, num+1);
+				}
+				else
+				{
+					key_pressed = -1;
+				} 
 				break;
 			case 5:
 				if(val>0)
@@ -1182,7 +1207,6 @@ function _c_key(num, val)
 		}
 	}
 }
-
 
 //distribute presses received from mod.js
 function _c_grid(x, y, val)
@@ -1234,6 +1258,7 @@ function _c_grid(x, y, val)
 			}
 			break;
 		case 3:
+			if(DEBUG){post('pad_pressed', pad_pressed, '\n');}
 			if((val>0)&&(pad_pressed<0))
 			{
 				pad_pressed = x + (y*4);
@@ -1245,10 +1270,14 @@ function _c_grid(x, y, val)
 					add_automation(selected, 'preset', presets[selected.num]);
 				}
 			}
-			else
+			else if(val>0)
 			{
 				pad_pressed = -1;
 				copy_preset(selected, x+(y*4)+1);
+			}
+			else
+			{
+				pad_pressed = -1;
 			}
 			break;
 		case 4:
@@ -1266,10 +1295,14 @@ function _c_grid(x, y, val)
 					storage.message(presets[selected.num]);
 				}
 			}
+			else if(val > 0)
+			{
+				pad_pressed = -1;
+				copy_global_preset(preset, x+(y*4)+1);
+			}
 			else
 			{
 				pad_pressed = -1;
-				copy_global_preset(x+(y*4)+1);
 			}	
 			break;
 		case 5:
@@ -1616,6 +1649,7 @@ function _grid(x, y, val)
 			}
 			break;
 		case 5:
+			//Slider Mode
 			break;
 		case 6:
 			//Preset_Mode
@@ -1889,7 +1923,6 @@ function _guibuttons(num, val)
 //distributes input from gui grid element
 function _padgui_in(val)
 {
-	post('padguiin', val, '\n');
 	if(DEBUG){post('padguiin', val, '\n');}
 	_c_grid(val%4, Math.floor(val/4), 1);
 	_c_grid(val%4, Math.floor(val/4), 0);
@@ -2285,17 +2318,30 @@ function select_pattern(num)
 
 function copy_pattern(src, dest)
 {
+	if(DEBUG){post('copy pattern', src.num, dest.num, '\n');}
 	dest.obj.set.pattern(src.pattern);
 }
 
 function copy_preset(part, dest)
 {
-	storage.copy('poly.'+(part.num+1), presets[part.num], dest);
+	if(DEBUG){post('preset: copy', 'poly.'+(part.num+1), presets[part.num], dest, '\n');}
+	for(var index in Objs)
+	{
+		if(DEBUG){post('copy', 'poly.'+(part.num+1)+'::'+Objs[index].pattr, presets[part.num], dest, '\n');}
+		var type = Objs[index].pattr;
+		var types = {'object':0, 'hidden':0};
+		if(!(type in types))
+		{
+			part.obj.set[index](part[index], dest);
+		}
+	}
+	//storage.copy('poly.'+(part.num+1), presets[part.num], dest);
 }
 
-function copy_global_preset(dest)
+function copy_global_preset(src, dest)
 {
-	storage.copy(preset, dest);
+	if(DEBUG){post('copy global preset', 'copy', src, dest, '\n');}
+	storage.copy(src, dest);
 }
 
 //reset all parts to play from top...not quantized.
@@ -2385,7 +2431,7 @@ function change_key_mode(val)
 		default:
 			break;
 		case 5:
-			stepmodegui.message('int', 5);
+			//stepmodegui.message('int', 5);
 			break;
 	}
 	keymodegui.message('set', key_mode);
@@ -3031,7 +3077,8 @@ function init_storage()
 		storage.setstoredvalue('poly.'+(i+1)+'::timedivisorpattr', 1, 4);
 		storage.setstoredvalue('poly.'+(i+1)+'::notetypepattr', 1, 0);
 		storage.setstoredvalue('poly.'+(i+1)+'::notevaluepattr', 1, 2);
-		storage.setstoredvalue('poly.'+(i+1)+'::active', 1, 1);
+		storage.setstoredvalue('poly.'+(i+1)+'::active', 1, 1)
+		storage.setstoredvalue('poly.'+(i+1)+'::behavior_enable', 1, 1);
 	}while(i--);
 	storage.message(1);
 	var h=16;do{
@@ -3298,11 +3345,17 @@ function _lcd(obj, type, val)
 	if(DEBUG_LCD){post('lcd', obj, type, val, '\n');}
 	if((type=='lcd_name')&&(val!=undefined))
 	{
-		pns[obj].message('text', val.replace(/_/g, ' '));
+		if(pns[obj])
+		{
+			pns[obj].message('text', val.replace(/_/g, ' '));
+		}
 	}
 	else if((type == 'lcd_value')&&(val!=undefined))
 	{
-		mps[obj].message('text', val.replace(/_/g, ' '));
+		if(mps[obj])
+		{
+			mps[obj].message('text', val.replace(/_/g, ' '));
+		}
 	}
 	else if(type == 'encoder_value')
 	{
@@ -3436,7 +3489,7 @@ function hideerror()
 //should only be turned on while editing
 function forceload()
 {
-	if(FORCELOAD){init(1);}
+	if(FORCELOAD){post('FORCELOAD!!!!!!!\n');init(1);}
 }
 
 forceload();

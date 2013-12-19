@@ -1,5 +1,7 @@
 autowatch = 1;
 
+var DEBUG = false;
+
 var script = this;
 var BIG = [96, 64, 32, 0];
 var ALPHA = [' ', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 
@@ -410,7 +412,7 @@ function modamnt(args)
 
 function cntl_in(num, val)
 {
-	post('cntl_in', num, val, '\n');
+	if(DEBUG){post('cntl_in', num, val, '\n');}
 	if(cntls[num]!='none')
 	{
 		this.patcher.getnamed(cntls[num][0]).set(script[cntls[num][1]](val));

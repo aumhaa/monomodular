@@ -147,7 +147,7 @@ function init()
 	else
 	{
 		this_device.goto('canonical_parent');
-		post(this_device.type);
+		//post(this_device.type);
 		this_device.goto('canonical_parent');
 		//post(this_device.type);
 		if(this_device.type=='Track')
@@ -265,7 +265,7 @@ function cb_new_pedals(args)
 	{
 		this.last = 127;
 		hold += this.hold;
-		post('pedal', this.num, this.last, 'hold', hold, '\n');
+		//post('pedal', this.num, this.last, 'hold', hold, '\n');
 		if(this.num<3)
 		{
 			switch(hold)

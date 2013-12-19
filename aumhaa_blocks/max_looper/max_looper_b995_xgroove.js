@@ -759,12 +759,12 @@ function gen_loop(len)
 function groove_attributes()
 {
 	var args = arrayfromargs(arguments);
-	post('groove_attributes', args, '\n');
+	if(DEBUG){post('groove_attributes', args, '\n');}
 	switch(args[0])
 	{
 		case 'max':
 			max_time = args[1];
-			post('loop max is', max_time);
+			if(DEBUG){post('loop max is', max_time);}
 			break;
 	}
 }

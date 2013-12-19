@@ -1,6 +1,7 @@
 autowatch = 1;
 
 var DEBUG = false;
+var FORCELOAD = false;
 
 var alive = false;
 var finder;
@@ -18,7 +19,7 @@ function instance(num)
 		init();
 	}
 }
-function init()
+/*function init()
 {
 	if(DEBUG){post('virus_knobs_init\n');}
 	setup_objects(part_num+1);
@@ -32,8 +33,9 @@ function init()
 		if(track_name == 'Virus')
 		{
 			if(DEBUG){post('Checking items in track', finder.id, '\n');}
-			var id = parseInt(finder.id);
+			var id = finder.id;
 			result = new examine(id).result;
+			//finder.id = id;
 			break;
 		}
 		finder.goto('live_set');
@@ -50,14 +52,15 @@ function examine(id)
 {
 	this.orig_path = finder.unquotedpath;
 	this.result = 0;
+	this.orig_id = parseInt(id);
 	rec_level += 1;
 	finder.id = id;
 	var num_devices = finder.getcount('devices');
 	var name = finder.get('name');
-	if(DEBUG){post(rec_prefix(), 'EXAMINE RECURSION:', name, 'has', num_devices, 'devices.\n');}
+	if(DEBUG){post(rec_prefix(), 'EXAMINE RECURSION:', this.orig_id, name, 'has', num_devices, 'devices.\n');}
 	for(var j=0;j<num_devices;j++)
 	{
-		finder.goto('devices', parseInt(j));
+		finder.goto('devices', j);
 		var device_name = finder.get('name');
 		var can_have_chains = finder.get('can_have_chains');
 		if(DEBUG){post('Checking device:', device_name, '\n');}
@@ -70,19 +73,26 @@ function examine(id)
 			var num_chains = finder.getcount('chains');
 			for(var k=0;k<num_chains;k++)
 			{
-				finder.goto('chains', parseInt(k));
-				if(DEBUG){post('-recursing:', device_name, 'chain', k, ':', finder.get('name'), '\n');}
+				if(DEBUG){post('-before recursing:', device_name, 'chain', k, ':', finder.get('name'), finder.path, '\n');}
+				finder.goto('chains', k);
+				if(DEBUG){post('-recursing:', device_name, 'chain', k, ':', finder.get('name'), finder.path, '\n');}
 				var id_check = parseInt(finder.id);
 				this.result = parseInt(new examine(id_check).result);
 			}
+			if(DEBUG){post('___INNER\n');}
 			finder.goto('canonical_parent');	
 		}
+		if(DEBUG){post('___MIDDLE\n');}
 		finder.goto('canonical_parent');
 	}
-	finder.goto('canonical_parent');
+	if(DEBUG){post('___OUTER\n');}
+	if(DEBUG){post('-----', this.orig_id, id, finder.path, '\n');}
+	finder.goto('canonical_parent');		///this causes jsliveapi:syntax error, but works
+	//finder.id = this.orig_id;		///this seems to work, watch out for closures though!
+	if(DEBUG){post('-----', this.orig_id, id, finder.path, '\n');}
 	rec_level -= 1;
 	return this;
-}
+}*/
 
 function rec_prefix()
 {
@@ -157,7 +167,8 @@ function link_ids(id)
 				if(DEBUG){post('linked object:', name, '\n');}
 				if(DEBUG){post('new object is:', parameters[name].obj.get('name'), '\n');}
 			}
-			finder.goto('canonical_parent');
+			//finder.goto('canonical_parent');		///this causes jsliveapi:syntax error, but works
+			finder.id = id;		///this seems to work, watch out for closures though!
 		}
 	}
 }
@@ -171,3 +182,79 @@ function knob(num, val)
 	}
 }
 
+function init()
+{
+	if(DEBUG){post('virus_knobs_init\n');}
+	setup_objects(part_num+1);
+	var result = 0;
+	finder = new LiveAPI('live_set');
+	var num_tracks = finder.getcount('tracks');
+	for(var i =0; i<num_tracks;i++)
+	{
+		finder.goto('tracks', i);
+		var track_name = finder.get('name');
+		if(track_name == 'Virus')
+		{
+			if(DEBUG){post('Checking items in track', finder.id, '\n');}
+			var id = finder.id;
+			result = new examine(id).result;
+			break;
+		}
+		finder.goto('live_set');
+	}
+	if(DEBUG){post('Finished, result is:', result, '\n');}
+	if(result)
+	{
+		link_ids(result);
+		alive = true;
+	}
+}
+
+function examine(id)
+{
+	this.result = 0;
+	rec_level += 1;
+	finder.id = id;
+	var num_devices = finder.getcount('devices');
+	var name = finder.get('name');
+	if(DEBUG){post(rec_prefix(), 'EXAMINE RECURSION:', id, name, 'has', num_devices, 'devices.\n');}
+	for(var j=0;j<num_devices;j++)
+	{
+		finder.id = parseInt(id);
+		finder.goto('devices', j);
+		var dev_id = finder.id;
+		var device_name = finder.get('name');
+		var can_have_chains = finder.get('can_have_chains');
+		if(DEBUG){post('Checking device:', device_name, '\n');}
+		if((finder.get('class_name')=='AuPluginDevice')&&(finder.get('name')=='Virus TI Snow'))
+		{
+			this.result = parseInt(finder.id);
+		}
+		else if(can_have_chains>0)
+		{
+			var num_chains = finder.getcount('chains');
+			for(var k=0;k<num_chains;k++)
+			{
+				finder.id = parseInt(dev_id);
+				if(DEBUG){post('-before recursing: dev_id', dev_id, 'finder_id', finder.id, device_name, 'chain', k, ':', finder.get('name'), finder.path, '\n');}
+				finder.goto('chains', k);
+				if(DEBUG){post('-recursing: dev_id', dev_id, 'finder_id', finder.id, device_name, 'chain', k, ':', finder.get('name'), finder.path, '\n');}
+				var id_check = parseInt(finder.id);
+				this.result = parseInt(new examine(id_check).result);
+			}
+		}
+	}
+	rec_level -= 1;
+	finder.id = id;
+	return this;
+}
+
+//used to reinitialize the script immediately on saving; 
+//can be turned on by changing FORCELOAD to 1;
+//should only be turned on while editing
+function forceload()
+{
+	if(FORCELOAD){post('FORCELOAD!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n');init(1);}
+}
+
+forceload();

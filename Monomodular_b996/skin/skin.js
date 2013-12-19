@@ -41,7 +41,7 @@ function fsr(x, y)
 
 function init()
 {
-	post('init!');
+	if(DEBUG){post('skin init.');}
 	assignment_gui = this.patcher.getnamed('assignments');
 	assignment_coll = this.patcher.getnamed('matrix');
 	keys_gui = this.patcher.getnamed('keys');
@@ -206,6 +206,6 @@ function post_assignments()
 
 //post('new patch');
 
-if(FORCELOAD){init();}
+if(FORCELOAD){post('FORCELOAD!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n');init();}
 
 

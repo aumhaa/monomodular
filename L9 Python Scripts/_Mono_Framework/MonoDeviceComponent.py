@@ -28,7 +28,6 @@ class MonoDeviceComponent(DeviceComponent):
 		self._nodevice = NoDevice()
 	
 
-
 	def disconnect(self):
 		if self._device_parent != None:
 			if self._device_parent != None:
@@ -152,11 +151,23 @@ class MonoDeviceComponent(DeviceComponent):
 				break
 		if result == None:
 			if name == 'Mod_Chain_Pan':
-				if device.canonical_parent.mixer_device.panning != None:
-					result = device.canonical_parent.mixer_device.panning
+				if device.canonical_parent.mixer_device != None:
+					if device.canonical_parent.mixer_device.panning != None:
+						result = device.canonical_parent.mixer_device.panning
 			elif name == 'Mod_Chain_Vol':
-				if device.canonical_parent.mixer_device.panning != None:
-					result = device.canonical_parent.mixer_device.volume
+				if device.canonical_parent.mixer_device !=None:
+					if device.canonical_parent.mixer_device.panning != None:
+						result = device.canonical_parent.mixer_device.volume
+			elif(match('Mod_Chain_Send_', name)):
+				name = int(name.replace('Mod_Chain_Send_', ''))
+				if device.canonical_parent != None:
+					if device.canonical_parent.mixer_device != None:
+						self._parent._host.log_message('here1' + str(name))
+						if device.canonical_parent.mixer_device.sends != None:
+							self._parent._host.log_message('here2')
+							if len(device.canonical_parent.mixer_device.sends)>name:
+								self._parent._host.log_message('here3')
+								result = device.canonical_parent.mixer_device.sends[name]
 			elif(match('ModDevice_', name) and self._parent.device != None):
 				name = name.replace('ModDevice_', '')
 				#self._parent._host.log_message('modDevice with name: ' + str(name))
