@@ -2040,6 +2040,18 @@ function _settingsgui(num, val)
 			}
 			if(DEBUG){post('padmodeenables', padmodeenables, '\n');}
 			break;
+		case 16:
+			vals = args.slice(1, 17);
+			if(DEBUG){post('behavior enables:', vals, '\n');}
+			for(var i=0;i<16;i++)
+			{
+				if(vals[i+1]!=part[i].behavior_enable)
+				{
+					if(DEBUG){post('part', i, 'behavior enable, was', part[i].behavior_enable, ', setting:', vals[i+1], '\n');}
+					part[i].behavior_enable = vals[i+1];
+					part[i].obj.set.behavior(vals[i+1]);
+				}
+			}
 	}
 }
 
