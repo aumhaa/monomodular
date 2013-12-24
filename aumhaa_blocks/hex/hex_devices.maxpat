@@ -8,7 +8,7 @@
 			"architecture" : "x86"
 		}
 ,
-		"rect" : [ 25.0, 69.0, 640.0, 480.0 ],
+		"rect" : [ 476.0, 652.0, 228.0, 45.0 ],
 		"bgcolor" : [ 0.2, 0.2, 0.2, 1.0 ],
 		"bglocked" : 0,
 		"openinpresentation" : 1,
@@ -115,7 +115,7 @@
 					"parameter_enable" : 0,
 					"patching_rect" : [ 30.0, 30.0, 100.0, 20.0 ],
 					"presentation" : 1,
-					"presentation_rect" : [ 28.0, 25.0, 135.0, 29.0 ],
+					"presentation_rect" : [ 11.0, 8.0, 135.0, 29.0 ],
 					"rounded" : 0.0,
 					"text" : "Capture",
 					"textcolor" : [ 0.007843, 0.007843, 0.007843, 1.0 ]
@@ -194,7 +194,7 @@
 					"parameter_enable" : 0,
 					"patching_rect" : [ 54.0, 64.0, 54.5, 29.0 ],
 					"presentation" : 1,
-					"presentation_rect" : [ 170.0, 25.0, 67.0, 29.0 ],
+					"presentation_rect" : [ 153.0, 8.0, 67.0, 29.0 ],
 					"rounded" : 0
 				}
 

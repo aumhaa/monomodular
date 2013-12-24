@@ -162,11 +162,8 @@ class MonoDeviceComponent(DeviceComponent):
 				name = int(name.replace('Mod_Chain_Send_', ''))
 				if device.canonical_parent != None:
 					if device.canonical_parent.mixer_device != None:
-						self._parent._host.log_message('here1' + str(name))
 						if device.canonical_parent.mixer_device.sends != None:
-							self._parent._host.log_message('here2')
 							if len(device.canonical_parent.mixer_device.sends)>name:
-								self._parent._host.log_message('here3')
 								result = device.canonical_parent.mixer_device.sends[name]
 			elif(match('ModDevice_', name) and self._parent.device != None):
 				name = name.replace('ModDevice_', '')
