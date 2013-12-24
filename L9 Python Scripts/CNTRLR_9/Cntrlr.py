@@ -403,6 +403,7 @@ class CntrlrMonomodComponent(MonomodComponent):
 
 	def __init__(self, *a, **k):
 		super(CntrlrMonomodComponent, self).__init__(*a, **k)
+		self._alt_device_banks = MOD_TYPES
 	
 
 	def _send_grid(self, *a):
@@ -589,6 +590,10 @@ class CntrlrMonomodComponent(MonomodComponent):
 						#self._script.log_message('dial value update' +str(column) + str(row) + str(self._active_client._wheel[column][row]['value']))
 	
 
+	def _update_wheel(self):
+		self._update_c_wheel()
+	
+
 	def set_c_local_ring_control(self, val = 1):
 		self._c_local_ring_control = (val!=0)
 		self._script.set_local_ring_control(self._c_local_ring_control)
@@ -631,6 +636,9 @@ class CntrlrMonomodComponent(MonomodComponent):
 				self._script._shift_mode._modes_buttons[index].send_value(0)
 	
 
+	def _send_nav_box(self):
+		pass
+	
 
 
 class Cntrlr(ControlSurface):
@@ -655,6 +663,7 @@ class Cntrlr(ControlSurface):
 		self.set_local_ring_control(1)					#initialize the local_control state of the encoder rings
 		self._absolute_mode = 1							#used by CodecEncoderElement to determine whether inc/dec or absolute changes are sent from CNTRLR
 		self.flash_status = 1							#used to determine whether button LED's use flashing states or not
+		self._leds_last = None
 		self._device_selection_follows_track_selection = FOLLOW
 		with self.component_guard():
 			"""Initialization methods - comments included in the corresponding method"""
@@ -904,6 +913,7 @@ class Cntrlr(ControlSurface):
 		#	if self._encoder[index].value_has_listener(self._client[index]._mod_dial_value):
 		#		self._encoder[index].remove_value_listener(self._client[index]._mod_dial_value)
 
+		self._leds_last = None
 
 		"""THIS SECTION IS MISSING FROM THE ORIGINAL SCRIPT AND NEEDS TO BE FIXED...THE ASSIGNMENTS WERE MADE AT __init__"""
 		for index in range(4):								
@@ -1367,7 +1377,9 @@ class Cntrlr(ControlSurface):
 				leds.append(bytes[0])
 				leds.append(int(bytes[1]) + int(bytes[2]))
 			leds.append(247)
-			self._send_midi(tuple(leds))
+			if not leds==self._leds_last:
+				self._send_midi(tuple(leds))
+				self._leds_last = leds
 	
 
 	def _release_mod_dials(self):

@@ -16,9 +16,10 @@ from _Mono_Framework.MonoButtonElement import MonoButtonElement
 
 from MonomodComponent import MonomodComponent
 
+from Push.M4LInterfaceComponent import M4LInterfaceComponent
+
 SIDE_NOTES = (8, 24, 40, 56, 72, 88, 104, 120)
 DRUM_NOTES = (41, 42, 43, 44, 45, 46, 47, 57, 58, 59, 60, 61, 62, 63, 73, 74, 75, 76, 77, 78, 79, 89, 90, 91, 92, 93, 94, 95, 105, 106, 107)
-
 
 class LaunchMod(ControlSurface):
 	""" Script for Novation's Launchpad Controller """
@@ -33,6 +34,7 @@ class LaunchMod(ControlSurface):
 			self._timer = 0
 			self._suppress_send_midi = True
 			self._suppress_session_highlight = True
+			self._suppress_highlight = False
 			is_momentary = True
 			self._suggested_input_port = 'Launchpad'
 			self._suggested_output_port = 'Launchpad'
@@ -64,6 +66,7 @@ class LaunchMod(ControlSurface):
 			self.set_highlighting_session_component(self._selector.session_component())
 			self._suppress_session_highlight = False
 		self.log_message("--------------= " + str(self._monomod_version) + " log opened =--------------") #Create entry in log file
+
 
 	
 
@@ -154,6 +157,14 @@ class LaunchMod(ControlSurface):
 			ControlSurface._set_session_highlight(self, track_offset, scene_offset, width, height, include_return_tracks)
 	
 
+	def _setup_m4l_interface(self):
+		self._m4l_interface = M4LInterfaceComponent(controls=self.controls, component_guard=self.component_guard)
+		self.get_control_names = self._m4l_interface.get_control_names
+		self.get_control = self._m4l_interface.get_control
+		self.grab_control = self._m4l_interface.grab_control
+		self.release_control = self._m4l_interface.release_control
+	
+
 	"""Mono overrides and additions"""
 	def _setup_monobridge(self):
 		self._monobridge = MonoBridgeElement(self)
@@ -173,10 +184,16 @@ class LaunchMod(ControlSurface):
 	
 
 	def flash(self):
-		for control in self.controls:
-			if isinstance(control, MonoButtonElement):
-				control.flash(self._timer)
+		if self._host.is_enabled():
+			for control in self.controls:
+				if isinstance(control, MonoButtonElement):
+					control.flash(self._timer)
 	
 
+	#def set_highlighting_session_component(self, session_component):
+	#	self._highlighting_session_component = session_component
+	#	if session_component:
+	#		self._highlighting_session_component.set_highlighting_callback(self._set_session_highlight)
+	
 
 

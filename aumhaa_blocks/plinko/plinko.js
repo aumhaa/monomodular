@@ -12,6 +12,9 @@ setoutletassist(1,"note out");
 setoutletassist(2,"to preset");
 
 var script = this;
+
+var DEBUG = false;
+
 var alt = 0;
 var loop=1;
 var part_limit=8;
@@ -37,48 +40,23 @@ var pot_array=[];
 var pot_array_temp=[]; 
 x_adj=[1, 0, -1, 1, -1, 1, 0, -1, 0];
 y_adj=[1, 1, 1, 0, 0, -1, -1, -1, 0];
-const cleared_program=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
-const preset_program=[0,0,1,0,4,4,0,0,3,0,4,4,0,0,5,0,4,4,0,0,7,0,4,4,0];
-const empty = [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2];
+var cleared_program=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+var preset_program=[0,0,1,0,4,4,0,0,3,0,4,4,0,0,5,0,4,4,0,0,7,0,4,4,0];
+var empty = [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2];
 var display=[];
 var prog=[];
 var cell=[];
-var pattrs = this.patcher.getnamed('pattrs').subpatcher();
-for(var d=0;d<16;d++)																	  
-{
-	display[d]=[]; 
-	prog[d]=[];	
-	cell[d]=[];	   
-	for(var dd=0;dd<16;dd++)
-	{
-		display[d][dd]=[0,0,0];		 ///create the display arrays:16x16x3, one for each cell:edit, program, node
-		prog[d][dd]=[];
-		cell[d][dd]=[];
-		cell[d][dd]._x = d;
-		cell[d][dd]._y = dd;
-		cell[d][dd]._name = 'cell['+(d+1)+']['+(dd+1)+']';
-		cell[d][dd]._pattr = pattrs.getnamed(cell[d][dd]._name);
-		cell[d][dd]._prog=prog[d][dd];
-		if(cell[d][dd]._pattr.getvalueof()>0)
-		{
-			prog[d][dd]=cell[d][dd]._pattr.getvalueof().slice();   ///cells are : (direction, wormhole, probability, note)
-		}
-		else
-		{
-			prog[d][dd]=preset_program.slice();
-		}
-		prog[d][dd]._cell = cell[d][dd];
-		script['pattrs::'+cell[d][dd]._name] = make_cell_function(cell[d][dd]);
-	}																	   ///			   [velocity, duration aren't implemented] 
-}
+
+
 var pot_insert_coll=[];
-const monomap = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+var monomap = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
 var timer = 0;
-var alive = 0;
+var alive = false;
 var last = 0;
 var from_pattr = 'none';
 var offset = [0, 0];
 
+var pattrs;
 var storage;
 var preset_selector;
 var preset = 0;
@@ -104,25 +82,62 @@ function make_cell_function(cell)
 function update_storage(cell, prog)
 {
 	storage.message('pattrs::'+cell._name, prog); //prog[0], prog[1], prog[2], prog[3], prog[4], prog[5], prog[6], prog[7], prog[8], prog[9],prog[10], prog[11], prog[12], prog[13], prog[14], prog[15], prog[16],prog[17], prog[18], prog[19], prog[20], prog[21], prog[22], prog[23], prog[24]);
+	storage.setstoredvalue('pattrs::'+cell._name, preset, prog);
 }
 
-function recall()
+function recall(val)
 {
+	preset = val;
+	this.patcher.getnamed('storage_preset').set(parseInt(preset));
+	if(DEBUG){post('new preset# is:', val, '\n');}
 	if(alive > 0)
 	{
 		update_bound_view();
 	}
 }
 
+function last_preset(val)
+{
+	preset = val;
+}
 
 //////////////////////////////////////////////////////////////////////
 //////////////	   This is the Engine Itself	  ////////////////////
 //////////////////////////////////////////////////////////////////////
 
-function init_plinko()
-{	
-	storage = this.patcher.getnamed('plinko_store');
+function init_plinko() 
+{
+
+	storage = this.patcher.getnamed('plinko_preset');
 	preset_selector = this.patcher.getnamed('preset_selector');
+	pattrs = this.patcher.getnamed('pattrs').subpatcher();
+	for(var d=0;d<16;d++)
+	{
+		display[d]=[]; 
+		prog[d]=[];	
+		cell[d]=[];	   
+		for(var dd=0;dd<16;dd++)
+		{
+			display[d][dd]=[0,0,0];		 ///create the display arrays:16x16x3, one for each cell:edit, program, node
+			prog[d][dd]=[];
+			cell[d][dd]=[];
+			cell[d][dd]._x = d;
+			cell[d][dd]._y = dd;
+			cell[d][dd]._name = 'cell['+(d+1)+']['+(dd+1)+']';
+			cell[d][dd]._pattr = pattrs.getnamed(cell[d][dd]._name);
+			cell[d][dd]._prog=prog[d][dd];
+			if(cell[d][dd]._pattr.getvalueof()>0)
+			{
+				prog[d][dd]=cell[d][dd]._pattr.getvalueof().slice();   ///cells are : (direction, wormhole, probability, note)
+			}
+			else
+			{
+				prog[d][dd]=preset_program.slice();
+			}
+			prog[d][dd]._cell = cell[d][dd];
+			script['pattrs::'+cell[d][dd]._name] = make_cell_function(cell[d][dd]);
+		}																	   ///			   [velocity, duration aren't implemented] 
+	}
 	//if(from_pattr!='none')
 	//{
 	//	post('assigning from pattr\n');
@@ -157,11 +172,20 @@ function init_plinko()
 	//	}
 	//}														  ///matrix containing all program data: 6 cells per plane, 25 is start
 	//post("matrices instantiated:)\n"); 
-	alive = 1;
+	alive = true;
 	//this.patcher.getnamed('timer').message('bang');
-	update_bound_view();
+	///update_bound_view();
+	/*if(DEBUG){
+		for(var i in prog)
+		{
+			post('prog:', prog, '\n');
+		}
+	}*/
+	preset_selector.message('int', preset);
 	//outlet(1, 'offset', 1);
 }
+
+///function init_plinko(){}
 
 function fire_node()
 {	///place potential in a cell for inclusion on next turn:  this is where we play plinko in realtime
@@ -363,7 +387,7 @@ function list(x,y,z)
 
 function slot(val)
 {
-	preset = val;
+	if(DEBUG){post('new slot# is:', val, '\n');}
 }
 
 function slotlist()

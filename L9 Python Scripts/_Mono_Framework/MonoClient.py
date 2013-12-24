@@ -7,7 +7,7 @@ from _Framework.NotifyingControlElement import NotifyingControlElement
 from _Framework.Util import in_range
 from _Framework.Debug import debug_print
 from _Framework.Disconnectable import Disconnectable
-
+from _Framework.InputControlElement import InputSignal
 from MonoDeviceComponent import MonoDeviceComponent
 from ModDevices import *
 
@@ -62,38 +62,9 @@ LOGO = [[], [], [], [], [], [], [], [],
 		[], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []]
 
 
-class InputSignal(Signal):
-	"""
-	Special signal type that makes sure that interaction with input
-	works properly. Special input control elements that define
-	value-dependent properties should use this kind of signal.
-	"""
+def unpack_values(values):
+	return [int(i) for i in str(values).split('^')]
 
-	def __init__(self, sender = None, *a, **k):
-		super(InputSignal, self).__init__(sender=sender, *a, **k)
-		self._input_control = sender
-
-	@contextlib.contextmanager
-	def _listeners_update(self):
-		old_count = self.count
-		yield
-		diff_count = self.count - old_count
-		self._input_control._input_signal_listener_count += diff_count
-		listener_count = self._input_control._input_signal_listener_count
-		#if diff_count > 0 and listener_count == diff_count or diff_count < 0 and listener_count == 0:
-		#	self._input_control._request_rebuild()
-
-	def connect(self, *a, **k):
-		with self._listeners_update():
-			super(InputSignal, self).connect(*a, **k)
-
-	def disconnect(self, *a, **k):
-		with self._listeners_update():
-			super(InputSignal, self).disconnect(*a, **k)
-
-	def disconnect_all(self, *a, **k):
-		with self._listeners_update():
-			super(InputSignal, self).disconnect_all(*a, **k)
 
 
 class MonoClient(NotifyingControlElement):
@@ -164,6 +135,10 @@ class MonoClient(NotifyingControlElement):
 				self._banner_state = 0		
 	
 
+	def script_wants_forwarding(self):
+		return True
+	
+
 	def is_connected(self):
 		return self._connected
 	
@@ -197,8 +172,8 @@ class MonoClient(NotifyingControlElement):
 		self._device_parent = device.canonical_parent
 		if not self._device_parent.devices_has_listener(self._device_listener):
 			self._device_parent.add_devices_listener(self._device_listener)
-		self._mute = 0
-		self._send('toggle_mute', self._mute)
+		#self._mute = 0
+		#self._send('toggle_mute', self._mute)
 		for host in self._active_host:
 			host.update()
 		for host in self._host._hosts:

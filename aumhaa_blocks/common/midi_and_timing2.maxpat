@@ -3,11 +3,12 @@
 		"fileversion" : 1,
 		"appversion" : 		{
 			"major" : 6,
-			"minor" : 0,
-			"revision" : 7
+			"minor" : 1,
+			"revision" : 5,
+			"architecture" : "x86"
 		}
 ,
-		"rect" : [ 5.0, 46.0, 299.0, 104.0 ],
+		"rect" : [ 5.0, 46.0, 300.0, 102.0 ],
 		"bgcolor" : [ 0.168627, 0.168627, 0.168627, 1.0 ],
 		"bglocked" : 0,
 		"openinpresentation" : 1,
@@ -29,6 +30,74 @@
 		"tags" : "",
 		"title" : "plinko",
 		"boxes" : [ 			{
+				"box" : 				{
+					"fontname" : "Arial",
+					"fontsize" : 9.0,
+					"id" : "obj-10",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 3,
+					"outlettype" : [ "", "", "" ],
+					"patching_rect" : [ 662.0, 376.5, 46.0, 17.0 ],
+					"saved_attribute_attributes" : 					{
+						"valueof" : 						{
+							"parameter_initial" : [ "Off" ],
+							"parameter_initial_enable" : 1,
+							"parameter_invisible" : 1,
+							"parameter_linknames" : 1,
+							"parameter_longname" : "outport",
+							"parameter_shortname" : "outport",
+							"parameter_type" : 3
+						}
+
+					}
+,
+					"saved_object_attributes" : 					{
+						"annotation_name" : "",
+						"initial" : [ "Off" ],
+						"parameter_enable" : 1
+					}
+,
+					"text" : "pattr",
+					"varname" : "u780000013"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"fontname" : "Arial",
+					"fontsize" : 9.0,
+					"id" : "obj-7",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 3,
+					"outlettype" : [ "", "", "" ],
+					"patching_rect" : [ 271.0, 99.5, 46.0, 17.0 ],
+					"saved_attribute_attributes" : 					{
+						"valueof" : 						{
+							"parameter_initial" : [ "Off" ],
+							"parameter_initial_enable" : 1,
+							"parameter_invisible" : 1,
+							"parameter_linknames" : 1,
+							"parameter_longname" : "inport",
+							"parameter_shortname" : "inport",
+							"parameter_type" : 3
+						}
+
+					}
+,
+					"saved_object_attributes" : 					{
+						"annotation_name" : "",
+						"initial" : [ "Off" ],
+						"parameter_enable" : 1
+					}
+,
+					"text" : "pattr",
+					"varname" : "u893000017"
+				}
+
+			}
+, 			{
 				"box" : 				{
 					"fontname" : "Arial",
 					"fontsize" : 9.0,
@@ -442,16 +511,16 @@
 					"presentation_rect" : [ 206.0, 21.0, 82.0, 15.0 ],
 					"saved_attribute_attributes" : 					{
 						"valueof" : 						{
-							"parameter_enum" : [ "Plugin", "lh_midi", "Nome" ],
-							"parameter_initial" : [ 0.0 ],
-							"parameter_type" : 2,
-							"parameter_initial_enable" : 1,
-							"parameter_invisible" : 1,
-							"parameter_shortname" : "midi_input_menu",
-							"parameter_longname" : "midi_output_menu[1]",
-							"parameter_linknames" : 1,
 							"parameter_order" : 100,
-							"parameter_defer" : 1
+							"parameter_linknames" : 1,
+							"parameter_longname" : "midi_output_menu[1]",
+							"parameter_shortname" : "midi_input_menu",
+							"parameter_type" : 2,
+							"parameter_enum" : [ "Plugin", "lh_midi", "Nome" ],
+							"parameter_initial_enable" : 1,
+							"parameter_initial" : [ 0.0 ],
+							"parameter_defer" : 1,
+							"parameter_invisible" : 1
 						}
 
 					}
@@ -500,17 +569,17 @@
 					"presentation_rect" : [ 251.0, 75.0, 36.0, 15.0 ],
 					"saved_attribute_attributes" : 					{
 						"valueof" : 						{
-							"parameter_unitstyle" : 9,
-							"parameter_mmax" : 16.0,
-							"parameter_mmin" : 1.0,
-							"parameter_initial" : [ 0.0 ],
-							"parameter_type" : 1,
-							"parameter_initial_enable" : 1,
-							"parameter_invisible" : 1,
-							"parameter_shortname" : "nomechan",
-							"parameter_longname" : "nomechan[1]",
+							"parameter_order" : 100,
 							"parameter_linknames" : 1,
-							"parameter_order" : 100
+							"parameter_longname" : "nomechan[1]",
+							"parameter_shortname" : "nomechan",
+							"parameter_type" : 1,
+							"parameter_mmin" : 1.0,
+							"parameter_mmax" : 16.0,
+							"parameter_initial_enable" : 1,
+							"parameter_initial" : [ 0.0 ],
+							"parameter_unitstyle" : 9,
+							"parameter_invisible" : 1
 						}
 
 					}
@@ -556,45 +625,8 @@
 					"numinlets" : 1,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 645.0, 424.0, 78.0, 17.0 ],
+					"patching_rect" : [ 613.5, 433.0, 78.0, 17.0 ],
 					"text" : "prepend midiport"
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"fontname" : "Arial",
-					"fontsize" : 9.0,
-					"frozen_object_attributes" : 					{
-						"invisible" : 1
-					}
-,
-					"id" : "obj-66",
-					"maxclass" : "newobj",
-					"numinlets" : 1,
-					"numoutlets" : 3,
-					"outlettype" : [ "", "", "" ],
-					"patching_rect" : [ 627.0, 376.5, 59.0, 17.0 ],
-					"restore" : [ "Off" ],
-					"saved_attribute_attributes" : 					{
-						"valueof" : 						{
-							"parameter_invisible" : 1,
-							"parameter_linknames" : 1,
-							"parameter_longname" : "outport[1]",
-							"parameter_order" : 100,
-							"parameter_shortname" : "outport",
-							"parameter_type" : 3
-						}
-
-					}
-,
-					"saved_object_attributes" : 					{
-						"annotation_name" : "",
-						"parameter_enable" : 1
-					}
-,
-					"text" : "pattr outport",
-					"varname" : "outport[1]"
 				}
 
 			}
@@ -605,13 +637,13 @@
 					"fontname" : "Arial",
 					"fontsize" : 10.0,
 					"id" : "obj-78",
-					"items" : [ "Off", ",", "IAC Driver IAC Bus 1", ",", "block Controls", ",", "block Port 2", ",", "to Max 1", ",", "to Max 2" ],
+					"items" : [ "Off", ",", "IAC Driver Bus 1", ",", "Daemon Output 0", ",", "Daemon Output 1", ",", "Daemon Output 2", ",", "Daemon Output 3", ",", "Daemon Output 4", ",", "Daemon Output 5", ",", "Daemon Output 6", ",", "Daemon Output 7", ",", "to Max 1", ",", "to Max 2" ],
 					"maxclass" : "umenu",
 					"numinlets" : 1,
 					"numoutlets" : 3,
 					"outlettype" : [ "int", "", "" ],
 					"parameter_enable" : 0,
-					"patching_rect" : [ 604.0, 401.5, 100.0, 18.0 ],
+					"patching_rect" : [ 573.0, 406.0, 100.0, 18.0 ],
 					"pattrmode" : 1,
 					"presentation" : 1,
 					"presentation_rect" : [ 205.0, 49.5, 84.0, 18.0 ],
@@ -650,17 +682,17 @@
 					"presentation_rect" : [ 109.0, 80.0, 81.0, 13.0 ],
 					"saved_attribute_attributes" : 					{
 						"valueof" : 						{
-							"parameter_enum" : [ "thru_off", "thru_on" ],
-							"parameter_mmax" : 1.0,
-							"parameter_initial" : [ 0 ],
-							"parameter_type" : 2,
-							"parameter_initial_enable" : 1,
-							"parameter_invisible" : 1,
-							"parameter_shortname" : "midi_thru",
-							"parameter_longname" : "midi_thru",
-							"parameter_linknames" : 1,
 							"parameter_order" : 411,
-							"parameter_defer" : 1
+							"parameter_linknames" : 1,
+							"parameter_longname" : "midi_thru",
+							"parameter_shortname" : "midi_thru",
+							"parameter_type" : 2,
+							"parameter_mmax" : 1.0,
+							"parameter_enum" : [ "thru_off", "thru_on" ],
+							"parameter_initial_enable" : 1,
+							"parameter_initial" : [ 0 ],
+							"parameter_defer" : 1,
+							"parameter_invisible" : 1
 						}
 
 					}
@@ -789,18 +821,18 @@
 					"presentation_rect" : [ 56.0, 75.0, 36.0, 15.0 ],
 					"saved_attribute_attributes" : 					{
 						"valueof" : 						{
-							"parameter_unitstyle" : 0,
-							"parameter_mmax" : 16.0,
-							"parameter_mmin" : 1.0,
-							"parameter_initial" : [ 0.0 ],
-							"parameter_type" : 1,
-							"parameter_initial_enable" : 1,
-							"parameter_invisible" : 1,
-							"parameter_shortname" : "in_channel",
-							"parameter_longname" : "in_channel",
-							"parameter_linknames" : 1,
 							"parameter_order" : 406,
-							"parameter_defer" : 1
+							"parameter_linknames" : 1,
+							"parameter_longname" : "in_channel",
+							"parameter_shortname" : "in_channel",
+							"parameter_type" : 1,
+							"parameter_mmin" : 1.0,
+							"parameter_mmax" : 16.0,
+							"parameter_initial_enable" : 1,
+							"parameter_initial" : [ 0.0 ],
+							"parameter_unitstyle" : 0,
+							"parameter_defer" : 1,
+							"parameter_invisible" : 1
 						}
 
 					}
@@ -1097,8 +1129,9 @@
 						"fileversion" : 1,
 						"appversion" : 						{
 							"major" : 6,
-							"minor" : 0,
-							"revision" : 7
+							"minor" : 1,
+							"revision" : 5,
+							"architecture" : "x86"
 						}
 ,
 						"rect" : [ 529.0, 56.0, 393.0, 403.0 ],
@@ -1819,16 +1852,6 @@
 							}
 , 							{
 								"patchline" : 								{
-									"destination" : [ "obj-1", 0 ],
-									"disabled" : 0,
-									"hidden" : 0,
-									"midpoints" : [ 159.5, 384.0, 111.0, 384.0, 111.0, 248.0, 142.5, 248.0 ],
-									"source" : [ "obj-2", 0 ]
-								}
-
-							}
-, 							{
-								"patchline" : 								{
 									"destination" : [ "obj-193", 0 ],
 									"disabled" : 0,
 									"hidden" : 0,
@@ -2270,16 +2293,16 @@
 					"presentation_rect" : [ 10.0, 21.0, 83.0, 15.0 ],
 					"saved_attribute_attributes" : 					{
 						"valueof" : 						{
-							"parameter_enum" : [ "Off", "Plugin", "lh_midi", "Merged" ],
-							"parameter_initial" : [ 1 ],
-							"parameter_type" : 2,
-							"parameter_initial_enable" : 1,
-							"parameter_invisible" : 1,
-							"parameter_shortname" : "midi_input_menu",
-							"parameter_longname" : "midi_input_menu",
-							"parameter_linknames" : 1,
 							"parameter_order" : 409,
-							"parameter_defer" : 1
+							"parameter_linknames" : 1,
+							"parameter_longname" : "midi_input_menu",
+							"parameter_shortname" : "midi_input_menu",
+							"parameter_type" : 2,
+							"parameter_enum" : [ "Off", "Plugin", "lh_midi", "Merged" ],
+							"parameter_initial_enable" : 1,
+							"parameter_initial" : [ 1 ],
+							"parameter_defer" : 1,
+							"parameter_invisible" : 1
 						}
 
 					}
@@ -2346,48 +2369,12 @@
 			}
 , 			{
 				"box" : 				{
-					"fontname" : "Arial",
-					"fontsize" : 9.0,
-					"frozen_object_attributes" : 					{
-						"invisible" : 1
-					}
-,
-					"id" : "obj-16",
-					"maxclass" : "newobj",
-					"numinlets" : 1,
-					"numoutlets" : 3,
-					"outlettype" : [ "", "", "" ],
-					"patching_rect" : [ 253.0, 97.5, 54.0, 17.0 ],
-					"restore" : [ "Off" ],
-					"saved_attribute_attributes" : 					{
-						"valueof" : 						{
-							"parameter_invisible" : 1,
-							"parameter_longname" : "inport",
-							"parameter_order" : 407,
-							"parameter_shortname" : "inport",
-							"parameter_type" : 3
-						}
-
-					}
-,
-					"saved_object_attributes" : 					{
-						"annotation_name" : "",
-						"parameter_enable" : 1
-					}
-,
-					"text" : "pattr inport",
-					"varname" : "inport"
-				}
-
-			}
-, 			{
-				"box" : 				{
 					"arrow" : 0,
 					"arrowframe" : 0,
 					"fontname" : "Arial",
 					"fontsize" : 10.0,
 					"id" : "obj-33",
-					"items" : [ "Off", ",", "IAC Driver IAC Bus 1", ",", "block Controls", ",", "block Port 2", ",", "from Max 1", ",", "from Max 2" ],
+					"items" : [ "Off", ",", "IAC Driver Bus 1", ",", "Daemon Input 0", ",", "Daemon Input 1", ",", "Daemon Input 2", ",", "Daemon Input 3", ",", "Daemon Input 4", ",", "Daemon Input 5", ",", "Daemon Input 6", ",", "Daemon Input 7", ",", "from Max 1", ",", "from Max 2" ],
 					"maxclass" : "umenu",
 					"numinlets" : 1,
 					"numoutlets" : 3,
@@ -2483,17 +2470,17 @@
 					"presentation_rect" : [ 109.0, 21.0, 81.0, 15.0 ],
 					"saved_attribute_attributes" : 					{
 						"valueof" : 						{
-							"parameter_enum" : [ "Sync_Int", "Sync_Ext" ],
-							"parameter_mmax" : 1.0,
-							"parameter_initial" : [ 0 ],
-							"parameter_type" : 2,
-							"parameter_initial_enable" : 1,
-							"parameter_invisible" : 1,
-							"parameter_shortname" : "timing_master",
-							"parameter_longname" : "timing_master[1]",
-							"parameter_linknames" : 1,
 							"parameter_order" : 415,
-							"parameter_defer" : 1
+							"parameter_linknames" : 1,
+							"parameter_longname" : "timing_master[1]",
+							"parameter_shortname" : "timing_master",
+							"parameter_type" : 2,
+							"parameter_mmax" : 1.0,
+							"parameter_enum" : [ "Sync_Int", "Sync_Ext" ],
+							"parameter_initial_enable" : 1,
+							"parameter_initial" : [ 0 ],
+							"parameter_defer" : 1,
+							"parameter_invisible" : 1
 						}
 
 					}
@@ -2517,17 +2504,17 @@
 					"presentation_rect" : [ 153.0, 50.5, 37.0, 15.0 ],
 					"saved_attribute_attributes" : 					{
 						"valueof" : 						{
-							"parameter_unitstyle" : 8,
-							"parameter_mmin" : -1.0,
-							"parameter_initial" : [ -1.0 ],
-							"parameter_type" : 1,
-							"parameter_initial_enable" : 1,
-							"parameter_invisible" : 1,
-							"parameter_shortname" : "start",
-							"parameter_longname" : "start",
-							"parameter_linknames" : 1,
 							"parameter_order" : 414,
-							"parameter_defer" : 1
+							"parameter_linknames" : 1,
+							"parameter_longname" : "start",
+							"parameter_shortname" : "start",
+							"parameter_type" : 1,
+							"parameter_mmin" : -1.0,
+							"parameter_initial_enable" : 1,
+							"parameter_initial" : [ -1.0 ],
+							"parameter_unitstyle" : 8,
+							"parameter_defer" : 1,
+							"parameter_invisible" : 1
 						}
 
 					}
@@ -2549,16 +2536,16 @@
 					"presentation_rect" : [ 109.0, 50.5, 33.0, 15.0 ],
 					"saved_attribute_attributes" : 					{
 						"valueof" : 						{
-							"parameter_unitstyle" : 8,
-							"parameter_initial" : [ 0.0 ],
+							"parameter_order" : 416,
+							"parameter_linknames" : 1,
+							"parameter_longname" : "beat",
+							"parameter_shortname" : "beat",
 							"parameter_type" : 1,
 							"parameter_initial_enable" : 1,
-							"parameter_invisible" : 1,
-							"parameter_shortname" : "beat",
-							"parameter_longname" : "beat",
-							"parameter_linknames" : 1,
-							"parameter_order" : 416,
-							"parameter_defer" : 1
+							"parameter_initial" : [ 0.0 ],
+							"parameter_unitstyle" : 8,
+							"parameter_defer" : 1,
+							"parameter_invisible" : 1
 						}
 
 					}
@@ -2640,6 +2627,15 @@
 					"disabled" : 0,
 					"hidden" : 0,
 					"source" : [ "obj-1", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-78", 0 ],
+					"disabled" : 0,
+					"hidden" : 0,
+					"source" : [ "obj-10", 1 ]
 				}
 
 			}
@@ -2972,16 +2968,6 @@
 			}
 , 			{
 				"patchline" : 				{
-					"destination" : [ "obj-33", 0 ],
-					"disabled" : 0,
-					"hidden" : 0,
-					"midpoints" : [ 280.0, 119.75, 239.5, 119.75 ],
-					"source" : [ "obj-16", 1 ]
-				}
-
-			}
-, 			{
-				"patchline" : 				{
 					"destination" : [ "obj-15", 0 ],
 					"disabled" : 0,
 					"hidden" : 0,
@@ -3282,7 +3268,7 @@
 					"destination" : [ "obj-99", 0 ],
 					"disabled" : 0,
 					"hidden" : 0,
-					"midpoints" : [ 654.5, 450.0, 738.5, 450.0, 738.5, 366.5, 582.5, 366.5 ],
+					"midpoints" : [ 623.0, 458.0, 738.5, 458.0, 738.5, 366.5, 582.5, 366.5 ],
 					"source" : [ "obj-64", 0 ]
 				}
 
@@ -3294,16 +3280,6 @@
 					"hidden" : 0,
 					"midpoints" : [ 133.5, 389.5, 106.5, 389.5 ],
 					"source" : [ "obj-65", 0 ]
-				}
-
-			}
-, 			{
-				"patchline" : 				{
-					"destination" : [ "obj-78", 0 ],
-					"disabled" : 0,
-					"hidden" : 0,
-					"midpoints" : [ 656.5, 398.75, 613.5, 398.75 ],
-					"source" : [ "obj-66", 1 ]
 				}
 
 			}
@@ -3350,6 +3326,15 @@
 					"disabled" : 0,
 					"hidden" : 0,
 					"source" : [ "obj-69", 1 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-33", 0 ],
+					"disabled" : 0,
+					"hidden" : 0,
+					"source" : [ "obj-7", 1 ]
 				}
 
 			}
@@ -3657,10 +3642,41 @@
 					"destination" : [ "obj-78", 0 ],
 					"disabled" : 0,
 					"hidden" : 0,
-					"midpoints" : [ 582.5, 398.5, 613.5, 398.5 ],
+					"midpoints" : [ 582.5, 398.5, 582.5, 398.5 ],
 					"source" : [ "obj-99", 0 ]
 				}
 
+			}
+ ],
+		"parameters" : 		{
+			"obj-159" : [ "beat", "beat", 416 ],
+			"obj-44" : [ "midi_input_menu", "midi_input_menu", 409 ],
+			"obj-83::obj-143" : [ "timing[2]", "timing", 2 ],
+			"obj-58" : [ "midi_output_menu[1]", "midi_input_menu", 100 ],
+			"obj-80" : [ "swing[2]", "swing", 3 ],
+			"obj-28" : [ "start", "start", 414 ],
+			"obj-187" : [ "timing_master[1]", "timing_master", 415 ],
+			"obj-61" : [ "nomechan[1]", "nomechan", 100 ],
+			"obj-40" : [ "midi_thru", "midi_thru", 411 ],
+			"obj-10" : [ "outport", "outport", 0 ],
+			"obj-7" : [ "inport", "inport", 0 ],
+			"obj-29" : [ "in_channel", "in_channel", 406 ]
+		}
+,
+		"dependency_cache" : [ 			{
+				"name" : "timing_b992.maxpat",
+				"bootpath" : "/Users/amounra/monomodular_git/aumhaa_blocks/common",
+				"patcherrelativepath" : ".",
+				"type" : "JSON",
+				"implicit" : 1
+			}
+, 			{
+				"name" : "lh_midiin.mxo",
+				"type" : "iLaX"
+			}
+, 			{
+				"name" : "lh_midiout.mxo",
+				"type" : "iLaX"
 			}
  ]
 	}

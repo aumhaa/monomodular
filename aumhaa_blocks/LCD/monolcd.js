@@ -55,47 +55,63 @@ var positions = [0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 20, 21, 22, 23, 24, 2
 var pipe = [];
 var surfaces = [];
 
-const MONOHM={colors:[.9, .9, .9, 1], regexp: new RegExp(/(MonOhm)/), n: 'MonOhm', 
+var MONOHM={colors:[.9, .9, .9, 1], regexp: new RegExp(/(MonOhm)/), n: 'MonOhm', 
 				names:['Dial_0', 'Dial_1', 'Dial_2', 'Dial_3', 'None', 'None', 'None', 'Crossfader',
 						'Dial_4', 'Dial_5', 'Dial_6', 'Dial_7', 'None', 'None', 'None', 'None', 
 						'Dial_8', 'Dial_9', 'Dial_10', 'Dial_11', 'Dial_12', 'Dial_13', 'Dial_14', 'Dial_15',
 						'Fader_0', 'Fader_1', 'Fader_2', 'Fader_3', 'Fader_4', 'Fader_5', 'Fader_6', 'Fader_7']};
-const CODEC = {colors:[0, 1, 0, 1], regexp: new RegExp(/(Codec)/), n: 'Codec', 
+var CODEC = {colors:[0, 1, 0, 1], regexp: new RegExp(/(Codec)/), n: 'Codec', 
 				names:['Dial_0_0', 'Dial_1_0', 'Dial_2_0', 'Dial_3_0', 'Dial_4_0', 'Dial_5_0', 'Dial_6_0', 'Dial_7_0',
 						'Dial_0_1', 'Dial_1_1', 'Dial_2_1', 'Dial_3_1', 'Dial_4_1', 'Dial_5_1', 'Dial_6_1', 'Dial_7_1', 
 						'Dial_0_2', 'Dial_1_2', 'Dial_2_2', 'Dial_3_2', 'Dial_4_2', 'Dial_5_2', 'Dial_6_2', 'Dial_7_2',
 						'Dial_0_3', 'Dial_1_3', 'Dial_2_3', 'Dial_3_3', 'Dial_4_3', 'Dial_5_3', 'Dial_6_3', 'Dial_7_3']};
-const BLOCKMOD = {colors:[1, 1, 0, 1], regexp: new RegExp(/(BlockMod)/), n: 'BlockMod', 
+var CODEX = {colors:[0, 1, 0, 1], regexp: new RegExp(/(Codex)/), n: 'Codex', 
+				names:['Dial_0_0', 'Dial_1_0', 'Dial_2_0', 'Dial_3_0', 'Dial_4_0', 'Dial_5_0', 'Dial_6_0', 'Dial_7_0',
+						'Dial_0_1', 'Dial_1_1', 'Dial_2_1', 'Dial_3_1', 'Dial_4_1', 'Dial_5_1', 'Dial_6_1', 'Dial_7_1', 
+						'Dial_0_2', 'Dial_1_2', 'Dial_2_2', 'Dial_3_2', 'Dial_4_2', 'Dial_5_2', 'Dial_6_2', 'Dial_7_2',
+						'Dial_0_3', 'Dial_1_3', 'Dial_2_3', 'Dial_3_3', 'Dial_4_3', 'Dial_5_3', 'Dial_6_3', 'Dial_7_3']};
+var BLOCKMOD = {colors:[1, 1, 0, 1], regexp: new RegExp(/(BlockMod)/), n: 'BlockMod', 
 				names:['None', 'None', 'None', 'None', 'None', 'None', 'None', 'None',
 						'None', 'None', 'None', 'None', 'None', 'None', 'None', 'None', 
 						'Fader_0', 'Fader_1', 'None', 'None', 'None', 'None', 'None', 'None',
 						'Dial_0', 'Dial_1', 'Dial_2', 'Dial_3', 'Dial_4', 'Dial_5', 'Dial_6', 'Dial_7']};
-const CNTRLR_ORIG = {colors:[.5, .7, 1, 1], regexp: new RegExp(/(Cntrlr_Orig)/), n: 'Cntrlr', 
+var CNTRLR_ORIG = {colors:[.5, .7, 1, 1], regexp: new RegExp(/(Cntrlr_Orig)/), n: 'Cntrlr', 
 				names:['Dial_Left_0', 'Dial_Left_1', 'Dial_Left_2', 'Dial_Left_3', 'Dial_Right_0', 'Dial_Right_1', 'Dial_Right_2', 'Dial_Right_3',
 						'Dial_Left_4', 'Dial_Left_5', 'Dial_Left_6', 'Dial_Left_7', 'Dial_Right_4', 'Dial_Right_5', 'Dial_Right_6', 'Dial_Right_7', 
 						'Dial_Left_8', 'Dial_Left_9', 'Dial_Left_10', 'Dial_Left_11', 'Dial_Right_8', 'Dial_Right_9', 'Dial_Right_10', 'Dial_Right_11',
 						'Encoder_4', 'Encoder_5', 'Encoder_6', 'Encoder_7', 'Encoder_8', 'Encoder_9', 'Encoder_10', 'Encoder_11']};
-const CNTRLR = {colors:[.5, .7, 1, 1], regexp: new RegExp(/(Cntrlr)/), n: 'Cntrlr', 
+var CNTRLR = {colors:[.5, .7, 1, 1], regexp: new RegExp(/(Cntrlr)/), n: 'Cntrlr', 
 				names:['Dial_Left_0', 'Dial_Left_1', 'Dial_Left_2', 'Dial_Left_3', 'Dial_Right_0', 'Dial_Right_1', 'Dial_Right_2', 'Dial_Right_3',
 						'Dial_Left_4', 'Dial_Left_5', 'Dial_Left_6', 'Dial_Left_7', 'Dial_Right_4', 'Dial_Right_5', 'Dial_Right_6', 'Dial_Right_7', 
 						'Dial_Left_8', 'Dial_Left_9', 'Encoder_0', 'Encoder_1', 'Encoder_2', 'Encoder_3', 'Dial_Right_10', 'Dial_Right_11',
 						'Encoder_4', 'Encoder_5', 'Encoder_6', 'Encoder_7', 'Encoder_8', 'Encoder_9', 'Encoder_10', 'Encoder_11']};
-const AUMPC40 = {colors:[0, 1, .3, 1], regexp: new RegExp(/(AumPC40)/), n: 'AumPC40', 
+var AUMPC40 = {colors:[0, 1, .3, 1], regexp: new RegExp(/(AumPC40)/), n: 'AumPC40', 
 				names:['Track_Control_0', 'Track_Control_1', 'Track_Control_2', 'Track_Control_3', 'Device_Control_0', 'Device_Control_1', 'Device_Control_2', 'Device_Control_3',
 						'Track_Control_4', 'Track_Control_5', 'Track_Control_6', 'Track_Control_7', 'Device_Control_4', 'Device_Control_5', 'Device_Control_6', 'Device_Control_7', 
 						'None', 'None', 'None', 'None', 'None', 'None', 'None', 'None',
 						'Slider_0', 'Slider_1', 'Slider_2', 'Slider_3', 'Slider_4', 'Slider_5', 'Slider_6', 'Slider_7']};
-const AUMPC20 = {colors:[.3, .8, .3, 1], regexp: new RegExp(/(AumPC20)/), n: 'AumPC20', 
+var AUMPC20 = {colors:[.3, .8, .3, 1], regexp: new RegExp(/(AumPC20)/), n: 'AumPC20', 
 				names:['None', 'None', 'None', 'None', 'None', 'None', 'None', 'None',
 						'None', 'None', 'None', 'None', 'None', 'None', 'None', 'None', 
 						'None', 'None', 'None', 'None', 'None', 'None', 'None', 'None',
 						'Slider_0', 'Slider_1', 'Slider_2', 'Slider_3', 'Slider_4', 'Slider_5', 'Slider_6', 'Slider_7']};
-const OHMMODES = {colors:[.9, .9, .9, 1], regexp: new RegExp(/(OhmModes)/), n: 'OhmModes', 
+var OHMMODES = {colors:[.9, .9, .9, 1], regexp: new RegExp(/(OhmModes)/), n: 'OhmModes', 
 				names:['Dial_0', 'Dial_1', 'Dial_2', 'Dial_3', 'None', 'None', 'None', 'None',
 						'Dial_4', 'Dial_5', 'Dial_6', 'Dial_7', 'None', 'None', 'None', 'None', 
 						'Dial_8', 'Dial_9', 'Dial_10', 'Dial_11', 'Dial_12', 'Dial_13', 'Dial_14', 'Dial_15',
 						'Fader_0', 'Fader_1', 'Fader_2', 'Fader_3', 'Fader_4', 'Fader_5', 'Fader_6', 'Fader_7']};
-const Supported_Surfaces = [MONOHM, CODEC, BLOCKMOD, CNTRLR, AUMPC20, AUMPC40, OHMMODES];
+var BASE = {colors:[1, 0, 0, 1], regexp: new RegExp(/(Base)/), n: 'Base', 
+				names:['Device_Chain', 'None', 'None', 'None', 'None', 'None', 'None', 'Fader_8',
+						'Device_Name', 'None', 'None', 'None', 'None', 'None', 'None', 'None',
+						'Device_Bank', 'None', 'None', 'None', 'None', 'None', 'None', 'None',
+						'Fader_0', 'Fader_1', 'Fader_2', 'Fader_3', 'Fader_4', 'Fader_5', 'Fader_6', 'Fader_7']};
+var AUMTROLL = {colors:[.5, .7, 1, 1], regexp: new RegExp(/(AumTroll)/), n: 'AumTroll', 
+				names:['Dial_Left_0', 'Dial_Left_1', 'Dial_Left_2', 'Dial_Left_3', 'Dial_Right_0', 'Dial_Right_1', 'Dial_Right_2', 'Dial_Right_3',
+						'Dial_Left_4', 'Dial_Left_5', 'Dial_Left_6', 'Dial_Left_7', 'Dial_Right_4', 'Dial_Right_5', 'Dial_Right_6', 'Dial_Right_7', 
+						'None', 'None', 'Encoder_0', 'Encoder_1', 'Encoder_2', 'Encoder_3', 'None', 'None',
+						'Encoder_4', 'Encoder_5', 'Encoder_6', 'Encoder_7', 'Encoder_8', 'Encoder_9', 'Encoder_10', 'Encoder_11']};
+
+var Supported_Surfaces = [MONOHM, CODEC, BLOCKMOD, CNTRLR, AUMTROLL, AUMPC20, AUMPC40, OHMMODES, BASE, CODEX];
 
 ////Setup////
 
@@ -236,7 +252,7 @@ function make_cell(parent, num, surface_type)
 
 function make_surface(num, surface_type, bridge_id)
 {
-	//post('Make surface', num, surface_type, bridge_id, '\n');
+	if(DEBUG){post('Make surface', num, surface_type, bridge_id, '\n');}
 	var new_surface = [];
 	new_surface.active = false;
 	new_surface.touched = false;
@@ -270,10 +286,10 @@ function make_surface(num, surface_type, bridge_id)
 	new_surface.pipe = function(args)
 	{
 		//args = arrayfromargs(messagename, arguments);
-		//post(new_surface.n, ':', args, '\n');
+		if(DEBUG){post(new_surface.n, ':', args, '\n');}
 		if((args[0]=='value')&&(new_surface[args[1]]))
 		{
-			new_surface[args[1]][args[2]](args.slice(3));
+			new_surface[args[1]][args[2]](args.slice(3,4));
 		}
 	}
 	new_surface.change_color = function()

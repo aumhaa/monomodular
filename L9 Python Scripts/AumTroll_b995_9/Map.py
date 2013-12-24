@@ -36,6 +36,10 @@ FOLLOW = True		#this sets whether or not the last selected device on a track is 
 
 CHOPPER_ENABLE = False		#when set True, this enables the Python ClipChopperComponent in modSlot 4 when a mod isn't present there
 
+AUMPUSH_LINK = True
+
+USE_PEDAL = True
+
 MONOHM_LINK = True			#when set True, this enables an alternate configuration to be used for the controls to better suit use with the MonOhm script
 
 TROLL_RIGHT_MODE = 2		#this is the initial mode that MixerRight on the MonOhm will be set to when first detected by the CNTRLR
@@ -73,6 +77,7 @@ SEND_RESET = [7, 7, 7]
 STOP_CLIPS = [127, 1, 1]
 STOP_CLIPS_OFF = [127, 127, 127]
 SELECT = [127, 127, 127]
+SELECT_ALT = [5, 5, 5]
 SCENE_LAUNCH = [7, 3, 17]
 USER1_COLOR = [4, 4, 29]
 USER2_COLOR = [5, 5, 29]
