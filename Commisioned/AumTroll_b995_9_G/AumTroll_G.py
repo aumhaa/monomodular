@@ -48,12 +48,24 @@ from _Mono_Framework.LiveUtils import *
 
 from AumTroll_b995_9.AumTroll import AumTroll
 from Map import *
+ 
+from Push.SessionRecordingComponent import *
+from Push.ClipCreator import ClipCreator
+from Push.ViewControlComponent import ViewControlComponent
 
 class AumTroll_G(AumTroll):
 
 
 	def __init__(self, *a, **k):
 		super(AumTroll_G, self).__init__(*a, **k)
+		with self.component_guard():
+			self._setup_session_recording_component()
+		self.log_message('Aumtroll G 3')
+	
+
+
+	def _setup_session_recording_component(self):
+		self._recorder = SessionRecordingComponent(ClipCreator(), ViewControlComponent())
 	
 
 	"""the mixer component corresponds and moves with our selection in Live, and allows us to assign physical controls"""
@@ -134,8 +146,14 @@ class AumTroll_G(AumTroll):
 			self._mixer.channel_strip(index+4).set_arm_button(None)		#remove the arm button assignments
 			self._mixer.channel_strip(index+4).set_mute_button(None)		#remove the mute button assignments
 			self._mixer.channel_strip(index+4).set_select_button(None)	#remove the select button assignments
+		self._device_navigator.set_arrange_session_toggle_button(None)
 		self._device_navigator.set_device_clip_toggle_button(None)
 		self._device_navigator.set_detail_toggle_button(None)
+		self._device_navigator.set_shift_button(None)
+		self._transport.set_nudge_buttons(None, None)
+		self._recorder.set_record_button(None)
+		self._recorder.set_re_enable_automation_button(None)
+		
 		super(AumTroll_G, self).deassign_live_controls(*a, **k)
 	
 
@@ -173,10 +191,11 @@ class AumTroll_G(AumTroll):
 					self._button[index+12].set_on_off_values(SELECT[self._rgb], SELECT_OFF[self._rgb])	#set the select color from the Map.py
 					self._mixer.channel_strip(index+4).set_select_button(self._button[index+12])	#assign the select buttons to our mixer channel strips
 
-				self._session.set_stop_track_clip_buttons(tuple(self._button[index+4] for index in range(8)))	#these last two lines assign the send_reset buttons and the stop_clip buttons for each track
+				#self._session.set_stop_track_clip_buttons(tuple(self._button[index+4] for index in range(8)))	#these last two lines assign the send_reset buttons and the stop_clip buttons for each track
 				for index in range(8):
-					self._button[index + 4].set_on_off_values(STOP_CLIP[self._rgb], STOP_CLIP[self._rgb])	#this assigns the custom colors defined in the Map.py file to the stop_clip buttons.  They have seperate on/off values, but we assign them both the same value so we can always identify them
-					self._button[index + 4].send_value(STOP_CLIP[self._rgb], True)				#finally, we send the on/off colors out to turn the LEDs on for the stop clip buttons
+					#self._button[index + 4].set_on_off_values(SOLO[self._rgb], SOLO[self._rgb])	#this assigns the custom colors defined in the Map.py file to the stop_clip buttons.  They have seperate on/off values, but we assign them both the same value so we can always identify them
+					self._mixer.channel_strip(index).set_solo_button(self._button[index+4])
+					#self._button[index + 4].send_value(STOP_CLIP[self._rgb], True)				#finally, we send the on/off colors out to turn the LEDs on for the stop clip buttons
 				for index in range(4):															#set up a for loop to generate an index for assigning the session nav buttons' colors
 					self._button[index + 20].set_on_off_values(SESSION_NAV[self._rgb], SESSION_NAV_OFF[self._rgb])	#assign the colors from Map.py to the session nav buttons
 				self._session.set_track_bank_buttons(self._button[21], self._button[20])		#set the track bank buttons for the Session navigation controls
@@ -190,13 +209,19 @@ class AumTroll_G(AumTroll):
 				for index in range(4):															#set up a for loop to generate an index for assigning the session nav buttons' colors
 					self._button[index + 24].set_on_off_values(SHIFTS[self._rgb], SHIFTS_OFF[self._rgb])	#assign the colors from Map.py to the session nav buttons
 
-				self._session_zoom.set_zoom_button(self._button[24])							#assign the lower right key button to the shift function of the Zoom component
 				self._session.update()															#tell the Session component to update so that the grid will display the currently selected session region
 				self._session.set_enabled(True)													#enable the Session Component
 				self._session_zoom.set_enabled(True)											#enable the Session Zoom
+				
+				self._device_navigator.set_arrange_session_toggle_button(self._encoder_button[4])
+				self._device_navigator.set_device_clip_toggle_button(self._encoder_button[5])
+				self._device_navigator.set_detail_toggle_button(self._encoder_button[6])
+				#self._device_navigator.set_shift_button(self._encoder_button[7])
+				self._session_zoom.set_zoom_button(self._encoder_button[7])							#assign the lower right key button to the shift function of the Zoom component
 
-				self._device_navigator.set_device_clip_toggle_button(self._button[25])
-				self._device_navigator.set_detail_toggle_button(self._button[26])
+				self._transport.set_nudge_buttons(self._button[25], self._button[24])
+				self._recorder.set_record_button(self._button[27])
+				self._recorder.set_re_enable_automation_button(self._button[26])
 		else:
 			for index in range(8):
 				self._mixer2.channel_strip(index).set_volume_control(self._fader[index])
@@ -216,10 +241,10 @@ class AumTroll_G(AumTroll):
 
 		"""this section assigns the encoders and encoder buttons"""
 		self._device.set_parameter_controls(tuple([self._encoder[index+4] for index in range(8)]))			#assign the encoders from the device component controls - we are doing this here b
-		self._encoder_button[7].set_on_value(DEVICE_LOCK[self._rgb])					#set the on color for the Device lock encoder button
-		self._device.set_lock_button(self._encoder_button[7])							#assign encoder button 7 to the device lock control
-		self._encoder_button[4].set_on_value(DEVICE_ON[self._rgb])						#set the on color for the Device on/off encoder button 
-		self._device.set_on_off_button(self._encoder_button[4])							#assing encoder button 4 to the device on/off control
+		#self._encoder_button[7].set_on_value(DEVICE_LOCK[self._rgb])					#set the on color for the Device lock encoder button
+		#self._device.set_lock_button(self._encoder_button[7])							#assign encoder button 7 to the device lock control
+		#self._encoder_button[4].set_on_value(DEVICE_ON[self._rgb])						#set the on color for the Device on/off encoder button 
+		#self._device.set_on_off_button(self._encoder_button[4])							#assing encoder button 4 to the device on/off control
 		for index in range(2):															#setup a recursion to generate indexes so that we can reference the correct controls to assing to the device_navigator functions
 			self._encoder_button[index + 8].set_on_value(DEVICE_NAV[self._rgb])			#assign the on color for the device navigator
 			self._encoder_button[index + 10].set_on_value(DEVICE_BANK[self._rgb])		#assign the on color for the device bank controls
@@ -233,6 +258,7 @@ class AumTroll_G(AumTroll):
 		#self._mixer.update()
 		#self.request_rebuild_midi_map()
 	
+
 
 
 
