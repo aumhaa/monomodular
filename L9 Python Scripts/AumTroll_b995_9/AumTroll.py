@@ -458,7 +458,7 @@ class AumTroll(Cntrlr):
 			self._setup_pedal()
 			#self._setup_alt_device_control()
 		#self.schedule_message(3, self._session._do_show_highlight)
-		self.send_midi(tuple(request_snapshot))
+		self._send_midi(tuple(request_snapshot))
 	
 
 	"""script initialization methods"""
