@@ -222,7 +222,7 @@ class MonoPedal(ControlSurface):
 
 	def receive_led(self, button, value):
 		#self.log_message('receive led: ' + str(index) + ' ' + str(value))
-	
+		pass
 		
 	"""called on timer"""
 	def update_display(self):

@@ -473,7 +473,7 @@ class MonoDeviceComponent(DeviceComponent):
 		#DeviceComponent.set_parameter_controls(self, controls)"""
 	
 
-	def _device_parameters_to_map(self):
+	def _device_parameters_to_map(self, host):
 		raise self.is_enabled() or AssertionError
 		raise self._device != None or AssertionError
 		raise host._parameter_controls != None or AssertionError

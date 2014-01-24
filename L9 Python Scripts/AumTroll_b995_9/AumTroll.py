@@ -490,6 +490,10 @@ class AumTroll(Cntrlr):
 		pass
 	
 
+	def _setup_device_selector(self):
+		self._device_selector = AumTrollDeviceSelectorComponent(self)
+		self._device_selector.name = 'Device_Selector'
+	
 
 	"""cntrlr modes"""
 	"""here we set up some methods that will be used to update the control assignments when we change between different modes"""
