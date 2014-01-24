@@ -125,6 +125,90 @@ class LoopPedalExpressionElement(EncoderElement):
 	
 
 
+class AumTrollDeviceSelectorComponent(DeviceSelectorComponent):
+
+
+	def __init__(self, *a, **k):
+		super(AumTrollDeviceSelectorComponent, self).__init__(*a, **k)
+	
+
+	def set_matrix(self, matrix):
+		buttons = []
+		if not matrix is None:
+			for button, address in matrix.iterbuttons():
+				#self._script.log_message('button: ' + str(button))
+				button.use_default_message()
+				button.set_enabled(True)
+				buttons.append(button)
+		self.set_mode_buttons(tuple(buttons))
+	
+
+	def set_mode_buttons(self, buttons):
+		assert(isinstance(buttons, tuple) or buttons is None)
+		if buttons == None:
+			buttons = []
+
+		for button in self._modes_buttons:
+			button.remove_value_listener(self._mode_value)
+
+		self._modes_buttons = []
+		for button in buttons:
+			if not button is None:
+				button.add_value_listener(self._mode_value, identify_sender=True)
+				self._modes_buttons.append(button)
+			self._number_of_modes = len(self._modes_buttons) + self._offset
+		self.update()
+	
+
+	def update(self):
+		if self.is_enabled():
+			for button in range(len(self._modes_buttons)):
+				if button + self._offset == self._last_preset:
+					self._modes_buttons[button].send_value(13)
+				else:
+					self._modes_buttons[button].send_value(1)
+	
+
+	def _update_mode(self):
+		mode = self._modes_heap[-1][0]
+		assert(mode in range(self.number_of_modes()))
+		if self._mode_index != mode:
+			self._mode_index = mode
+
+		if self.is_enabled():
+			key = str('p' + str(self._mode_index + 1 + self._offset) + ' ')
+			preset = None
+			for track in self.song().tracks:
+				for device in self.enumerate_track_device(track):
+					if(match(key, str(device.name)) != None):
+						preset = device
+						break
+			for return_track in self.song().return_tracks:
+				for device in self.enumerate_track_device(return_track):
+					if(match(key, str(device.name)) != None):
+						preset = device
+						break
+			for device in self.enumerate_track_device(self.song().master_track):
+				if(match(key, str(device.name)) != None):
+					preset = device
+					break
+
+			if preset != None:
+				#self._script.log_message('preset found: ' + str(preset.name))
+				self._script.set_appointed_device(preset)
+				self.song().view.select_device(preset)
+				self._last_preset = self._mode_index + self._offset
+
+			self.update()
+	
+
+	def set_mode(self, mode):
+		self._clean_heap()
+		self._modes_heap = [(mode, None, None)]
+		self._update_mode()
+	
+
+
 class AumTrollMonoDevice(MonoDeviceComponent):
 
 
@@ -456,9 +540,11 @@ class AumTroll(Cntrlr):
 			self._setup_alt_device_control()
 			self._setup_alt_mixer()
 			self._setup_pedal()
+			self._setup_device_selector()
 			#self._setup_alt_device_control()
 		#self.schedule_message(3, self._session._do_show_highlight)
 		self._send_midi(tuple(request_snapshot))
+
 	
 
 	"""script initialization methods"""

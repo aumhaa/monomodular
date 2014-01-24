@@ -655,32 +655,28 @@ class AumPushInstrumentComponent(InstrumentComponent):
 		return -1
 	
 
-	def _setup_instrument_mode(self, interval):
+	def _setup_instrument_mode(self):
 		if self.is_enabled() and self._matrix:
-			for button, _ in self._matrix.iterbuttons():
-				if button:
-					button.use_default_message()
-					button.force_next_send()
-
-			pattern = self._get_pattern(interval)
+			self._matrix.reset()
+			pattern = self._pattern
 			max_j = self._matrix.width() - 1
-			for button, (i, j) in self._matrix.iterbuttons():
-				if button:
-					note_info = pattern.note(i, max_j - j)
-					if note_info.index != None:
-						button.set_on_off_values(note_info.color, 'Instrument.NoteOff')
-						button.turn_on()
-						button.set_enabled(False)
-						override_channel = self._override_channel() 
-						if override_channel > -1:
-							button.set_channel(override_channel)
-						else:
-							button.set_channel(note_info.channel)
-						button.set_identifier(note_info.index)
+			for button, (i, j) in ifilter(first, self._matrix.iterbuttons()):
+				profile = 'default' if self._takeover_pads else 'instrument'
+				button.sensitivity_profile = profile
+				note_info = pattern.note(i, max_j - j)
+				if note_info.index != None:
+					button.set_on_off_values('Instrument.NoteAction', 'Instrument.' + note_info.color)
+					button.turn_off()
+					button.set_enabled(self._takeover_pads)
+					if override_channel > -1:
+						button.set_channel(override_channel)
 					else:
-						button.set_channel(NON_FEEDBACK_CHANNEL)
-						button.set_light(note_info.color)
-						button.set_enabled(True)
+						button.set_channel(note_info.channel)
+					button.set_identifier(note_info.index)
+				else:
+					button.set_channel(NON_FEEDBACK_CHANNEL)
+					button.set_light('Instrument.' + note_info.color)
+					button.set_enabled(True)
 	
 
 	def on_selected_track_changed(self, *a, **k):
