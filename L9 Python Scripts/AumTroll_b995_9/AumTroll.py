@@ -130,6 +130,13 @@ class AumTrollDeviceSelectorComponent(DeviceSelectorComponent):
 
 	def __init__(self, *a, **k):
 		super(AumTrollDeviceSelectorComponent, self).__init__(*a, **k)
+		self.song().add_appointed_device_listener(self._device_listener)
+	
+
+	def disconnect(self, *a, **k):
+		super(AumTrollDeviceSelectorComponent, self).disconnect()
+		if self.song().appointed_device_has_listener(self._device_listener):
+			self.song().remove_appointed_device_listener(self._device_listener)
 	
 
 	def set_matrix(self, matrix):
@@ -144,7 +151,7 @@ class AumTrollDeviceSelectorComponent(DeviceSelectorComponent):
 	
 
 	def set_mode_buttons(self, buttons):
-		assert(isinstance(buttons, tuple) or buttons is None)
+		#assert(isinstance(buttons, tuple) or buttons is None)
 		if buttons == None:
 			buttons = []
 
@@ -162,11 +169,19 @@ class AumTrollDeviceSelectorComponent(DeviceSelectorComponent):
 
 	def update(self):
 		if self.is_enabled():
-			for button in range(len(self._modes_buttons)):
-				if button + self._offset == self._last_preset:
-					self._modes_buttons[button].send_value(13)
-				else:
-					self._modes_buttons[button].send_value(1)
+			name = 'None'
+			dev = self.song().appointed_device
+			if hasattr(dev, 'name'):
+				name = dev.name
+				dev_type = dev.type
+				dev_class = dev.class_name
+			if self._modes_buttons:
+				for index in range(len(self._modes_buttons)):
+					if match('p' + str(index+1) + ' ', name) != None:
+						val = (dev_class in DEVICE_COLORS and DEVICE_COLORS[dev_class]) or (dev_type in DEVICE_COLORS and DEVICE_COLORS[dev_type])
+						self._modes_buttons[index].send_value(val, True)
+					else:
+						self._modes_buttons[index].send_value(0, True)
 	
 
 	def _update_mode(self):
@@ -197,7 +212,7 @@ class AumTrollDeviceSelectorComponent(DeviceSelectorComponent):
 				#self._script.log_message('preset found: ' + str(preset.name))
 				self._script.set_appointed_device(preset)
 				self.song().view.select_device(preset)
-				self._last_preset = self._mode_index + self._offset
+				#self._last_preset = self._mode_index + self._offset
 
 			self.update()
 	
@@ -206,6 +221,11 @@ class AumTrollDeviceSelectorComponent(DeviceSelectorComponent):
 		self._clean_heap()
 		self._modes_heap = [(mode, None, None)]
 		self._update_mode()
+	
+
+	def _device_listener(self, *a, **k):
+		if self.is_enabled():
+			self.update()
 	
 
 
@@ -748,11 +768,15 @@ class AumTroll(Cntrlr):
 			self._session.set_enabled(True)													#enable the Session Component
 			self._session_zoom.set_enabled(True)											#enable the Session Zoom
 
+		elif not self._aumpush == None:
+			self.assign_aumpush_controls()
+
 		elif not self._monohm == None:
 			for index in range(8):
 				self._mixer2.channel_strip(index).set_volume_control(self._fader[index])
 			self._mixer2.set_track_offset(TROLL_OFFSET)
-			self._device_selector.set_mode_buttons(self._grid)
+			self._device_selector.set_mode_buttons(tuple(self._grid))
+			self._device_selector.set_enabled(True)
 			if not self._shifted:
 				self._assign_monomodular_controls()
 			else:
@@ -764,9 +788,6 @@ class AumTroll(Cntrlr):
 			self._find_devices()
 			self._device1.update()
 			self._device2.update()
-
-		elif not self._aumpush == None:
-			self.assign_aumpush_controls()
 
 		"""this section assigns the encoders and encoder buttons"""
 		if self._aumpush == None:
@@ -964,7 +985,6 @@ class AumTroll(Cntrlr):
 
 	def assign_aumpush_controls(self):
 		if self._aumpush:
-			self._mixer2.set_track_offset(TROLL_OFFSET)
 			inputs = self.find_inputs()
 			if not inputs is None:
 				for index in range(4):
@@ -980,8 +1000,6 @@ class AumTroll(Cntrlr):
 				self._mixer3.return_strip(index).set_volume_control(self._encoder[index+4])
 				self._encoder_button[index+4].send_value(127, True)
 			if self._shift_mode._mode_index is 0:
-				self._device_selector.assign_buttons(self._grid[:15])
-				self._device_selector.set_enabled(True)
 				self._on_shift_button_value.subject = self._grid[15]
 				if self._aumpush._host._is_connected:
 					self._aumpush._host._set_bank_buttons(tuple(self._button[4:12]+self._button[20:28]))
@@ -1019,6 +1037,9 @@ class AumTroll(Cntrlr):
 			self._find_devices()
 			self._device1.update()
 			self._device2.update()
+			self._device_selector.set_mode_buttons(tuple(self._grid[:15]))
+			self._device_selector.set_enabled(True)
+			self._device_selector.update()
 			self.request_rebuild_midi_map()
 	
 
@@ -1143,6 +1164,7 @@ class AumTroll(Cntrlr):
 		self.log_message('_connect_monohm')
 		self._monohm = monohm
 		self._monohm._cntrlr = self
+		self._mixer2.set_track_offset(TROLL_OFFSET)
 		#self.set_device_component(self._monohm._device)
 		"""if '_monohm_shift' in dir(monohm):
 			if self._monohm._shift_mode.mode_index_has_listener(monohm._monohm_shift):
@@ -1172,7 +1194,7 @@ class AumTroll(Cntrlr):
 		with self.component_guard():
 			self.deassign_live_controls()
 			self.schedule_message(3, self.assign_live_controls)
-		self._device_selector.update = self._make_device_selector_update(self._device_selector)
+		#self._device_selector.update = self._make_device_selector_update(self._device_selector)
 	
 
 	def _make_device_selector_update(self, selector):
@@ -1334,7 +1356,7 @@ class AumTroll(Cntrlr):
 			self.deassign_live_controls()
 			self.assign_live_controls()
 			if self._shifted and self._on_shift_button_value.subject:
-				self._on_shift_button_value.subject.send_value(7, True)
+				self._on_shift_button_value.subject.send_value(12, True)
 	
 
 

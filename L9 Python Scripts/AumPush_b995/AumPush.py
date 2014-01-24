@@ -4,7 +4,7 @@ from __future__ import with_statement
 import Live
 from contextlib import contextmanager
 from functools import partial
-from itertools import izip, chain, imap
+from itertools import izip, chain, imap, ifilter
 from _Tools.re import *
 from _Framework.Dependency import inject
 from _Framework.ControlSurface import ControlSurface
@@ -19,7 +19,7 @@ from _Framework.Layer import Layer
 from _Framework.Resource import PrioritizedResource
 from _Framework.DeviceBankRegistry import DeviceBankRegistry
 from _Framework.SubjectSlot import subject_slot, subject_slot_group
-from _Framework.Util import find_if, clamp, nop, mixin, const, forward_property
+from _Framework.Util import find_if, clamp, nop, mixin, const, forward_property, first
 from _Framework import Defaults
 from _Framework import Task
 from _Framework.MixerComponent import MixerComponent
@@ -91,6 +91,17 @@ from _Mono_Framework.Mod import *
 
 CHANNEL_TEXT = ['Ch. 1', 'Ch. 2', 'Ch. 3', 'Ch. 4', 'Ch. 5', 'Ch. 6', 'Ch. 7', 'Ch. 8']
 
+DEVICE_COLORS = {'midi_effect':2,
+				'audio_effect':5,
+				'instrument':7,
+				'Operator':3,
+				'DrumGroupDevice':6,
+				'MxDeviceMidiEffect':4,
+				'MxDeviceInstrument':4,
+				'MxDeviceAudioEffect':4,
+				'InstrumentGroupDevice':1,
+				'MidiEffectGroupDevice':1,
+				'AudioEffectGroupDevice':1}
 
 class AumPushValueComponent(ValueComponent):
 
@@ -193,7 +204,7 @@ class AumPushTrollComponent(CompoundComponent):
 			if not buttons[index] is None:
 				buttons[index].set_on_off_values('Scales.Diatonic', BUTTON_COLORS[int(index/4)])
 			self._mixer.channel_strip(index).set_select_button(buttons[index])
-		self._device_selector.set_mode_buttons(tuple(buttons[16:]))
+		self._device_selector.set_mode_buttons(tuple(buttons[16:32]))
 	
 
 	def set_display_line1(self, display):
@@ -340,7 +351,8 @@ class AumPushTrollComponent(CompoundComponent):
 
 	def set_enabled(self, enabled = True):
 		super(AumPushTrollComponent, self).set_enabled(enabled)
-		self._script._select_note_mode()
+		if not enabled:
+			self._script._select_note_mode()
 	
 
 	def set_mode_matrix(self, matrix):
@@ -442,6 +454,23 @@ class AumPushDeviceSelectorComponent(DeviceSelectorComponent):
 					self._modes_buttons[button].send_value(1)
 	
 
+	def update(self):
+		if self.is_enabled():
+			name = 'None'
+			dev = self.song().appointed_device
+			if hasattr(dev, 'name'):
+				name = dev.name
+				dev_type = dev.type
+				dev_class = dev.class_name
+			if self._modes_buttons:
+				for index in range(len(self._modes_buttons)):
+					if match('p' + str(index+1) + ' ', name) != None:
+						val = (dev_class in DEVICE_COLORS and DEVICE_COLORS[dev_class]) or (dev_type in DEVICE_COLORS and DEVICE_COLORS[dev_type])
+						self._modes_buttons[index].send_value(val)
+					else:
+						self._modes_buttons[index].send_value(20)
+	
+
 	def _update_mode(self):
 		mode = self._modes_heap[-1][0]
 		assert(mode in range(self.number_of_modes()))
@@ -480,6 +509,7 @@ class AumPushDeviceSelectorComponent(DeviceSelectorComponent):
 		self._modes_heap = [(mode, None, None)]
 		self._update_mode()
 	
+
 
 class AumPushSpecialMixerComponent(SpecialMixerComponent):
 
@@ -661,22 +691,23 @@ class AumPushInstrumentComponent(InstrumentComponent):
 			pattern = self._pattern
 			max_j = self._matrix.width() - 1
 			for button, (i, j) in ifilter(first, self._matrix.iterbuttons()):
-				profile = 'default' if self._takeover_pads else 'instrument'
-				button.sensitivity_profile = profile
-				note_info = pattern.note(i, max_j - j)
-				if note_info.index != None:
-					button.set_on_off_values('Instrument.NoteAction', 'Instrument.' + note_info.color)
-					button.turn_off()
-					button.set_enabled(self._takeover_pads)
-					if override_channel > -1:
-						button.set_channel(override_channel)
+				if not button == None:
+					profile = 'default' if self._takeover_pads else 'instrument'
+					button.sensitivity_profile = profile
+					note_info = pattern.note(i, max_j - j)
+					if note_info.index != None:
+						button.set_on_off_values('Instrument.NoteAction', 'Instrument.' + note_info.color)
+						button.turn_off()
+						button.set_enabled(self._takeover_pads)
+						if override_channel > -1:
+							button.set_channel(override_channel)
+						else:
+							button.set_channel(note_info.channel)
+						button.set_identifier(note_info.index)
 					else:
-						button.set_channel(note_info.channel)
-					button.set_identifier(note_info.index)
-				else:
-					button.set_channel(NON_FEEDBACK_CHANNEL)
-					button.set_light('Instrument.' + note_info.color)
-					button.set_enabled(True)
+						button.set_channel(NON_FEEDBACK_CHANNEL)
+						button.set_light('Instrument.' + note_info.color)
+						button.set_enabled(True)
 	
 
 	def on_selected_track_changed(self, *a, **k):
@@ -750,7 +781,10 @@ class AumPush(Push):
 			self._matrix_CC.add_row(self._pad_CC[(index*8):(index*8)+8])"""
 	
 
-	"""def _init_instrument(self):
+	def _init_instrument(self):
+		super(AumPush, self)._init_instrument()
+		self._instrument._instrument._setup_instrument_mode = self._make_setup_instrument_mode(self._instrument._instrument)
+		"""
 		self._instrument = AumPushInstrumentComponent(name='Instrument_Component')
 		self._instrument.set_enabled(False)
 		self._instrument.layer = Layer(matrix=self._matrix, touch_strip=self._touch_strip_control, scales_toggle_button=self._scale_presets_button, presets_toggle_button=self._shift_button, octave_up_button=self._octave_up_button, octave_down_button=self._octave_down_button)
@@ -760,7 +794,14 @@ class AumPush(Push):
 		self._instrument._scales.presets_layer.priority = DIALOG_PRIORITY
 		self._instrument._scales.scales_info_layer = Layer(info_line=self._display_line1, blank_line=self._display_line2)
 		self._instrument._scales.scales_info_layer.priority = MODAL_DIALOG_PRIORITY
-		self._instrument._override_channel = self._get_current_instrument_channel"""
+		self._instrument._override_channel = self._get_current_instrument_channel
+		#instrument_basic_layer = Layer(octave_strip=ComboElement(self._touch_strip_control, [self._shift_button]), scales_toggle_button=self._scale_presets_button, presets_toggle_button=self._shift_button, octave_up_button=self._octave_up_button, octave_down_button=self._octave_down_button, scale_up_button=ComboElement(self._octave_up_button, [self._shift_button]), scale_down_button=ComboElement(self._octave_down_button, [self._shift_button]))
+		#self._instrument = MelodicComponent(skin=self._skin, is_enabled=False, clip_creator=self._clip_creator, name='Melodic_Component', grid_resolution=self._grid_resolution, note_editor_settings=self._add_note_editor_setting(), layer=Layer(playhead=self._playhead_element, mute_button=self._global_mute_button, quantization_buttons=self._side_buttons, loop_selector_matrix=self._double_press_matrix.submatrix[:, 0], short_loop_selector_matrix=self._double_press_event_matrix.submatrix[:, 0], note_editor_matrices=ButtonMatrixElement([[ self._matrix.submatrix[:, 7 - row] for row in xrange(7) ]])), instrument_play_layer=instrument_basic_layer + Layer(matrix=self._matrix, touch_strip=self._touch_strip_control, aftertouch_control=self._aftertouch_control, delete_button=self._delete_button), instrument_sequence_layer=instrument_basic_layer + Layer(note_strip=self._touch_strip_control))
+		#self._on_note_editor_layout_changed.subject = self._instrument
+
+		self._instrument._instrument = self._instrument.register_component(AumPushInstrumentComponent(name='Instrument_Component'))
+		self._instrument._instrument._override_channel = self._get_current_instrument_channel
+		"""
 	
 
 	@subject_slot('failure')
@@ -852,7 +893,7 @@ class AumPush(Push):
 		self._device_parameter_provider._current_bank_details = self._make_current_bank_details(self._device_parameter_provider)
 		self.modhandler._device_component = self._device_parameter_provider
 		#self.modhandler.layer = Layer( lock_button = self._note_mode_button, push_grid = self._matrix, shift_button = self._shift_button, alt_button = self._select_button, key_buttons = self._track_state_buttons, device_component = self._device )
-	#	self._device_navigation._on_selected_device_changed = self._make_on_selected_device_changed(self._device_navigation)
+		#self._device_navigation._on_selected_device_changed = self._make_on_selected_device_changed(self._device_navigation)
 	
 
 	def _init_mixer(self):
@@ -870,7 +911,8 @@ class AumPush(Push):
 			strip = self._mixer.channel_strip(track)
 			strip.name = 'Channel_Strip_' + str(track)
 			strip.set_invert_mute_feedback(True)
-			strip.set_delete_handler(self._delete_component)
+			if hasattr(strip, 'set_delete_handler'):
+				strip.set_delete_handler(self._delete_component)
 			strip._do_select_track = self._selector.on_select_track
 			strip.layer = Layer(shift_button=self._shift_button, duplicate_button=self._duplicate_button, selector_button=self._select_button)
 
@@ -962,7 +1004,7 @@ class AumPush(Push):
 				channelized = True
 			if not (self._note_modes.selected_mode is 'mod' and self._host.is_modlocked()):
 				self._step_sequencer.set_drum_group_device(drum_device)
-				if track == None or track.is_foldable or track in self.song().return_tracks or track == self.song().master_track or track.is_frozen:
+				if track == None or track.is_foldable or track in self.song().return_tracks or track == self.song().master_track or (hasattr(track, 'is_frozen') and track.is_frozen):
 					self._note_modes.selected_mode = 'disabled'
 				elif not mod_device is None:
 					#self._note_modes.selected_mode = 'disabled'
@@ -1028,6 +1070,32 @@ class AumPush(Push):
 				return ProviderDeviceComponent._current_bank_details(device_component)
 		return _current_bank_details
 		
+	
+
+	def _make_setup_instrument_mode(self, instrument_component):
+		def _setup_instrument_mode():
+			if instrument_component.is_enabled() and instrument_component._matrix:
+				instrument_component._matrix.reset()
+				pattern = instrument_component._pattern
+				max_j = instrument_component._matrix.width() - 1
+				for button, (i, j) in ifilter(first, instrument_component._matrix.iterbuttons()):
+					if not button == None:
+						profile = 'default' if instrument_component._takeover_pads else 'instrument'
+						button.sensitivity_profile = profile
+						note_info = pattern.note(i, max_j - j)
+						if note_info.index != None:
+							button.set_on_off_values('Instrument.NoteAction', 'Instrument.' + note_info.color)
+							button.turn_off()
+							button.set_enabled(instrument_component._takeover_pads)
+							button.set_channel(note_info.channel)
+							button.set_identifier(note_info.index)
+						else:
+							button.set_channel(NON_FEEDBACK_CHANNEL)
+							button.set_light('Instrument.' + note_info.color)
+							button.set_enabled(True)
+					else:
+						self.log_message('button is None: ' + str(i, j))
+		return _setup_instrument_mode
 	
 
 	def _is_mod(self, device):

@@ -140,4 +140,14 @@ DEFAULT_SCALE = 'Auto'
 """This is the default SplitMode used for all MIDI Channels"""
 DEFAULT_SPLIT = False
 
-
+DEVICE_COLORS = {'midi_effect':2,
+				'audio_effect':5,
+				'instrument':7,
+				'Operator':3,
+				'DrumGroupDevice':6,
+				'MxDeviceMidiEffect':4,
+				'MxDeviceInstrument':4,
+				'MxDeviceAudioEffect':4,
+				'InstrumentGroupDevice':1,
+				'MidiEffectGroupDevice':1,
+				'AudioEffectGroupDevice':1}
