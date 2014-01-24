@@ -112,7 +112,10 @@ class MonoEncoderElement(EncoderElement):
 				elif str(parameter.original_name) == 'Track Panning':
 					self._parameter_lcd_name = 'Pan'
 				else:
-					self._parameter_lcd_name = str(parameter.name)
+					try:
+						self._parameter_lcd_name = str(parameter.name)
+					except:
+						self._parameter_lcd_name = ' '
 			#self._last_value(int(((self._parameter.value - self._parameter.min) / (self._parameter.max - self._parameter.min))  * 127))
 			#self._parameter_last_value = str(self.mapped_parameter())
 			try:

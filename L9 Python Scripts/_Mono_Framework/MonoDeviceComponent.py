@@ -229,6 +229,7 @@ class MonoDeviceComponent(DeviceComponent):
 						host._parameter_controls[index].release_parameter()			
 			else:
 				parameters = self._device_parameters_to_map(host)
+				parameters = self._device_parameters_to_map()
 				num_controls = len(host._parameter_controls)
 				index = (self._bank_index * num_controls)
 				for control in host._parameter_controls:

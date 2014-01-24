@@ -398,12 +398,14 @@ function anything(args)
 				init();
 				break;
 			}
+			break;
 		case 1:
 			if(args[0] == 'bang')
 			{
 				dissolve();
 				break;	  
 			}
+			break;
 		case 2:
 			lcd(args[0]);
 			break;
