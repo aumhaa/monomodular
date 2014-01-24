@@ -1624,7 +1624,7 @@ class MonOhm(ControlSurface):
 		for column in range(8):
 			for row in range(8):
 				self._grid[column][row].set_identifier(OHM_MAP_ID[column][row])
-				self._grid[column][row].set_identifier(OHM_MAP_CHANNEL[column][row])
+				self._grid[column][row].set_channel(OHM_MAP_CHANNEL[column][row])
 				self._grid[column][row].send_value(OHM_MAP_VALUE[column][row])
 				self._grid[column][row].set_enabled(False)
 	

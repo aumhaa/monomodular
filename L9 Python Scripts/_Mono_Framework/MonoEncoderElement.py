@@ -108,11 +108,17 @@ class MonoEncoderElement(EncoderElement):
 		if parameter:
 			if isinstance(parameter, Live.DeviceParameter.DeviceParameter):
 				if str(parameter.original_name) == 'Track Volume' or self._mapped_to_midi_velocity is True:
-					self._parameter_lcd_name = str(parameter.canonical_parent.canonical_parent.name)
+					try:
+						self._parameter_lcd_name = str(parameter.canonical_parent.canonical_parent.name)
+					except:
+						self._parameter_lcd_name = ' '
 				elif str(parameter.original_name) == 'Track Panning':
 					self._parameter_lcd_name = 'Pan'
 				else:
-					self._parameter_lcd_name = str(parameter.name)
+					try:
+						self._parameter_lcd_name = str(parameter.name)
+					except:
+						self._parameter_lcd_name = ' '
 			#self._last_value(int(((self._parameter.value - self._parameter.min) / (self._parameter.max - self._parameter.min))  * 127))
 			#self._parameter_last_value = str(self.mapped_parameter())
 			try:

@@ -10,6 +10,10 @@ var DEBUG = true;
 var SHOW_STORAGE = false;
 var FORCELOAD = true;
 
+var bgcolors = {'OFF': [0, 0, 0, 1], 'WHITE':[1, 1, 1, 1], 'YELLOW':[1, 1, 0, 1], 'CYAN':[0, 1, 1, 1], 
+				'MAGENTA':[1, 0, 1, 1], 'RED':[1, 0, 0, 1], 'GREEN':[0, 1, 0, 1], 'BLUE':[0, 0, 1, 1],
+				'INVISIBLE':[1, 1, 1, 0]};
+
 
 function NodeComponent(name, num, poly)
 {
@@ -283,6 +287,91 @@ function Key(name, call, x, parent)
 
 }
 
+function Display()
+{
+	var self = this;
+	this.panel = [];
+	this.dial = [];
+	this.button = [];
+	this._name = [];
+	this._value = [];
+	this.layer = 'Main';
+
+	this.layers={	'Main':     {	'_name': 	{'set': ['Mute', '', 'Voices', '', 'Storage', '', 'Routing', '', '?'],
+												'fontsize':[6, 6, 6, 6, 6, 6, 6, 6, 30]
+												},
+									'_value': 	{'set': ['', '', '', '', '', '', '', '']
+												},
+									'panel': 	{'bgcolor':[bgcolors.YELLOW, bgcolors.OFF, bgcolors.BLUE, bgcolors.OFF, bgcolors.RED, bgcolors.OFF, bgcolors.GREEN, bgcolors.OFF, bgcolors.WHITE],
+												'bordercolor':[bgcolors.OFF, bgcolors.OFF, bgcolors.OFF, bgcolors.OFF, bgcolors.OFF, bgcolors.OFF, bgcolors.OFF, bgcolors.OFF, bgcolors.OFF]
+												},
+									'dial':     {'needlecolor':[bgcolors.INIVISIBLE, bgcolors.INIVISIBLE, bgcolors.INIVISIBLE, bgcolors.INIVISIBLE, bgcolors.INIVISIBLE, bgcolors.INIVISIBLE, bgcolors.INIVISIBLE, bgcolors.INIVISIBLE, bgcolors.INIVISIBLE],
+												'int':[0, 0, 0, 0, 0, 0, 0, 0, 0]
+												}
+								},
+					'Voices':   {	'_name': 	{'set': ['Mute', '', 'Voices', '', 'Storage', '', 'Routing', '', '?'],
+												'fontsize':[9, 9, 9, 9, 9, 9, 9, 9, 40]
+												},
+									'_value': 	{'set': ['', '', '', '', '', '', '', '']
+												},
+									'panel': 	{'bgcolor':[bgcolors.WHITE, bgcolors.YELLOW, bgcolors.CYAN, bgcolors.MAGENTA, bgcolors.RED, bgcolors.GREEN, bgcolors.BLUE, bgcolors.OFF, bgcolors.WHITE],
+												'bordercolor':[bgcolors.OFF, bgcolors.OFF, bgcolors.OFF, bgcolors.OFF, bgcolors.OFF, bgcolors.OFF, bgcolors.OFF, bgcolors.OFF, bgcolors.OFF]
+												},
+									'dial':     {'needlecolor':[0, 0, 0, 0, 0, 0, 0, 0, 0],
+												'int':[0, 0, 0, 0, 0, 0, 0, 0, 0]
+												}
+								},
+					'Storage':  {	'_name': 	{'set': ['Mute', '', 'Voices', '', 'Storage', '', 'Routing', '', '?'],
+												'fontsize':[9, 9, 9, 9, 9, 9, 9, 9, 40]
+												},
+									'_value': 	{'set': ['', '', '', '', '', '', '', '']
+												},
+									'panel': 	{'bgcolor':[bgcolors.WHITE, bgcolors.YELLOW, bgcolors.CYAN, bgcolors.MAGENTA, bgcolors.RED, bgcolors.GREEN, bgcolors.BLUE, bgcolors.OFF, bgcolors.WHITE],
+												'bordercolor':[bgcolors.OFF, bgcolors.OFF, bgcolors.OFF, bgcolors.OFF, bgcolors.OFF, bgcolors.OFF, bgcolors.OFF, bgcolors.OFF, bgcolors.OFF]
+												},
+									'dial':     {'needlecolor':[0, 0, 0, 0, 0, 0, 0, 0, 0],
+												'int':[0, 0, 0, 0, 0, 0, 0, 0, 0]
+												}
+								},
+					'Routing':  {	'_name': 	{'set': ['Mute', '', 'Voices', '', 'Storage', '', 'Routing', '', '?'],
+												'fontsize':[9, 9, 9, 9, 9, 9, 9, 9, 40]
+												},
+									'_value': 	{'set': ['', '', '', '', '', '', '', '']
+												},
+									'panel': 	{'bgcolor':[bgcolors.WHITE, bgcolors.YELLOW, bgcolors.CYAN, bgcolors.MAGENTA, bgcolors.RED, bgcolors.GREEN, bgcolors.BLUE, bgcolors.OFF, bgcolors.WHITE],
+												'bordercolor':[bgcolors.OFF, bgcolors.OFF, bgcolors.OFF, bgcolors.OFF, bgcolors.OFF, bgcolors.OFF, bgcolors.OFF, bgcolors.OFF, bgcolors.OFF]
+												},
+									'dial':     {'needlecolor':[0, 0, 0, 0, 0, 0, 0, 0, 0],
+												'int':[0, 0, 0, 0, 0, 0, 0, 0, 0]
+												}
+								}
+					};
+
+	for(var i=0;i<9;i++)
+	{
+		this.panel[i] = patcher.getnamed('panel['+i+']');
+		this.dial[i] = patcher.getnamed('dial['+i+']');
+		this.button[i] = patcher.getnamed('button['+i+']');
+		this._name[i] = patcher.getnamed('name['+i+']');
+		this._value[i] = patcher.getnamed('value['+i+']');
+	}
+	this._update = function()
+	{
+		for(var i=0;i<9;i++)
+		{
+			for(var obj in this.layers[this.layer])
+			{
+				post('obj', obj, '\n');
+				var object = this.layers[this.layer][obj];
+				for(var prop in object)
+				{
+					this[obj][i].message(prop, object[prop][i]);
+				}
+			}
+		}	
+	}
+	this._update();
+}
 
 var unique = jsarguments[1];
 var Alive=0;
@@ -305,6 +394,7 @@ var slotlist = [];
 var speed = [0, 0, 0, 0];
 var matrix = new Grid('Grid', 'grid', 16, 16);
 var keys = new Keys('Keys', 'key', 8);
+var display;
 
 //this array contains the scripting names of objects in the top level patcher.	To include an new object to be addressed 
 //in this script, it's only necessary to add its name to this array.  It can then be addressed as a direct variable
@@ -386,6 +476,7 @@ function initialize(val)
 				script[i.replace('_', "")] = script[i];
 			}
 		}
+		display = new Display();
 		Alive = 1;
 		clear_surface();
 		plinko2.message('recall', 1);
