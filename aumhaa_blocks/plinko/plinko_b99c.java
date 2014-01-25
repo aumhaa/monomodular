@@ -6,30 +6,20 @@ public class plinko_b99c extends MaxObject
 	public int loop = 1;
 	public int part_limit = 8;
 	public int[] dump = new int[4];
-	//public int linked = 0;
-	//public int mode = 0;
 	public int active = -1;
-	//public int pressed = -1;   //changed from 0 to -1 to get first button in
-	//public int offset= 0;
 	public int random = 0;
-	//public int waiting_for_wormhole = 0;
 	public int note = 0;
-	//public int wormhole = 0;
-	//public int probability = 0;
 	public int plane = 8;
 	public int[] x_adj = {0, -1, 0, 1, -1, 1, -1, 0, 1};
 	public int[] y_adj = {0, -1, -1, -1, 0, 0, 1, 1, 1};
-	//public int[] monomap = {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
 	public int[][] display = new int[16][16];
 	public int[][] last_display = new int[16][16];
-	//public int[][] editor = new int[16][16];
 	public int[][][] prog = new int[16][16][25];
 	public int[] def_prog = {0,0,2,0,4,4,0,0,4,0,4,4,0,0,6,0,4,4,0,0,8,0,4,4,0};
 	public int[][] pot_array_temp = new int[part_limit][3];
 	public int pot_array_temp_pos = 0;
 	public int[][] pot_array = new int[part_limit][3];
 	public int pot_array_pos = 0;
-	//public String bin_on = "1";
 	
 	private static final String[] INLET_ASSIST = new String[]{
 		"pulse input", "grid input", "key input", "program input", "plane input", "particle limit input"
@@ -74,20 +64,7 @@ public class plinko_b99c extends MaxObject
 	
 	
 	public void list(Atom[] args) 
-	{ 
-		//post("Received list message at inlet "+getInlet()); 
-		//loop through all the atoms in the list 
-		//Atom a; 
-		//for(int i = 0; i < args.length; i++) 
-		//{ 
-		//	a = args[i]; 
-		//	if(a.isFloat()) 
-		//		post("List element "+i+" is a floating point atom with a value of "+a.getFloat()); 
-		//	else if(a.isInt()) 
-		//		post("List element "+i+" is an integer atom with a value of "+a.getInt()); 
-		//	else if(a.isString()) 
-		//		post("List element "+i+" is a String atom with a value of "+a.getString()); 
-		//} 
+	{
 	}
 	
 	public void init()
@@ -186,15 +163,9 @@ public class plinko_b99c extends MaxObject
 	{
 		if(getInlet()==0)			
 		{
-			//post("bang from inlet 0");
 			//post("resetting pot_array positions");
 			pot_array_pos = 0;
 			pot_array_temp_pos = 0;
-			//if(linked==0)													  ///if no key is being held...
-			//{
-			//	  display_edit();											  ///display the edit plane of the array over the node plane
-			//}
-			//clear_edit();		/// clear the edit grid (display)
 			roll_random();		/// either generate a random number or assign a value entered from the gui
 			for(int ref=0;ref<part_limit;ref++)
 			{

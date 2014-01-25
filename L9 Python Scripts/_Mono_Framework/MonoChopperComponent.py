@@ -31,6 +31,7 @@ class MonoChopperComponent(ControlSurfaceComponent):
 		self._track = self.song().view.selected_track
 		#self._change = time.time()
 		self._change = time.clock()
+		self._interval = .01
 		self.song().add_tempo_listener(self._on_tempo_change)
 		self._tempo = self._cs.song().tempo
 		self._on_tempo_change()
@@ -69,8 +70,8 @@ class MonoChopperComponent(ControlSurfaceComponent):
 				add = ((time.clock() - self._change)/self._div)
 				pos = report + add
 				new_pos = ((self._clip_focus.loop_end - self._clip_focus.loop_start)/16)*x
-				change = new_pos-pos
-				#self._cs.log_message('div ' + str(self._div) + ' time ' + str(time.time()) + ' add ' + str(add) + ' report ' + str(report) + ' pos ' + str(pos) + ' newpos ' + str(new_pos) + ' change ' + str(change))
+				change = new_pos - pos
+				#self._cs.log_message('interval ' + str(self._interval) + ' div ' + str(self._div) + ' time ' + str(time.clock()) + ' add ' + str(add) + ' report ' + str(report) + ' pos ' + str(pos) + ' newpos ' + str(new_pos) + ' change ' + str(change))
 				self._clip_focus.move_playing_pos(change)
 				#self._change[2] = self._change[3]
 				#self._change[3] = new_pos + add
@@ -84,11 +85,12 @@ class MonoChopperComponent(ControlSurfaceComponent):
 			start = self._clip_focus.loop_start
 			end = self._clip_focus.loop_end
 			length = (end - start)
-			#self._cs.log_message('start ' + str(start) + ' end ' + str(end) + ' length ' + str(length))
 			#self._change = time.time()		#[time.time(), time.time() - self._change[0], pos - self._change[3], pos]
+			self._interval = time.clock() - self._change
 			self._change = time.clock()
-			#self.log_message('time ' + str(time.clock()))
-			#self.log_message('time ' + str(time.time()) + ' pos: ' + str(pos) + ' ' + str(start) +' ' + str(end) + ' ' + str(length))
+			#self._cs.log_message('start ' + str(start) + ' end ' + str(end) + ' length ' + str(length))
+			#self._cs.log_message('time ' + str(self._change) + ' pos: ' + str(pos) + ' ' + str(start) +' ' + str(end) + ' ' + str(length))
+			#self._cs.log_message('interval: ' + str(self._interval))
 			if self.is_enabled():
 				for index in range(16):
 					val = int(pos > (length/16)*index)

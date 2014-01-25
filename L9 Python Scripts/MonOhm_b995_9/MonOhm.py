@@ -308,11 +308,10 @@ class MonOhm(ControlSurface):
 			self.song().view.add_selected_track_listener(self._update_selected_device)
 			if FORCE_TYPE is True:
 				self._rgb = FORCE_COLOR_TYPE
-				if not self._rgb:
-					self._color_defs = RGB_COLOR_DEFS
+				if self._rgb == 0:
+					self.set_rgb_colors()
 				else:
-					self._color_defs = MONOCHROME_COLOR_DEFS
-					self._host._navbox_selected = 8
+					self.set_monochrome_colors()
 			else:
 				self.schedule_message(10, self.query_ohm)
 		self.schedule_message(1, self._open_log)
@@ -326,7 +325,7 @@ class MonOhm(ControlSurface):
 	
 
 	def query_ohm(self):
-		#self.log_message('querying ohm64')
+		self.log_message('querying ohm64')
 		self._send_midi(tuple(check_model))
 	
 
@@ -1514,33 +1513,45 @@ class MonOhm(ControlSurface):
 
 	def handle_sysex(self, midi_bytes):
 		assert(isinstance (midi_bytes, tuple))
-		#self.log_message(str('sysex') + str(midi_bytes))
+		self.log_message(str('sysex') + str(midi_bytes))
 		if len(midi_bytes) > 10:
-			if midi_bytes[:11] == tuple([240, 126, 0, 6, 2, 0, 1, 97, 1, 0, 7]):
-				self.show_message(str('Ohm64 RGB detected...setting color map'))
-				self.log_message(str('Ohm64 RGB detected...setting color map'))
-				self._rgb = 0
-				self._host._host_name = 'OhmRGB'
-				self._color_type = 'OhmRGB'
-				for button in self._button:
-					button._color_map = COLOR_MAP
-				for column in self._grid:
-					for button in column:
-						button._color_map = COLOR_MAP
+			if FORCE_TYPE:
+				if FORCE_COLOR_TYPE is 0:
+					self.set_rgb_colors()
+				elif FORCE_COLOR_TYPE is 1:
+					self.set_monochrome_colors()
+			elif midi_bytes[:11] == tuple([240, 126, 0, 6, 2, 0, 1, 97, 1, 0, 7]):
+				self.set_rgb_colors()
 			elif midi_bytes[:11] == tuple([240, 126, 0, 6, 2, 0, 1, 97, 1, 0, 2]):
-				self.show_message(str('Ohm64 Monochrome detected...setting color map'))
-				self.log_message(str('Ohm64 Monochrome detected...setting color map'))
-				self._rgb = 1
-				self._host._host_name = 'Ohm64'
-				self._color_type = 'Monochrome'
-				for button in self._button:
-					button._color_map = [127 for index in range(0, 7)]
-				for column in self._grid:
-					for button in column:
-						button._color_map = [127 for index in range(0, 7)]
-				self._color_defs = MONOCHROME_COLOR_DEFS
-				self._assign_session_colors()
-				self._host._navbox_selected = 8
+				self.set_monochrome_colors()
+
+	def set_monochrome_colors(self):
+		self.show_message(str('Ohm64 Monochrome detected...setting color map'))
+		self.log_message(str('Ohm64 Monochrome detected...setting color map'))
+		self._rgb = 1
+		self._host._host_name = 'Ohm64'
+		self._color_type = 'Monochrome'
+		for button in self._button:
+			button._color_map = [127 for index in range(0, 7)]
+		for column in self._grid:
+			for button in column:
+				button._color_map = [127 for index in range(0, 7)]
+		self._color_defs = MONOCHROME_COLOR_DEFS
+		self._assign_session_colors()
+		self._host._navbox_selected = 8
+	
+
+	def set_rgb_colors(self):
+		self.show_message(str('Ohm64 RGB detected...setting color map'))
+		self.log_message(str('Ohm64 RGB detected...setting color map'))
+		self._rgb = 0
+		self._host._host_name = 'OhmRGB'
+		self._color_type = 'OhmRGB'
+		for button in self._button:
+			button._color_map = COLOR_MAP
+		for column in self._grid:
+			for button in column:
+				button._color_map = COLOR_MAP
 	
 
 	def receive_external_midi(self, midi_bytes):
@@ -1624,7 +1635,7 @@ class MonOhm(ControlSurface):
 		for column in range(8):
 			for row in range(8):
 				self._grid[column][row].set_identifier(OHM_MAP_ID[column][row])
-				self._grid[column][row].set_identifier(OHM_MAP_CHANNEL[column][row])
+				self._grid[column][row].set_channel(OHM_MAP_CHANNEL[column][row])
 				self._grid[column][row].send_value(OHM_MAP_VALUE[column][row])
 				self._grid[column][row].set_enabled(False)
 	

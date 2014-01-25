@@ -162,11 +162,8 @@ class MonoDeviceComponent(DeviceComponent):
 				name = int(name.replace('Mod_Chain_Send_', ''))
 				if device.canonical_parent != None:
 					if device.canonical_parent.mixer_device != None:
-						self._parent._host.log_message('here1' + str(name))
 						if device.canonical_parent.mixer_device.sends != None:
-							self._parent._host.log_message('here2')
 							if len(device.canonical_parent.mixer_device.sends)>name:
-								self._parent._host.log_message('here3')
 								result = device.canonical_parent.mixer_device.sends[name]
 			elif(match('ModDevice_', name) and self._parent.device != None):
 				name = name.replace('ModDevice_', '')
@@ -232,6 +229,7 @@ class MonoDeviceComponent(DeviceComponent):
 						host._parameter_controls[index].release_parameter()			
 			else:
 				parameters = self._device_parameters_to_map(host)
+				parameters = self._device_parameters_to_map()
 				num_controls = len(host._parameter_controls)
 				index = (self._bank_index * num_controls)
 				for control in host._parameter_controls:
@@ -475,7 +473,7 @@ class MonoDeviceComponent(DeviceComponent):
 		#DeviceComponent.set_parameter_controls(self, controls)"""
 	
 
-	def _device_parameters_to_map(self):
+	def _device_parameters_to_map(self, host):
 		raise self.is_enabled() or AssertionError
 		raise self._device != None or AssertionError
 		raise host._parameter_controls != None or AssertionError

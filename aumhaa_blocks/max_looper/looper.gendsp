@@ -1,0 +1,211 @@
+{
+	"patcher" : 	{
+		"fileversion" : 1,
+		"appversion" : 		{
+			"major" : 6,
+			"minor" : 1,
+			"revision" : 6,
+			"architecture" : "x86"
+		}
+,
+		"rect" : [ 1745.0, 218.0, 649.0, 593.0 ],
+		"bgcolor" : [ 0.9, 0.9, 0.9, 1.0 ],
+		"bglocked" : 0,
+		"openinpresentation" : 0,
+		"default_fontsize" : 10.0,
+		"default_fontface" : 0,
+		"default_fontname" : "Arial",
+		"gridonopen" : 0,
+		"gridsize" : [ 15.0, 15.0 ],
+		"gridsnaponopen" : 0,
+		"statusbarvisible" : 2,
+		"toolbarvisible" : 1,
+		"boxanimatetime" : 200,
+		"imprint" : 0,
+		"enablehscroll" : 1,
+		"enablevscroll" : 1,
+		"devicewidth" : 0.0,
+		"description" : "",
+		"digest" : "",
+		"tags" : "",
+		"boxes" : [ 			{
+				"box" : 				{
+					"fontname" : "Arial",
+					"fontsize" : 10.0,
+					"id" : "obj-3",
+					"maxclass" : "newobj",
+					"numinlets" : 0,
+					"numoutlets" : 2,
+					"outlettype" : [ "", "" ],
+					"patching_rect" : [ 294.416656, 12.0, 93.0, 18.0 ],
+					"text" : "buffer Loop ---loop"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"fontname" : "Arial",
+					"fontsize" : 10.0,
+					"id" : "obj-2",
+					"maxclass" : "newobj",
+					"numinlets" : 0,
+					"numoutlets" : 2,
+					"outlettype" : [ "", "" ],
+					"patching_rect" : [ 161.0, 12.0, 108.0, 18.0 ],
+					"text" : "buffer window window"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"fontname" : "Arial",
+					"fontsize" : 10.0,
+					"id" : "obj-6",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 0,
+					"patching_rect" : [ 192.055542, 535.0, 117.0, 18.0 ],
+					"text" : "out 2 @comment phase"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"fontname" : "Arial",
+					"fontsize" : 10.0,
+					"id" : "obj-21",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 0,
+					"patching_rect" : [ 505.5, 535.0, 117.0, 18.0 ],
+					"text" : "out 4 @comment debug"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"fontname" : "Arial",
+					"fontsize" : 10.0,
+					"id" : "obj-43",
+					"maxclass" : "newobj",
+					"numinlets" : 0,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 35.333313, 12.0, 110.0, 18.0 ],
+					"text" : "in 1 @comment signal"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"code" : "Buffer window(\"window\");\r\nBuffer Loop(\"---loop\");\r\n\r\nParam start(0);\r\nParam end(5292000);\r\nParam offset(0);\r\nParam pos(0);\r\nParam play(0);\r\nParam feedback(1);\r\nParam record(0);\r\nParam overdub(0);\r\n\r\nHistory phase(0);\r\nHistory restart(0);\r\nHistory last_input(0);\r\nHistory last_phase(0);\r\nHistory correct(0);\r\nHistory dir(0);\r\nHistory last_index(0);\r\n\r\n_offset = mstosamps(offset);\r\ncorrect = fixnan(_offset/end);\r\nindex = 0;\r\ndif = 0;\r\nheld = 0;\r\n\r\nrate = in2;\r\nsig = dcblock(in1);\r\ndir = sign(rate);\r\n\r\nphase = restart ? 0 : wrap(phase + rate, 0, dim(Loop));\r\nrestart = 0;\r\n\r\nthru_phase = wrap((phase/end) + pos, 0, 1);\r\n\r\nout2 = thru_phase;\r\nout3 = sampstoms(end);\r\nout4 = dim(window);\r\n\r\nthru_phase = wrap(thru_phase + correct, 0, 1);\r\n//out4 = end;\r\n//out4 = thru_phase;\r\npoints = 16;\r\nmidpoint = points/2;\r\nwspan = dim(window)/points;\r\nwphase = trunc(fract(thru_phase*end) * wspan);\r\nsphase = trunc(thru_phase*end);\r\nsum = 0;\r\n\r\nif(play)\r\n{\r\n\tfor (i = 0; i < points; i += 1) {\r\n\t\tsshift = sphase + (midpoint - i);\r\n\t\ts = peek(Loop, sshift, boundmode=\"clamp\", interp=\"none\");\r\n\t\twshift = wphase + (i * wspan);\r\n\t\tw = peek(window, wshift, boundmode=\"wrap\", interp=\"none\");\r\n\t\tsum = sum + (w * s);\r\n\t}\r\n\tout1 = sum;\r\n\r\n\tcurrent_index = sphase;\r\n\r\n\t//offset = in4*in5*abs(record-1);  //need to add this back to distinguish for od vs record\r\n\t_offset = _offset*abs(record-1);\r\n\tif(record||overdub)\r\n\t{\r\n\t\tif(rate == 1.)\r\n\t\t{\r\n\t\t\tindex = wrap(current_index-_offset, start, end);\r\n\t\t\tpoke(Loop, sig + (peek(Loop, index, 0)*feedback), index, 0);\r\n\t\t}\r\n\t\telse if(current_index!=last_index)\r\n\t\t{\r\n\t\t\tif(dir>0)\r\n\t\t\t{\r\n\t\t\t\tdif = current_index-last_index;\r\n\t\t\t\tif(dif < 0)\r\n\t\t\t\t{\r\n\t\t\t\t\tdif += end;\r\n\t\t\t\t}\r\n\t\t\t\tfor(i = 0;i<dif;i+=1)\r\n\t\t\t\t{\t\r\n\t\t\t\t\tindex = wrap(last_index-_offset+i, start, end);\r\n\t\t\t\t\theld = peek(Loop, index, 0)*feedback;\r\n\t\t\t\t\tsig_to_write = sig ? sig + held : held;\r\n\t\t\t\t\tpoke(Loop, sig_to_write, index, 0);\r\n\t\t\t\t}\r\n\t\t\t}\r\n\t\t\telse if(dir<0)\r\n\t\t\t{\r\n\t\t\t\tdif = last_index-current_index;\r\n\t\t\t\tif(dif < 0)\r\n\t\t\t\t{\r\n\t\t\t\t\tdif += end;\r\n\t\t\t\t}\r\n\t\t\t\tfor(i = 0;i<dif;i+=1)\r\n\t\t\t\t{\t\r\n\t\t\t\t\tindex = wrap(last_index-i-_offset, start, end);\r\n\t\t\t\t\theld = peek(Loop, index, 0)*feedback;\r\n\t\t\t\t\tsig_to_write = sig ? sig + held : held;\r\n\t\t\t\t\tpoke(Loop, sig_to_write, index, 0);\r\n\t\t\t\t}\r\n\t\t\t}\r\n\t\t}\r\n\t}\r\n\tlast_index = current_index;\r\n}",
+					"fontname" : "Arial",
+					"fontsize" : 10.0,
+					"id" : "obj-34",
+					"maxclass" : "codebox",
+					"numinlets" : 2,
+					"numoutlets" : 4,
+					"outlettype" : [ "", "", "", "" ],
+					"patching_rect" : [ 35.333313, 47.5, 489.166687, 448.5 ]
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"fontname" : "Arial",
+					"fontsize" : 10.0,
+					"id" : "obj-25",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 0,
+					"patching_rect" : [ 348.777771, 535.0, 117.0, 18.0 ],
+					"text" : "out 3 @comment length"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"fontname" : "Arial",
+					"fontsize" : 10.0,
+					"id" : "obj-1",
+					"maxclass" : "newobj",
+					"numinlets" : 0,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 505.5, 12.0, 101.0, 18.0 ],
+					"text" : "in 2 @comment rate"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"fontname" : "Arial",
+					"fontsize" : 10.0,
+					"id" : "obj-4",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 0,
+					"patching_rect" : [ 35.333313, 535.0, 116.0, 18.0 ],
+					"text" : "out 1 @comment signal"
+				}
+
+			}
+ ],
+		"lines" : [ 			{
+				"patchline" : 				{
+					"destination" : [ "obj-34", 1 ],
+					"disabled" : 0,
+					"hidden" : 0,
+					"source" : [ "obj-1", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-21", 0 ],
+					"disabled" : 0,
+					"hidden" : 0,
+					"source" : [ "obj-34", 3 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-25", 0 ],
+					"disabled" : 0,
+					"hidden" : 0,
+					"source" : [ "obj-34", 2 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-4", 0 ],
+					"disabled" : 0,
+					"hidden" : 0,
+					"source" : [ "obj-34", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-6", 0 ],
+					"disabled" : 0,
+					"hidden" : 0,
+					"source" : [ "obj-34", 1 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-34", 0 ],
+					"disabled" : 0,
+					"hidden" : 0,
+					"source" : [ "obj-43", 0 ]
+				}
+
+			}
+ ]
+	}
+
+}

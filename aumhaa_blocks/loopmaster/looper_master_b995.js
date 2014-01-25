@@ -4,10 +4,12 @@ inlets = 2;
 outlets = 2;
 
 var DEBUG = 0;
+var FORCELOAD = false;
 
-var MONOPEDAL=new RegExp(/(MonOhm)/);
+//var MONOPEDAL=new RegExp(/(MonOhm)/);
 var AUMTROLL = new RegExp(/(AumTroll)/);
 var MONOHM = new RegExp(/(MonOhm)/);
+var MONOPEDAL = new RegExp(/(MonoPedal)/);
 var wiki_page_addy = 'http://www.aumhaa.com/wiki/index.php?title=LoopMaster';
 ////this section is necessary for basic operations
 undefined = (function(){var u; return u;})();	 ///required to return an actual 'undefined', in case its variable name gets reassigned
@@ -39,6 +41,7 @@ var POBJ = ['waveform', 'muteui', 'speedui', 'quantizemenuui', 'offsetui', 'auto
  				'muteui', 'feedbackui', 'inputui', 'inloopui', 'inertiaui', 'autoselectui', 'selectedui', 'relativeui',
  				'loopui', 'clearui', 'reverseui', 'undoui', 'overdubui', 'quantizerecordui', 'beatui', 'timer'];
 var state_color={'mute':[1, 1, 1], 'recording':[1, 0, 0], 'empty':[.45, .45, .45], 'playing':[0, 1, 0], 'overdubbing':[0, 0, 1], 'awaiting_record':[.5, .0, .3], 'muted':[0, 0, 0]};
+var Colors={'mute':1, 'recording':5, 'empty':2, 'playing':6, 'overdubbing':3, 'awaiting_record':4, 'muted':1};
 var sync_color=[[0, 0, 0], [.3, .3, .3], [.6, .6, .6], [1, 1, 1]];
 var front=0;
 var auto=1;
@@ -56,6 +59,7 @@ var	sel_loop_number = 0;
 var sender;
 
 var	pedal = [];
+var leds = [];
 var	expression;
 var hold = 0;
 var connected = false;
@@ -103,6 +107,19 @@ for(var i=0;i<16;i++)
 	}
 }
 	
+function send_led(){}
+
+function _send_led(num, val)
+{
+	if((typeof(val) == 'number')&&(leds[num]))
+	{
+		leds[num].call('send_value', val);
+	}
+	else if(DEBUG)
+	{
+		post('led exception:', val, typeof(val));
+	}
+}
 
 function current_settings(looper_id, looper_number, phase, state, speed, overdub, quantize_record_enabled, quantize_record_menu, offset, mute, feedback, input, inertia, loop_end, quantize_record_relative)
 {
@@ -170,6 +187,13 @@ function init()
 	}
 	master.sel_loop = all_loops;
 	create_loops();
+	for(var i in script)
+	{
+		if((/^_/).test(i))
+		{
+			script[i.replace('_', "")] = script[i];
+		}
+	}
 	alive = 1;
 	messnamed('maxlooper', 'register');
 	master.timer.message('bang');
@@ -186,7 +210,16 @@ function connect()
 		{
 			surface.goto('control_surfaces', i);
 			//post('type:', surface.type);
-			if((MONOPEDAL.test(surface.type))||(AUMTROLL.test(surface.type)))
+			if(MONOPEDAL.test(surface.type))
+			{
+				connected = true;
+				assign_monopedal_api(i);
+				break;
+			}
+		}
+		for(var i= 0;i<6;i++)
+		{
+			if((MONOHM.test(surface.type))||(AUMTROLL.test(surface.type)))
 			{
 				connected = true;
 				assign_api(i);
@@ -194,6 +227,30 @@ function connect()
 			}
 		}
 	}
+}
+
+function assign_monopedal_api(cs)
+{
+    ///these three are necessary for the rest of functionality to work, don't change them
+    //surface=new LiveAPI(this.patcher, 'control_surfaces', cs);
+	post('assigning monobutton api elements....');
+    surface.num=cs;
+    get_instance_names();
+	var hold = [0, 0, 0, 8, 4, 2, 1];
+	for (var i=0;i<7;i++)
+    {
+        pedal[i]=element('Pedal_'+i, 'pedal', cb_new_pedals, 'controls', 'value', [['num', i], ['last', 0], ['hold', hold[i]]]);
+    }
+    expression=element('Pedal_7', 'expression', cb_new_expression, 'controls', 'value', [['num', 0]]);
+	//pedal[10]=element('Scene_Pedal_4', 'pedal', cb_reset, 'controls', 'value', [['num', 10]]);
+	script.send_led = script._send_led;
+	for (var i=0;i<4;i++)
+	{
+		leds[i]=element('LED_'+i, 'led', dummy_callback, 'controls', 'value', [['num', i]]);
+		//leds[i].call('send_value', 3);
+		send_led(i, 1);
+	}
+    post("Done building MonoPedal API Objects.\n");
 }
 
 function assign_api(cs)
@@ -386,7 +443,7 @@ function cb_new_pedals(args)
 
 function cb_new_expression(args)
 {
-	if(DEBUG){post('expression', args, '\n');}
+	//if(DEBUG){post('expression', args, '\n');}
 	if((args[0]=='value')&&(args[1]!='bang'))
 	{
 		//fb_sample.pop();
@@ -437,6 +494,8 @@ function cb_expression(args)
 		}
 	}
 }
+
+function dummy_callback(){}
 
 function get_instance_names()
 {
@@ -571,7 +630,7 @@ function register(number, id, waveform)
 {
 	if(alive>0)
 	{
-		//post('create_looper', number);
+		post('create_looper', number);
 		looper[number]=new_looper(number, id, waveform);
 		looper[number].handshake();
 		master.waveform[number].message('set', looper[number].waveform);  ///is this the culprit??
@@ -825,7 +884,7 @@ function phase(number, phase)
 		if(dial[number]!=undefined)
 		{
 			//var dir = Math.abs((phase - looper[number].last_phase)>0)
-			var dir = looper[number].direction
+			var dir = looper[number] ? looper[number].direction : 1;
 			//post('phase', phase, '\n');
 			dial[number].state.message("set", parseInt(phase*360));
 			dial[number].state_main.message("set", parseInt(phase*360));
@@ -895,6 +954,7 @@ function set_loop_number(number)
 					{
 						sender.message('/loop_lcd/pos'+i+'/set_bg', 1, 1, 1);
 					}
+					send_led(i, Colors[looper[i] ? looper[i].state : 1] + 21);
 				}
 				else
 				{
@@ -904,6 +964,7 @@ function set_loop_number(number)
 					{
 						sender.message('/loop_lcd/pos'+i+'/set_bg', .4, .4, .4);
 					}
+					send_led(i, Colors[looper[i] ? looper[i].state : 'empty']);
 				}
 			}
 			//for(var j=0;j<4;j++)
@@ -922,6 +983,7 @@ function set_loop_number(number)
 				}
 				dial[i].state.bgcolor(1,1,1,.5);
 				dial[i].state_main.bgcolor(1,1,1,.5);
+				send_led(i, looper[i] ? Colors[looper[i].state] + 21 : 21);
 			}
 		}
 		if(lcd_view>0)
@@ -1031,6 +1093,9 @@ function looper_state(looper_id, looper_num, val, loop_end)
 		{
 			sender.message('/loop_lcd/st'+looper_num+'/set_color', state_color[val][0], state_color[val][1], state_color[val][2]);
 		}
+		looper[looper_num].state = val;
+		if(DEBUG){post('changing buttons state:', val, '\n');}
+		send_led(looper_num, Colors[val] + (21*(looper_num == (sel_loop_number-1))));
 		//post('master waveform', loop_end, '\n');
 		if(loop_end!=undefined)
 		{
@@ -1295,6 +1360,7 @@ function clear_lcd()
 			sender.message('/loop_lcd/pos'+i+'/set_bg', 0, 0, 0);
 			sender.message('/loop_lcd/st'+i+'/set_color', 0, 0, 0);
 			sender.message('/loop_lcd/fb'+i+'/x', 0);
+			send_led(i, 0);
 		}
 	}
 }
@@ -1637,3 +1703,14 @@ function remote(val)
 	remote_val = val;
 	//post('remote', remote_val, '\n');
 }
+
+//used to reinitialize the script immediately on saving; 
+//can be turned on by changing FORCELOAD to 1;
+//should only be turned on while editing
+
+function forceload()
+{
+	if(FORCELOAD){init(1);}
+}
+
+forceload();
