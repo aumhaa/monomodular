@@ -21,7 +21,7 @@ from _Framework.ModeSelectorComponent import ModeSelectorComponent # Class for s
 from _Framework.NotifyingControlElement import NotifyingControlElement # Class representing control elements that can send values
 from _Framework.SessionComponent import SessionComponent # Class encompassing several scene to cover a defined section of Live's session
 from _Framework.TransportComponent import TransportComponent # Class encapsulating all functions in Live's transport section
-
+from _Framework.Task import *
 from _Generic.Devices import *
 
 """Imports from _Mono_Framework"""
@@ -373,6 +373,7 @@ class Codec(ControlSurface):
 		self._shift_pressed = 0
 		self._shift_pressed_timer = 0
 		self._shift_thresh = SHIFT_THRESH
+		self._shift_fix = time.clock()
 		self._use_device_selector = USE_DEVICE_SELECTOR
 		self._device_selection_follows_track_selection=FOLLOW
 		self._leds_last = 0
@@ -599,15 +600,22 @@ class Codec(ControlSurface):
 		self._shift_pressed = int(value != 0)
 		if self._shift_pressed > 0:
 			self._send_midi(SLOWENCODER)
-			if (self._shift_pressed_timer + self._shift_thresh) > self._timer:
-				#if(self._host.is_enabled() != True)
+		else:
+			if self._shift_pressed_timer > 0:
 				self.log_message('mod mode: ' + str(abs(self._monomod_mode._mode_index - 1)))
 				self._monomod_mode.set_mode(max(0, min(1, abs(self._monomod_mode._mode_index - 1))))
-				#else:
-				#	self._monomod_mode.set_mode(0)
-			self._shift_pressed_timer = self._timer % 256
-		else:
+				self._shift_pressed_timer = 0
+			else:
+				if self._shift_pressed_timer == 0:
+					self._shift_pressed_timer = 1
+					self.schedule_message(int(self._shift_thresh), self._shift_timer)
 			self._send_midi(NORMALENCODER)
+		if self._shift_button != None:
+			self._shift_button.send_value(self._shift_pressed + (28*self._monomod_mode._mode_index))
+	
+
+	def _shift_timer(self, *a, **k):
+		self._shift_pressed_timer = 0
 	
 
 	def _mod_mode_update(self):
@@ -668,14 +676,19 @@ class Codec(ControlSurface):
 			self._mixer.channel_strip(index).set_pan_control(None)
 			self._mixer.channel_strip(index).set_send_controls(tuple([None, None, None, None]))
 		for index in range(4):
+			self._device[index].set_on_off_button(None)
+			self._device[index].set_lock_button(None)
+			self._device[index].set_bank_nav_buttons(None, None)
+			self._device[index].set_nav_buttons(None, None)
 			self._device[index].set_enabled(False)
 			self._device[index]._parameter_controls = None
-			#self._device_navigator[index].set_enabled(False)
 		self._special_device.set_enabled(False)
 		self._special_device._parameter_controls = None
 		self._device_selector.set_enabled(False)
 		self._deassign_buttons()
 		for control in self.controls:
+			if isinstance(control, ButtonElement):
+				control.release_parameter()
 			control.reset()
 		self.request_rebuild_midi_map()
 	
@@ -714,6 +727,10 @@ class Codec(ControlSurface):
 			device_param_controls = []
 			for control in range(8):
 				device_param_controls.append(self._dial[control][index])
+			self._device[index].set_on_off_button(self._button[1][index])
+			self._device[index].set_lock_button(self._button[2][index])
+			self._device[index].set_bank_nav_buttons(self._button[4][index], self._button[5][index])
+			self._device[index].set_nav_buttons(self._button[6][index], self._button[7][index])
 			self._device[index].set_parameter_controls(tuple(device_param_controls))
 			self._device[index].set_enabled(True)
 		self._device_selector.set_enabled(self._use_device_selector)
@@ -765,7 +782,8 @@ class Codec(ControlSurface):
 				button.remove_value_listener(self._device_select_value)
 		if self._session._is_linked():
 			self._session._unlink()
-		self.song().view.remove_selected_track_listener(self._update_selected_device)
+		if self.song().view.selected_track_has_listener(self._update_selected_device):
+			self.song().view.remove_selected_track_listener(self._update_selected_device)
 		"""for cs in self._control_surfaces():
 			for host in self._hosts:
 				self.log_message('installed: ' + str(cs) + ' vs. ' + str(host))
@@ -820,8 +838,6 @@ class Codec(ControlSurface):
 	def update_display(self):
 		ControlSurface.update_display(self)		#since we are overriding this from the inherited method, we need to call the original routine as well
 		self._timer = (self._timer + 1) % 256
-		if(self._timer == 0):
-			self._shift_pressed_timer = -12
 		if(self._local_ring_control is False):
 			self.send_ring_leds()
 		self.flash()

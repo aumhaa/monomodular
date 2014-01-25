@@ -50,23 +50,23 @@ class CodecDeviceComponent(DeviceComponent):
 	
 
 	def _bank_up_value(self, value):
-		if not self._script._shift_pressed and self.is_enabled():
-			DeviceComponent._bank_up_value(self, value)
+		if (not self._script._shift_pressed) and self.is_enabled():
+			super(CodecDeviceComponent, self)._bank_up_value(value)
 	
 
 	def _bank_down_value(self, value):
-		if not self._script._shift_pressed and self.is_enabled():
-			DeviceComponent._bank_down_value(self, value)
+		if (not self._script._shift_pressed) and self.is_enabled():
+			super(CodecDeviceComponent, self)._bank_down_value(value)
 	
 
 	def _on_off_value(self, value):
-		if not self._script._shift_pressed and self.is_enabled():
-			DeviceComponent._on_off_value(self, value)
+		if (not self._script._shift_pressed) and self.is_enabled():
+			super(CodecDeviceComponent, self)._on_off_value(value)
 	
 
 	def _bank_value(self, value):
-		if not self._script._shift_pressed and self.is_enabled():
-			DeviceComponent._bank_value(self, value)
+		if (not self._script._shift_pressed) and self.is_enabled():
+			super(DeviceComponent, self)._bank_value(value)
 	
 
 	def display_device(self):
@@ -144,17 +144,18 @@ class CodecDeviceComponent(DeviceComponent):
 	
 
 	def _nav_value(self, value, sender):
-		if not self._script._shift_pressed:
-			assert ((sender != None) and (sender in (self._prev_button, self._next_button)))
-			if self.is_enabled() and not self.is_locked() and value != 0:		# and (not self._shift_pressed)):
-				if ((not sender.is_momentary()) or (value != 0)):
-					if self._script._device_component != self:
-						self._script.set_device_component(self)
-					direction = Live.Application.Application.View.NavDirection.left
-					if (sender == self._next_button):
-						direction = Live.Application.Application.View.NavDirection.right
-					self.application().view.scroll_view(direction, 'Detail/DeviceChain', True)
-					self.update()
+		if self.is_enabled():
+			if not self._script._shift_pressed:
+				assert ((sender != None) and (sender in (self._prev_button, self._next_button)))
+				if self.is_enabled() and not self.is_locked() and value != 0:		# and (not self._shift_pressed)):
+					if ((not sender.is_momentary()) or (value != 0)):
+						if self._script._device_component != self:
+							self._script.set_device_component(self)
+						direction = Live.Application.Application.View.NavDirection.left
+						if (sender == self._next_button):
+							direction = Live.Application.Application.View.NavDirection.right
+						self.application().view.scroll_view(direction, 'Detail/DeviceChain', True)
+						self.update()
 	
 
 	def update(self):
