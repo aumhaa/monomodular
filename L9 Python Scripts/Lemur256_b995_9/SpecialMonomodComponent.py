@@ -456,3 +456,18 @@ class SpecialMonomodComponent(CompoundComponent):
 	def _update_wheel(self):
 		pass
 	
+	"""CNTRLR specific methods"""
+	def _send_c_grid(self, column, row, value):		#to be sent to controller from client
+		pass
+	
+
+	def _send_c_key(self, index, value):
+		pass
+	
+
+	def _send_c_wheel(self, column, row, wheel, parameter=None):		#to be sent to controller from client
+		pass
+	
+
+	def _update_c_wheel(self):
+		pass

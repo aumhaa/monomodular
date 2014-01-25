@@ -89,6 +89,8 @@ from MonoScaleComponent import MonoScaleComponent
 
 from _Mono_Framework.Mod import *
 
+from ModDevices import *
+
 CHANNEL_TEXT = ['Ch. 1', 'Ch. 2', 'Ch. 3', 'Ch. 4', 'Ch. 5', 'Ch. 6', 'Ch. 7', 'Ch. 8']
 
 DEVICE_COLORS = {'midi_effect':2,

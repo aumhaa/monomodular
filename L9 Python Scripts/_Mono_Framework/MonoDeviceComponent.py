@@ -228,7 +228,6 @@ class MonoDeviceComponent(DeviceComponent):
 					else:
 						host._parameter_controls[index].release_parameter()			
 			else:
-				parameters = self._device_parameters_to_map(host)
 				parameters = self._device_parameters_to_map()
 				num_controls = len(host._parameter_controls)
 				index = (self._bank_index * num_controls)
@@ -473,7 +472,7 @@ class MonoDeviceComponent(DeviceComponent):
 		#DeviceComponent.set_parameter_controls(self, controls)"""
 	
 
-	def _device_parameters_to_map(self, host):
+	def _device_parameters_to_map(self):
 		raise self.is_enabled() or AssertionError
 		raise self._device != None or AssertionError
 		raise host._parameter_controls != None or AssertionError
