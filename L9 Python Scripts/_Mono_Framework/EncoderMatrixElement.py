@@ -3,6 +3,8 @@
 from __future__ import with_statement
 
 import contextlib
+from _Framework.Util import product
+
 from _Framework.EncoderElement import EncoderElement 
 from _Framework.SubjectSlot import SubjectEvent
 from _Framework.Signal import Signal
@@ -121,4 +123,6 @@ class EncoderMatrixElement(NotifyingControlElement):
 		"""for entry in self._value_notifications:
 			callback = entry['Callback']
 			callback(value, coordinates[0], coordinates[1])"""
+	
+
 

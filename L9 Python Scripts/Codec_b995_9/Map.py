@@ -8,8 +8,6 @@ Copyright (c) 2010 __artisia__. All rights reserved.
 
 This file allows the reassignment of the controls from their default arrangement.  The order is from left to right; 
 Buttons are Note #'s and Faders/Rotaries are Controller #'s
-There will eventually be a way to reassign the functions accessed by the different shift modes from this file as well....
-Hold tight ;)
 """
 CHANNEL = 0		#main channel (0 - 15)
 

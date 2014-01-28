@@ -189,13 +189,30 @@ class Codex(Codec):
 		self._alt_send_reset.name = 'Alt_Reset_Sends'
 	
 
+	"""these two secondary DeviceComponents are only set up if the MONOHM_LINK flag in .Map is turned on"""
+	def _setup_alt_device_control(self):
+		self._device1 = NewDeviceComponent()
+		self._device1.name = 'Device_Component1'
+		self._device2 = NewDeviceComponent()
+		self._device2.name = 'Device_Component2'
+	
+
+	def _setup_alt_mixer(self):
+		is_momentary = True
+		self._num_tracks = (8) #A mixer is one-dimensional
+		self._mixer2 = MixerComponent(8, 4, False, False)
+		self._mixer2.name = 'Mixer'
+		#self._mixer2.set_track_offset(4) #Sets start point for mixer strip (offset from left)
+		for index in range(8):
+			self._mixer2.channel_strip(index).name = 'Mixer_ChannelStrip_' + str(index)
+			self._mixer2.channel_strip(index)._invert_mute_feedback = True
+	
+
 	"""Mode Functions"""
 	def _shift_update(self):
 		if(self._shift_mode.is_enabled()):
 			with self.component_guard():
 				self.allow_updates(False)
-				#if(not self._in_build_midi_map):
-				#	self.set_suppress_rebuild_requests(True)
 				self._deassign_all()
 				if(self._shift_mode._mode_index is 0):
 					#self._assign_volume()
@@ -212,15 +229,12 @@ class Codex(Codec):
 					else:
 						self._shift_mode._modes_buttons[index].turn_off()
 				self.allow_updates(True)
-				#self.set_suppress_rebuild_requests(False)
 				self.request_rebuild_midi_map()
 	
 
 	def _shift_value(self, value):
 		super(Codex, self)._shift_value(value)
-		if self._monomod_mode._mode_index == 0 and self._shift_mode._mode_index is 0:
-			self._deassign_all()
-			self._assign_aumtroll_cntrls()
+		self._shift_update()
 	
 
 	def _deassign_all(self):
@@ -240,6 +254,7 @@ class Codex(Codec):
 		self._device2._parameter_controls = None
 		self._mixer2.return_strip(0).set_send_controls(None)
 		self._mixer2.return_strip(1).set_send_controls(None)
+		self._mixer2.return_strip(2).set_send_controls(None)
 		super(Codex, self)._deassign_all()
 		for button, _ in self._button_matrix.iterbuttons():
 			button.send_value(0, True)
@@ -247,39 +262,38 @@ class Codex(Codec):
 	
 
 	def _assign_aumtroll_cntrls(self):
-
-			if self._shift_pressed:
-				inputs = self.find_inputs()
-				if not inputs is None:
-					for index in range(4):
-						self._dial[index][2].connect_to(inputs.parameters[index+1])
-					self._dial[6][2].connect_to(inputs.parameters[5])
-				xfade = self.find_perc_crossfader()
-				if not xfade is None:
-					self._dial[7][3].connect_to(xfade)
-				self._alt_device_selector.set_mode_buttons(tuple([self._button[index%8][int(index/8)] for index in range(16)]))
-				self._alt_device_selector.set_enabled(True)
-				self._mixer2.return_strip(0).set_send_controls([None, self._dial[4][2]])
-				self._mixer2.return_strip(1).set_send_controls([self._dial[5][2], None])
-			else:
-				self._alt_send_reset.set_buttons(tuple([self._button[4][2], self._button[5][2], self._button[6][2], self._button[7][2]]))
-				self._alt_send_reset.set_enabled(True)
-				self._mixer2.set_crossfader_control(self._dial[7][2])
-				self._mixer2.selected_strip().set_send_controls([self._dial[0][2], self._dial[1][2], self._dial[2][2], self._dial[3][2]])
-				for index in range(3):
-					self._mixer2.return_strip(index).set_volume_control(self._dial[index+4][2])
-				self._device1.set_parameter_controls(tuple([self._dial[index%4][int(index/4)] for index in range(8)]))
-				self._device2.set_parameter_controls(tuple([self._dial[(index%4)+4][int(index/4)] for index in range(8)]))
-				self._device1.set_enabled(True)
-				self._device2.set_enabled(True)
-				self._find_devices()
-				self._device1.update()
-				self._device2.update()
-			for index in range(8):
-				self._mixer2.channel_strip(index).set_volume_control(self._dial[index][3])
-				self._mixer2.channel_strip(index).set_select_button(self._column_button[index])
-				self._mixer2.channel_strip(index).set_mute_button(self._button[index][3])
-			#self._mixer2.set_track_offset(TROLL_OFFSET)
+		if self._shift_pressed:
+			inputs = self.find_inputs()
+			if not inputs is None:
+				for index in range(4):
+					self._dial[index][2].connect_to(inputs.parameters[index+1])
+				self._dial[6][2].connect_to(inputs.parameters[5])
+			xfade = self.find_perc_crossfader()
+			if not xfade is None:
+				self._dial[7][3].connect_to(xfade)
+			self._alt_device_selector.set_mode_buttons(tuple([self._button[index%8][int(index/8)] for index in range(16)]))
+			self._alt_device_selector.set_enabled(True)
+			self._mixer2.return_strip(0).set_send_controls([None, self._dial[4][2]])
+			self._mixer2.return_strip(1).set_send_controls([self._dial[5][2], None])
+		else:
+			self._alt_send_reset.set_buttons(tuple([self._button[4][2], self._button[5][2], self._button[6][2], self._button[7][2]]))
+			self._alt_send_reset.set_enabled(True)
+			self._mixer2.selected_strip().set_send_controls([self._dial[0][2], self._dial[1][2], self._dial[2][2], self._dial[3][2]])
+			for index in range(3):
+				self._mixer2.return_strip(index).set_volume_control(self._dial[index+4][2])
+			self._mixer2.set_crossfader_control(self._dial[7][2])
+			self._device1.set_parameter_controls(tuple([self._dial[index%4][int(index/4)] for index in range(8)]))
+			self._device2.set_parameter_controls(tuple([self._dial[(index%4)+4][int(index/4)] for index in range(8)]))
+			self._device1.set_enabled(True)
+			self._device2.set_enabled(True)
+			self._find_devices()
+			self._device1.update()
+			self._device2.update()
+		for index in range(8):
+			self._mixer2.channel_strip(index).set_volume_control(self._dial[index][3])
+			self._mixer2.channel_strip(index).set_select_button(self._column_button[index])
+			self._mixer2.channel_strip(index).set_mute_button(self._button[index][3])
+		#self._mixer2.set_track_offset(TROLL_OFFSET)
 
 	
 
@@ -307,24 +321,6 @@ class Codex(Codec):
 		return found_parameter
 	
 
-	"""these two secondary DeviceComponents are only set up if the MONOHM_LINK flag in .Map is turned on"""
-	def _setup_alt_device_control(self):
-		self._device1 = NewDeviceComponent()
-		self._device1.name = 'Device_Component1'
-		self._device2 = NewDeviceComponent()
-		self._device2.name = 'Device_Component2'
-	
-
-	def _setup_alt_mixer(self):
-		is_momentary = True
-		self._num_tracks = (8) #A mixer is one-dimensional
-		self._mixer2 = MixerComponent(8, 4, False, False)
-		self._mixer2.name = 'Mixer'
-		#self._mixer2.set_track_offset(4) #Sets start point for mixer strip (offset from left)
-		for index in range(8):
-			self._mixer2.channel_strip(index).name = 'Mixer_ChannelStrip_' + str(index)
-			self._mixer2.channel_strip(index)._invert_mute_feedback = True
-	
 
 	"""this method is used to find the devices the alt controls will latch to"""
 	def _find_devices(self):

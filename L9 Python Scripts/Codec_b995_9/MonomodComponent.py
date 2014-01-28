@@ -498,8 +498,8 @@ class MonomodComponent(CompoundComponent):
 				self._display_bank()
 				self._send_nav_box()
 			else:
-				self._update_wheel()
 				self._update_grid()
+				self._update_wheel()
 			self._update_keys()
 			self._update_nav_buttons()
 			self._update_shift_button()
@@ -733,6 +733,7 @@ class MonomodComponent(CompoundComponent):
 		if self.is_enabled() and not self._active_client._device_component.is_enabled():
 			self._script.notification_to_bridge(str(wheel['pn']), str(wheel['pv']), self._dial_matrix.get_dial(column, row))
 	
+
 
 	"""CNTRLR specific methods"""
 	def _send_c_grid(self, column, row, value):		#to be sent to controller from client

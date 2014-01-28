@@ -313,6 +313,8 @@ function init(val)
 	}
 }
 
+//function init(){}
+
 //make a closure to hold the setter function for any object in the poly patcher that is contained in the Objs dict
 function make_obj_setter(part, obj)
 {

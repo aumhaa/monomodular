@@ -361,7 +361,7 @@ function dissolve()
 {
 	hide_functions();
 	post(patch_type, ' mod.js dissolved!\n');
-	iniitiated = false;
+	initiated = false;
 	preview = false;
 	connected = false;
 	messnamed(unique+'alive', 0);

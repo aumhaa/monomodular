@@ -38,8 +38,8 @@ var feedback = [];
 var fb_sample = [0, 0, 0];
 var fb_last = -1;
 var POBJ = ['waveform', 'muteui', 'speedui', 'quantizemenuui', 'offsetui', 'autohideui', 'lcdui', 'remoteui',
- 				'muteui', 'feedbackui', 'inputui', 'inloopui', 'inertiaui', 'autoselectui', 'selectedui', 'relativeui',
- 				'loopui', 'clearui', 'reverseui', 'undoui', 'overdubui', 'quantizerecordui', 'beatui', 'timer'];
+				'muteui', 'feedbackui', 'inputui', 'inloopui', 'inertiaui', 'autoselectui', 'selectedui', 'relativeui',
+				'loopui', 'clearui', 'reverseui', 'undoui', 'overdubui', 'quantizerecordui', 'beatui', 'timer'];
 var state_color={'mute':[1, 1, 1], 'recording':[1, 0, 0], 'empty':[.45, .45, .45], 'playing':[0, 1, 0], 'overdubbing':[0, 0, 1], 'awaiting_record':[.5, .0, .3], 'muted':[0, 0, 0]};
 var Colors={'mute':1, 'recording':5, 'empty':2, 'playing':6, 'overdubbing':3, 'awaiting_record':4, 'muted':1};
 var sync_color=[[0, 0, 0], [.3, .3, .3], [.6, .6, .6], [1, 1, 1]];
@@ -54,13 +54,13 @@ var lcd_view=1;
 var zoomfactor=1.;
 var screen_position=.05;
 var num_loops = 4;
-var	sel_loop_number = 0;
+var sel_loop_number = 0;
 
 var sender;
 
-var	pedal = [];
+var pedal = [];
 var leds = [];
-var	expression;
+var expression;
 var hold = 0;
 var connected = false;
 
@@ -231,17 +231,17 @@ function connect()
 
 function assign_monopedal_api(cs)
 {
-    ///these three are necessary for the rest of functionality to work, don't change them
-    //surface=new LiveAPI(this.patcher, 'control_surfaces', cs);
+	///these three are necessary for the rest of functionality to work, don't change them
+	//surface=new LiveAPI(this.patcher, 'control_surfaces', cs);
 	post('assigning monobutton api elements....');
-    surface.num=cs;
-    get_instance_names();
+	surface.num=cs;
+	get_instance_names();
 	var hold = [0, 0, 0, 8, 4, 2, 1];
 	for (var i=0;i<7;i++)
-    {
-        pedal[i]=element('Pedal_'+i, 'pedal', cb_new_pedals, 'controls', 'value', [['num', i], ['last', 0], ['hold', hold[i]]]);
-    }
-    expression=element('Pedal_7', 'expression', cb_new_expression, 'controls', 'value', [['num', 0]]);
+	{
+		pedal[i]=element('Pedal_'+i, 'pedal', cb_new_pedals, 'controls', 'value', [['num', i], ['last', 0], ['hold', hold[i]]]);
+	}
+	expression=element('Pedal_7', 'expression', cb_new_expression, 'controls', 'value', [['num', 0]]);
 	//pedal[10]=element('Scene_Pedal_4', 'pedal', cb_reset, 'controls', 'value', [['num', 10]]);
 	script.send_led = script._send_led;
 	for (var i=0;i<4;i++)
@@ -250,23 +250,23 @@ function assign_monopedal_api(cs)
 		//leds[i].call('send_value', 3);
 		send_led(i, 1);
 	}
-    post("Done building MonoPedal API Objects.\n");
+	post("Done building MonoPedal API Objects.\n");
 }
 
 function assign_api(cs)
 {
-    ///these three are necessary for the rest of functionality to work, don't change them
-    //surface=new LiveAPI(this.patcher, 'control_surfaces', cs);
-    surface.num=cs;
-    get_instance_names();
+	///these three are necessary for the rest of functionality to work, don't change them
+	//surface=new LiveAPI(this.patcher, 'control_surfaces', cs);
+	surface.num=cs;
+	get_instance_names();
 	var hold = [0, 0, 0, 8, 4, 2, 1];
 	for (var i=0;i<7;i++)
-    {
-        pedal[i]=element('Pedal_'+i, 'pedal', cb_new_pedals, 'controls', 'value', [['num', i], ['last', 0], ['hold', hold[i]]]);
-    }
-    expression=element('Pedal_7', 'expression', cb_new_expression, 'controls', 'value', [['num', 0]]);
+	{
+		pedal[i]=element('Pedal_'+i, 'pedal', cb_new_pedals, 'controls', 'value', [['num', i], ['last', 0], ['hold', hold[i]]]);
+	}
+	expression=element('Pedal_7', 'expression', cb_new_expression, 'controls', 'value', [['num', 0]]);
 	//pedal[10]=element('Scene_Pedal_4', 'pedal', cb_reset, 'controls', 'value', [['num', 10]]);
-    post("Done building MonoPedal API Objects.\n");
+	post("Done building MonoPedal API Objects.\n");
 }
 
 function cb_pedals(args)
@@ -499,130 +499,130 @@ function dummy_callback(){}
 
 function get_instance_names()
 {
-    components=[];
-    controls=[];
-    var cont_count=surface.getcount('controls');
-    var comp_count=surface.getcount('components');
-    for(var i=0;i<comp_count;i++)
-    {
-        surface.goto('components', i);
-        components[surface.get('name')]=i;
-        surface.goto('control_surfaces', surface.num);
-    }
-    for(var j=0;j<cont_count;j++)
-    {
-        surface.goto('controls', j);
-        controls[surface.get('name')]=j;
-        surface.goto('control_surfaces', surface.num);
-    }
+	components=[];
+	controls=[];
+	var cont_count=surface.getcount('controls');
+	var comp_count=surface.getcount('components');
+	for(var i=0;i<comp_count;i++)
+	{
+		surface.goto('components', i);
+		components[surface.get('name')]=i;
+		surface.goto('control_surfaces', surface.num);
+	}
+	for(var j=0;j<cont_count;j++)
+	{
+		surface.goto('controls', j);
+		controls[surface.get('name')]=j;
+		surface.goto('control_surfaces', surface.num);
+	}
 }
-    
+	
 ///for godsake, don't fuck with this!!!!
 function element(api_name, name, callback, type, property, extras)
 {
-    var new_element=new LiveAPI(callback, 'control_surfaces', surface.num, type, find_by_api_name(api_name, type));
-    new_element.n=name;
-    if(extras)
-    {
-        for(var e=0;e<extras.length;e++)
-        {
-            eval('new_element.'+extras[e][0]+'='+extras[e][1]+';');
-        }
-    }
-    if(property != undefined)
-    {
-        new_element.property=property;
-    }
-    new_element.array_index = function()
-    {
-        for(index in elements)
-        {
-            if(elements[index]==this)
-            {
-                return index;
-            }
-        }
-    }
-    new_element.destroy = function()
-    {
-        for(index in elements)
-        {
-            if(elements[index]==this)
-            {
-                if(this.property)
-                {
-                    this.property=0;
-                }
-                this.id=0;
-                for(var prop in this)
-                {
-                    delete this[prop];
-                }
-                delete elements[index];
-                clear_value(this);
-                gc(this);
-            }
-        }
-    }
-    elements.push(new_element);
-    return new_element;
+	var new_element=new LiveAPI(callback, 'control_surfaces', surface.num, type, find_by_api_name(api_name, type));
+	new_element.n=name;
+	if(extras)
+	{
+		for(var e=0;e<extras.length;e++)
+		{
+			eval('new_element.'+extras[e][0]+'='+extras[e][1]+';');
+		}
+	}
+	if(property != undefined)
+	{
+		new_element.property=property;
+	}
+	new_element.array_index = function()
+	{
+		for(index in elements)
+		{
+			if(elements[index]==this)
+			{
+				return index;
+			}
+		}
+	}
+	new_element.destroy = function()
+	{
+		for(index in elements)
+		{
+			if(elements[index]==this)
+			{
+				if(this.property)
+				{
+					this.property=0;
+				}
+				this.id=0;
+				for(var prop in this)
+				{
+					delete this[prop];
+				}
+				delete elements[index];
+				//clear_value(this);
+				//gc(this);
+			}
+		}
+	}
+	elements.push(new_element);
+	return new_element;
 }
 
 function make_prop(args)
 {
-    var new_array=new Array()
-    for(var i = 0;i<args.length;i+2);
-    {
-        var next_array=new Array(args[i], args[i+1]);
-        new_array.push(next_array);
-        delete next_array();
-    }
-    //for(array in new_array)
-    //{
-    //    post(array[0], array[1])
-    //}
-    return(new_array);
-    delete new_array;
+	var new_array=new Array()
+	for(var i = 0;i<args.length;i+2);
+	{
+		var next_array=new Array(args[i], args[i+1]);
+		new_array.push(next_array);
+		delete next_array;
+	}
+	//for(array in new_array)
+	//{
+	//	  post(array[0], array[1])
+	//}
+	return(new_array);
+	delete new_array;
 }
-    
+	
 function clear_value(object)
 {
-    object=undefined;
+	object=undefined;
 }
 
 ///or this!
 function find_by_api_name(name, type)
 {
-    var new_object_number=0;
-    if(type=='controls')
-    {
-        if(controls[name])
-        {
-            new_object_number=controls[name];
-        }
-    }
-    if(type=='components')
-    {
-        if(components[name])
-        {
-            new_object_number=components[name];
-        }
-    }
-    return new_object_number;
+	var new_object_number=0;
+	if(type=='controls')
+	{
+		if(controls[name])
+		{
+			new_object_number=controls[name];
+		}
+	}
+	if(type=='components')
+	{
+		if(components[name])
+		{
+			new_object_number=components[name];
+		}
+	}
+	return new_object_number;
 }
 
 function dissolve()
 {
-    if(connected==true)
-    {
-        for(var index in elements)
-        {
-            elements[index].destroy();
-        }
-        connected=false;
-        post('LoopMaster script dissolved\n');    
-    }
-    //outlet(3, "dissolve");
+	if(connected==true)
+	{
+		/*for(var index in elements)
+		{
+			elements[index].destroy();
+		}
+		connected=false;*/
+		post('LoopMaster script dissolved\n');	  
+	}
+	//outlet(3, "dissolve");
 }
 ////block ends here
 
@@ -998,7 +998,7 @@ function display_selected(number)
 	outlet(0, 6, 6, ((0==number)*5)+1);
 	outlet(0, 6, 7, ((2==number)*5)+1);
 	outlet(0, 7, 6, ((1==number)*5)+1);
-	outlet(0, 7, 7, ((3==number)*5)+1);	
+	outlet(0, 7, 7, ((3==number)*5)+1); 
 }
 
 function looper_quantize_menu(looper_id, looper_number, item)
@@ -1327,7 +1327,7 @@ function invert(args)
 function set_screen_position(flo)
 {
 	screen_position = flo;
-	init_display();	
+	init_display(); 
 }
 
 function currentstate(a, b, c, d, e)
@@ -1337,7 +1337,7 @@ function currentstate(a, b, c, d, e)
 	x_end = b;
 	y_end = (c * (.03+screen_position))*zoomfactor;///Math.min((c * (.1 + screen_position) * zoomfactor), c);
 	lock();
-	viewer.zoomfactor((b/1280)*zoomfactor);  //I think this is a problem :|
+	viewer.zoomfactor((b/1280)*zoomfactor);	 //I think this is a problem :|
 	viewer.wind.scrollto(0, 0);
 }
 
@@ -1451,11 +1451,11 @@ function lock()
 
 function scale(x,a,b,c,d)
 {
-    var in_dif=((Math.max((a+1000000),(b+1000000)))-(Math.min((a+1000000),(b+1000000))));
-    var in_val=((Math.max((a+1000000),(x+1000000)))-(Math.min((a+1000000),(x+1000000))));
-    var out_dif=((Math.max((c+1000000),(d+1000000)))-(Math.min((c+1000000),(d+1000000))));
-    var out_min=(c+1000000);
-    return(((out_min+(((in_val)/(in_dif))*(out_dif)-1000000)).toFixed(3)));
+	var in_dif=((Math.max((a+1000000),(b+1000000)))-(Math.min((a+1000000),(b+1000000))));
+	var in_val=((Math.max((a+1000000),(x+1000000)))-(Math.min((a+1000000),(x+1000000))));
+	var out_dif=((Math.max((c+1000000),(d+1000000)))-(Math.min((c+1000000),(d+1000000))));
+	var out_min=(c+1000000);
+	return(((out_min+(((in_val)/(in_dif))*(out_dif)-1000000)).toFixed(3)));
 }
 
 ////Patcher Timing////
@@ -1492,9 +1492,9 @@ function clock()
 	for(var a in tasks)
 	{
 		if (script[tasks[a]] instanceof Function)
-	    {
-	        script[tasks[a]].apply(tasks[a],[]);
-	    }
+		{
+			script[tasks[a]].apply(tasks[a],[]);
+		}
 	}
 }
 

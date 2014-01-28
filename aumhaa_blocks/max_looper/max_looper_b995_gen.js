@@ -1,7 +1,7 @@
 autowatch = 1;
 
-var FORCELOAD = true;
-var DEBUG = 1;
+var FORCELOAD = false;
+var DEBUG = 0;
 var DEBUGX = 0;
 
 var script = this;
