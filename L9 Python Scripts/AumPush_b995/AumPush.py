@@ -998,7 +998,7 @@ class AumPush(Push):
 			current_device = self._device_parameter_provider._device
 			mod_device = self._is_mod(current_device)
 			newmod_device = self._is_newmod(current_device)
-			#self.log_message('newmod_device = ' + str(newmod_device))
+			self.log_message('newmod_device = ' + str(newmod_device))
 			#drum_device = find_if(lambda d: d.can_have_drum_pads, track.devices)
 			channelized = False
 			#self.log_message('track has midi input: ' + str(track.has_midi_input) + ' current subrouting in CHANNELS: ' + str(track.current_input_sub_routing))
@@ -1563,19 +1563,20 @@ class PushModHandler(ModHandler):
 		if not self._push_grid == None:
 			if is_id:
 				button = self._push_grid.get_button(x, y)
-				if value._id is -1 and value._channel is -1:
-					button.use_default_message()
-					button.set_enabled(True)
-				else:
-					identifier = value._id
-					if identifier < 0:
-						identifier = button._original_identifier
-					channel = value._channel
-					if channel < 0:
-						channel = button._original_channel
-					button.set_identifier(identifier)
-					button.set_channel(channel)
-					button.set_enabled(False)
+				if not button is None:
+					if value._id is -1 and value._channel is -1:
+						button.use_default_message()
+						button.set_enabled(True)
+					else:
+						identifier = value._id
+						if identifier < 0:
+							identifier = button._original_identifier
+						channel = value._channel
+						if channel < 0:
+							channel = button._original_channel
+						button.set_identifier(identifier)
+						button.set_channel(channel)
+						button.set_enabled(False)
 			else:
 				#this needs to be limited to only size of the grid :(
 				if x < 8 and y < 8:

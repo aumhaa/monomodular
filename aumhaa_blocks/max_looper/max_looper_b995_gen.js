@@ -1,7 +1,7 @@
 autowatch = 1;
 
 var FORCELOAD = false;
-var DEBUG = 0;
+var DEBUG = 1;
 var DEBUGX = 0;
 
 var script = this;
@@ -13,9 +13,50 @@ var dummy = prefix+'dummy';
 var resync = prefix+'resync';
 var looper = [];
 var finder;
-var looper_id = 0;
-var looper_number = -1;
-var registered = 0;
+var this_instance_number = -1;
+
+var INSTANCE = [[6, 6], [7, 6], [6, 7], [7, 7]];
+var grid_position = 0;
+var speed_values = [2, 1, 0, -1, -2];
+var inertia_values = [0, 50, 90, 300, 600];
+var circle = [[[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [4, 1], [4, 2], [4, 3], [4, 4], [3, 4], [2, 4], [1, 4], [0, 4], [0, 3], [0, 2], [0, 1]],
+				[[8, 0], [9, 0], [10, 0], [11, 0], [12, 0], [12, 1], [12, 2], [12, 3], [12, 4], [11, 4], [10, 4], [9, 4], [8, 4], [8, 3], [8, 2], [8, 1]],
+				[[0, 8], [1, 8], [2, 8], [3, 8], [4, 8], [4, 9], [4, 10], [4, 11], [4, 12], [3, 12], [2, 12], [1, 12], [0, 12], [0, 11], [0, 10], [0, 9]],
+				[[8, 8], [9, 8], [10, 8], [11, 8], [12, 8], [12, 9], [12, 10], [12, 11], [12, 12], [11, 12], [10, 12], [9, 12], [8, 12], [8, 11], [8, 10], [8, 9]]];
+var cell_fire = [];
+for(var i=0;i<16;i++)
+{
+	cell_fire[i] = [];
+	for(var j=0;j<16;j++)
+	{
+		cell_fire[i][j] = [-1, (((i>7)+0)+(((j>7)+0)*2))];
+		for(var l=0;l<4;l++)
+		{
+			for(var p=0;p<16;p++)
+			{
+				if((circle[l][p][0] == i)&&(circle[l][p][1] == j))
+				{
+					cell_fire[i][j][0] = p;
+				}
+			}
+		}
+		if(((i%8)>0)&&((i%8)<4)&&((j%8)>0)&&((j%8)<4))
+		{
+			cell_fire[i][j][0] = 17;
+		}
+		else if (((i%8)>5)&&((j%8)<6))
+		{
+			cell_fire[i][j][0] = 18 + (i%2);
+			cell_fire[i][j][2] = j;
+		}
+		else if ((j%8)>5)
+		{
+			cell_fire[i][j][0] = 20 + (j%2);
+			cell_fire[i][j][2] = i;
+		}
+	}
+}
+
 
 var in_loop = 0;
 var	go_to_overdub = 0;
@@ -25,7 +66,7 @@ var loop_start = 0;
 var loop_end = 0;
 var buffer_size = max_time;
 var offset = 240;
-var out_offset = 200;
+
 var fadetime = 100;
 var speed = 1.;
 var inertia = 1000;
@@ -35,28 +76,51 @@ var state = 'empty';
 var mute_status = 0;
 var fb_lvl = 1.0;
 var in_lvl = 1.0;
-var this_feedback = 100;
+
 var quantize_record = {enabled:1, ticks:1920, ms:2142.857178, samples:94500, menu:0, relative:1};
 var position = {ms:0, phase:0, report:0, relative:0};
 var undo_data = {can:false, loop_size: 0, clock_start: 0}
 var samps_per_ms = quantize_record.samples/quantize_record.ms;
 var looper = {};
-var POBJ = ['buffetloop', 'buffetundo', 'bufferloop', 'bufferundo', 'pokeloop', 'looper',
-				'groovespeed', 'grooveend', 'quantization', 'recphase',
-				'offsetui', 'tapeinertia', 'volout', 'feedbackui', 'inputui', 'inloopui', 
-				'overdubui', 'reverseui', 'undoui', 'clearui', 'speedui', 'inertiaui', 'muteui',
-				'quantizerecordui', 'loopui', 'quantizemenuui', 'frommaster', 'fadein', 'fadetime', 
-				'copybuffer', 'relativerecordui', 'calc_record', 'drivesource'];  // 'record', 'buffetin', 'bufferin', 'groovelength', 'latency'
+var POBJ = ['bufferloop', 'bufferundo', 'pokeloop', 'looper',
+			'groovespeed', 'grooveend', 'quantization', 'recphase',
+			'offset', 'tapeinertia', 'volout', 'feedback', 'input',
+			'overdub', 'reverse', 'undo', 'clear', 'speed', 'inertia', 'mute',
+			'quantizerecord', 'loop', 'quantizemenu', 'fadein', 'fadetime', 
+			'relativerecord', 'state', 'position', 'position_remote', 'state_remote']; 
+			// 'record', 'buffetin', 'bufferin', 'groovelength', 'latency', 'inloop', 'frommaster',
+			//'copybuffer', 'calc_record', 'drivesource', 'buffetloop', 'buffetundo', 
 var TOBJ = ['relativetimer',  'metro'];
 var TRIGGER = ['inlet', 'quantize', 'relative', 'quantization', 'buffer_size'];
 var LENGTHS = [1, 2, 4, 8, 16, 32, 64];
+var stored_messages = [];
 
 //var del_chan = new Task(change_poke_channel, this);
 
 function callback(){}
 
-function anything(){}
+function _anything()
+{
+	var args = arrayfromargs(messagename, arguments);
+	if(DEBUG){post('anything:', args, '\n');}
+}
 
+function anything()
+{
+	var args = arrayfromargs(arguments);
+	//if(DEBUG){post('anything', messagename, args, '\n');}
+	if(finder == null)
+	{
+		//if(DEBUG){post('adding to stack:', messagename, args, '\n');}
+		if(stored_messages.length>500)
+		{
+			stored_messages.shift();
+		}
+		stored_messages.push([messagename, args]);
+		//if(DEBUG){post('added:', stored_messages[0], '\n');}
+	}
+}
+	
 //called when live.this_device bangs
 function init()
 {
@@ -84,30 +148,71 @@ function init()
 	looper.looper.message('Loop', buffer_loop);
 	//looper.bufferloop.message('size', max_time);
 	looper.groovespeed.message('float', 1.0);
-	looper.quantizemenuui.message('int', looper.quantizemenuui.getvalueof());
-	looper.quantizerecordui.message('int', looper.quantizerecordui.getvalueof());
-	looper.offsetui.message('int', looper.offsetui.getvalueof());
-	looper.feedbackui.message('float', looper.feedbackui.getvalueof());
-	looper.inputui.message('float', looper.inputui.getvalueof());
-	looper.speedui.message('float', looper.speedui.getvalueof());
-	looper.inertiaui.message('int', looper.inertiaui.getvalueof());
+	looper.quantizemenu.message('int', looper.quantizemenu.getvalueof());
+	looper.quantizerecord.message('int', looper.quantizerecord.getvalueof());
+	looper.offset.message('int', looper.offset.getvalueof());
+	looper.feedback.message('float', looper.feedback.getvalueof());
+	looper.input.message('float', looper.input.getvalueof());
+	looper.speed.message('float', looper.speed.getvalueof());
+	looper.inertia.message('int', looper.inertia.getvalueof());
 	looper.fadetime.message('int', looper.fadetime.getvalueof());
-	looper.relativerecordui.message('int', looper.relativerecordui.getvalueof());
-	looper.overdubui.message('set', 0);
-	looper.quantizemenuui.message('bang');
+	looper.relativerecord.message('int', looper.relativerecord.getvalueof());
+	looper.overdub.message('set', 0);
+	looper.quantizemenu.message('bang');
 	looper.metro.message('bang');
 	looper.trigger.buffer_size.message(max_time);
 	looper.looper.message('play', 0);
 	looper.bufferloop.message('clear');
-	register();
+	var dev = new LiveAPI('live_set', 'this_device');
+	detect_instance(dev);
+	dev.goto('parameters', 19);
+	looper.position_remote.message('id', dev.id);
+	dev.goto('live_set', 'this_device');
+	dev.goto('parameters', 20);
+	looper.state_remote.message('id', dev.id);
+	display_position();
+	for(var i=0;i<5;i++)
+	{
+		outlet(0, 'push_grid', 'value', i, 7, 4);
+	}
+	outlet(0, 'push_grid', 'value', 0, 6, (undo_data.can*7)+1);
+	outlet(0, 'push_grid', 'value', 1, 6, (overdub_status*7)+3);	
+	outlet(0, 'push_grid', 'value', 2, 6, (in_loop*7)+5);
+	outlet(0, 'push_grid', 'value', 3, 6, (mute_status*7)+7);
+	outlet(0, 'push_grid', 'value', 4, 6, 2);
 }
 
+function detect_instance(this_device)
+{
+	var name = this_device.get('name');
+	var KEYS = [new RegExp(/(@loop1)/), new RegExp(/(@loop2)/), new RegExp(/(@loop3)/), new RegExp(/(@loop4)/)];
+	for(var i=0;i<4;i++)
+	{
+		if(KEYS[i].test(name))
+		{
+			this_instance_number = i;
+			outlet(0, 'push_grid', 'value', INSTANCE[i][0], INSTANCE[i][1], 1);
+			if(DEBUG){post('found instance number:', i, '\n');}
+			break;
+		}
+	}
+}
+	
 function current_state(val)
 {
 	if(DEBUG){post('current state:', val, '\n');}
+	if((val=='play')&&(overdub_status)){val = 'odub';}
 	looper.trigger.state = val;
 	in_loop = val == 'play' ? 0 : 1;
-	change_state(val == 'rec' ? 'recording' : val == 'wait_in' ? 'awaiting_record' : val == 'wait_out' ? 'awaiting_record' : mute_status ? 'muted' : overdub_status ? 'overdubbing' : val == 'play' ? 'playing' : 'empty');
+	update_state();
+}
+
+function update_state()
+{
+	var new_state = {'rec':0, 'empty':1, 'play':2, 'odub':3, 'wait_in':4, 'wait_out':4}[looper.trigger.state];
+	if(mute_status){new_state = 5;}
+	looper.state.message('int', new_state);
+	if(DEBUG){post('update state:', new_state, '\n');}
 }
 
 function trigger_end(val)
@@ -115,71 +220,19 @@ function trigger_end(val)
 	loop_end = val;
 }
 
-//register with LoopMaster
-function register()
-{
-	finder = new LiveAPI(callback, 'live_set', 'this_device');
-	looper_id = finder.id;
-	//looper.frommaster.message('set', 'maxlooper');
-	var path = finder.path.slice(0, -1).split(' ').slice(-4, -2)
-	if(DEBUG){post('request to register', looper_id, finder.path, 'check: ', path, '\n');}
-	//if(finder.path.split(' ')[5] == 'chains')
-	if(path[0] == 'chains')
-	{
-		looper.frommaster.message('set', 'maxlooper_' + looper_id);
-		//looper_number = finder.path.split(' ')[6];
-		looper_number = path[1];
-		messnamed('looper_master', 'register', looper_number, looper_id, buffer_loop);
-		if(DEBUG){post('sending registration', looper_number, looper_id, '\n');}
-		finder.goto('canonical_parent', 'canonical_parent', 'canonical_parent', 'view');
-	}
-	//post('finder path', finder.path, '\n');
-}	
-
-//called by LoopMaster when instance is detected
-function handshake(args)
-{
-	post('registered:', args, '\n');
-	registered = 1;
-	send_current_settings();
-}
-
 //begin or end loop recording, depending on current state
-function _loop()
+function _loop(val)
 {	
 	if(DEBUG){post('loop\n');}
 	switch(looper.trigger.state)
 	{
 		case 'empty':
+		case 'odub':
 		case 'play':
 			begin_loop();
 			break;
 		case 'rec':
 			end_loop();
-			break;
-	}
-			
-}
-
-//this is called from LoopMaster?
-///this is seriously problematic.....we need to stop the current loop process, not just fool it into thinking that we have
-function _set_loop(state) 
-{
-	switch(state)
-	{
-		case 0:
-			if(in_loop>0)
-			{
-				looper.loopui.message('bang');
-			}
-			break;
-		case 1:
-			if(in_loop>0)
-			{
-				position.report = 0;
-			}
-			in_loop = 0;
-			looper.loopui.message('bang');
 			break;
 	}
 }
@@ -191,13 +244,109 @@ function begin_loop()
 	in_loop = 1;
 	loop_start = 0;//rec_phase * max_time;//ms, new						//set the internal value of loop_start to 0, the beginning of the buffer
 	change_mute(0);														//mute the output of the patch
+	change_overdub(0);
 	change_speed(1., 1);												//turn speed to <forward 1.0
 	make_undo_step();													//copy the current loop into the record buffer and store its relevant attributes
-	looper.overdubui.message('set', 0);									//turn off overdubbing ui
 	looper.looper.message('overdub', 0);
 	looper.trigger.inlet.message('start');
-	looper.inputui.message('float', 1);									//turn the input all the way up
+	looper.input.message('float', 1);									//turn the input all the way up
+	outlet(0, 'push_grid', 'value', 2, 6, 12);
+}
 
+//this is only called from the loop() func, and only when a loop is already recording
+function end_loop()
+{
+	if(DEBUG){post('loop_end', loop_end, '\n');}
+	in_loop = 0;
+	looper.trigger.inlet.message('end');
+	if(go_to_overdub)
+	{
+		change_overdub(1);
+	}
+	else if(go_to_mute)
+	{
+		change_mute(1);
+	}
+	else
+	{
+		change_mute(0);
+		looper.fadein.message('int', 0.);
+		looper.fadein.message('list', 1., fadetime);
+	}
+	update_state();
+	outlet(0, 'push_grid', 'value', 2, 6, 5);
+	outlet(0, 'push_grid', 'value', 4, 6, 2);
+}
+
+//change overdubbing state
+function _overdub()
+{
+	switch(looper.trigger.state)
+	{
+		case 'rec':
+		case 'wait_in':
+			if(!go_to_overdub)
+			{
+				go_to_overdub = 1;
+				_loop();
+			}
+			break;
+		default:
+			if(mute_status){change_mute(0);}
+			_change_overdub(Math.abs(overdub_status - 1));
+			break;
+	}
+	update_state();
+}
+
+function _change_overdub(val)
+{
+	if(DEBUG){post('change_overdub', val, '\n');}
+	overdub_status = val;
+	go_to_overdub = 0;
+	looper.trigger.state = overdub_status ? 'odub' : 'play';
+	looper.looper.message('feedback', overdub_status ? fb_lvl : 1);
+	looper.looper.message('overdub', overdub_status);
+	outlet(0, 'push_grid', 'value', 1, 6, (overdub_status*7)+3);
+	outlet(0, 'push_grid', 'value', 4, 6, 9);
+}
+
+function _mute()
+{
+	if(DEBUG){post('_mute\n');}
+	var status = mute_status;
+	switch(looper.trigger.state)
+	{
+		case 'play':
+			status = Math.abs(mute_status-1);
+			_change_mute(status);
+			break;
+		case 'wait_in':
+			go_to_mute = 1;
+			_loop();
+			break;
+		case 'odub':
+			_change_overdub(0);
+			_change_mute(1);
+			break;
+		case 'wait_out':
+			go_to_mute = 1;
+			break;
+		default:
+			go_to_mute = 1;
+			_loop();
+			break;
+	}
+	update_state();
+}
+
+function _change_mute(val)
+{
+	if(DEBUG){post('change_mute', val, '\n');}
+	mute_status = val;
+	go_to_mute = 0;
+	looper.volout.message('float', Math.abs(val-1));
+	outlet(0, 'push_grid', 'value', 3, 6, (mute_status*7)+7);
 }
 
 //copy the current loop into the record buffer and store its relevant attributes
@@ -207,6 +356,7 @@ function make_undo_step()
 	undo_data.loop_size = loop_end;
 	undo_data.clock_start = clock_start;
 	looper.bufferundo.message('duplicate', buffer_loop);
+	outlet(0, 'push_grid', 'value', 0, 6, (undo_data.can*7)+1);	
 }
 
 //move the undo buffer's contents to the loop buffer and restore it's settings
@@ -214,7 +364,7 @@ function undo()
 {
 	if(undo_data.can == true)
 	{
-		looper.overdubui.message('set', 0);
+		//looper.overdub.message('set', 0);
 		looper.looper.message('play', 0);
 		loop_end = undo_data.loop_size;
 		looper.bufferloop.message('duplicate', buffer_undo);
@@ -223,94 +373,7 @@ function undo()
 		looper.looper.message('play', 1);
 		undo_data.can = false;
 	}
-}
-
-//this is only called from the loop() func, and only when a loop is already recording
-function end_loop(rec_phase)
-{
-	if(DEBUG){post('loop_end', loop_end, '\n');}
-	in_loop = 0;
-	looper.trigger.inlet.message('end');
-	afterbirth();
-}
-
-function make_dummy_loop(len)
-{
-	if(!in_loop)
-	{
-		make_undo_step();
-		loop_end = LENGTHS[len]*quantize_record.samples;
-		if(DEBUG){post('make_dummy_loop', len, loop_end, '\n');}
-		looper.speedui.message('float', 1);
-		looper.feedbackui.message('float', 1);
-		looper.inputui.message('float', 1);
-		set_mute(0);
-		looper.looper.message('start', 0);
-		looper.looper.message('end', loop_end);
-		looper.looper.message('restart', 1);
-		clear();
-		looper.looper.message('play', 1);
-		looper.looper.message('overdub', 1);
-		looper.overdub_status = 1;
-		wating_for_overdub = 0;
-		looper.trigger.state = 'play';
-		looper.overdubui.message('int', 1);
-		change_state('overdubbing');
-	}
-	//overdub(1);
-}
-
-//this is called after make_loop() to carry out functions initiated by the method used to end the loop
-function afterbirth()
-{
-	if(go_to_overdub > 0)											//if overdub was pressed to end the recording>
-	{
-		go_to_overdub = 0;											//turn off the flag 
-		overdub(1);												//turn on overdub internally
-	}
-	else if(go_to_mute > 0)											//if mute was pressed to end the recording
-	{
-		go_to_mute = 0;												//turn off the flag
-		change_mute(1);												//mute the patch
-		change_state('muted');										//update the HUD
-	}
-	else
-	{
-		change_mute(0);		//this was uncommented in time();
-		looper.fadein.message('int', 0.);
-		looper.fadein.message('list', 1., fadetime);
-		change_state('playing');									//otherwise, update the HUD that we are now playing
-	}
-}
-
-//this is called every 100ms to update the GUI and HUD
-function _loop_phase(val)
-{
-	phase = val;
-	report('phase', [looper_number, phase]);
-}
-
-//change overdubbing state
-function _overdub(status)
-{
-	if(go_to_overdub)
-	{
-		go_to_overdub = 0;
-	}
-	else if((looper.trigger.state == 'rec')||(looper.trigger.state == 'wait_in'))
-	{
-		go_to_overdub = 1;
-		looper.loopui.message('bang');
-	}
-	else
-	{
-		overdub_status = status;
-		looper.trigger.state = status ? 'odub' : 'play';
-		looper.looper.message('feedback', status ? fb_lvl : 1);
-		looper.looper.message('overdub', status);
-		looper.overdubui.message('set', status);
-		if(mute_status<1){change_state(status ? 'overdubbing' : 'playing');} 
-	}
+	outlet(0, 'push_grid', 'value', 0, 6, (undo_data.can*7)+1);	
 }
 
 //store an undo step and clear the buffer
@@ -320,16 +383,37 @@ function _clear()
 	make_undo_step();
 	looper.bufferloop.message('clear');
 	looper.looper.message('play', 1);
-	if(overdub_status < 1)
-	{
-		change_state('empty');
-	}
+	update_state();
+	outlet(0, 'push_grid', 'value', 4, 6, 2);	
 }	
 
 //reverse the tape transport; force ignores inertia;  sets internal attribute and forwards to change_speed()
 function _reverse(force)
 {
 	change_speed(speed * -1, force);
+}
+
+function make_dummy_loop(len)
+{
+	if(!in_loop)
+	{
+		make_undo_step();
+		loop_end = LENGTHS[len]*quantize_record.samples;
+		if(DEBUG){post('make_dummy_loop', len, loop_end, '\n');}
+		looper.speed.message('float', 1);
+		looper.feedback.message('float', 1);
+		looper.input.message('float', 1);
+		change_mute(0);
+		looper.looper.message('start', 0);
+		looper.looper.message('end', loop_end);
+		looper.looper.message('restart', 1);
+		clear();
+		looper.looper.message('play', 1);
+		looper.looper.message('overdub', 1);
+		looper.overdub_status = 1;
+		wating_for_overdub = 0;
+		looper.trigger.state = 'odub';
+	}
 }
 
 //change the transport speed;  force ignores inertia
@@ -344,15 +428,21 @@ function _change_speed(new_speed, force)
 		looper.tapeinertia.message('list', new_speed, inertia* Math.abs(speed - new_speed));
 	}
 	speed = new_speed;
-	looper.speedui.message('set', speed);
-	report('looper_speed', [looper_id, looper_number, speed]);
+	looper.speed.message('set', speed);
+	for(var i=0;i<5;i++)
+	{
+		outlet(0, 'push_grid', 'value', 7, i, ((speed==speed_values[i])*1)+2);
+	}
 }
 
 //change the transport inertia attribute 
 function _change_inertia(new_inertia)
 {
 	inertia = new_inertia;
-	report('looper_inertia', [looper_id, looper_number, inertia]);
+	for(var i=0;i<5;i++)
+	{
+		outlet(0, 'push_grid', 'value', 6, i, ((inertia>=inertia_values[i])*2)+3);
+	}
 }
 
 //change the record quantize amount
@@ -365,7 +455,6 @@ function _set_quantize_amount(menu, ticks, ms, samples)
 	quantize_record.ms = ms;
 	samps_per_ms = samples/ms;
 	looper.trigger.quantization.message('int', menu);
-	report('looper_quantize_menu',  [looper_id, looper_number, menu]);
 }
 
 //turn on/off quantization
@@ -376,12 +465,12 @@ function _set_quantize_record(val)
 	{
 		quantize_record.enabled = val;
 		looper.trigger.quantize.message('int', val+1);
-		messnamed('looper_quantize_status', [looper_id, looper_number, val]);
 	}
 	else
 	{
-		looper.quantizerecordui.message('set', 0);
+		looper.quantizerecord.message('set', 0);
 	}
+	outlet(0, 'push_grid', 'value', 5, 7, (quantize_record.enabled*6)+2);
 }
 
 //turn on/off relative quantization	
@@ -392,19 +481,17 @@ function _set_relative_record(val)
 	{
 		quantize_record.relative = val;
 		looper.trigger.relative.message('int', val+1);
-		report('looper_relative_status', [looper_id, looper_number, val]);
 	}
 	else
 	{
-		looper.relativerecordui.message('set', 0);
+		looper.relativerecord.message('set', 0);
 	}
 }
 
 //set the predefined loop creation size
-function set_dummy_size(size)
+function _set_dummy_size(size)
 {
 	dummy_size = size;
-	report('looper_dummy_size', [looper_id, looper_number, dummy_size]);
 }
 
 //set the latency offset
@@ -414,7 +501,6 @@ function _set_offset(new_offset)
 	offset = new_offset;
 	//looper.trigger.offset.message(new_offset);
 	looper.looper.message('offset', new_offset);
-	messnamed('looper_offset', [looper_id, looper_number, offset]);
 }
 
 function _set_fade_time(new_fade_time)
@@ -425,7 +511,6 @@ function _set_fade_time(new_fade_time)
 function _input_level(level)
 {
 	in_lvl = level;
-	report('looper_input', [looper_id, looper_number, in_lvl]);
 	messnamed(prefix+'input', in_lvl);
 }
 
@@ -436,153 +521,139 @@ function _feedback_level(level)
 	{
 		looper.looper.message('feedback', fb_lvl);
 	}
-	report('looper_feedback', [looper_id, looper_number, fb_lvl]);
 }
 
-function _mute()
+function _display_position()
 {
-	//looper.muteui.message('set', 0);
-	set_mute(Math.abs(mute_status-1));
-}
-
-function _change_mute(val)
-{
-	if(DEBUG){post('change_mute', val, '\n');}
-	mute_status = val;
-	looper.volout.message('float', Math.abs(val-1));
-	change_state(looper.trigger.state == 'play' ? val ? 'muted' : overdub_status ? 'overdubbing' : 'playing' : state);
-}
-
-function _set_mute(status)
-{
-	if(DEBUG){post('set_mute', status, '\n');}
-	switch(looper.trigger.state)
+	grid_position = parseInt(phase*16);	
+	if(speed > 0)
 	{
-		case 'play':
-			change_mute(status);
-			break;
-		case 'wait_in':
-			//cancel?
-			break;
-		default:
-			go_to_mute = 1;
-			looper.loopui.message('bang');
-			break;
+		for(var i=0;i<16;i++)
+		{
+			var light =((i<=grid_position)&&(i>(grid_position-4))) + (i==grid_position);
+			outlet(0, 'push_grid', 'value', circle[0][i][0], circle[0][i][1], (light*2)+1);
+		}
 	}
+	else
+	{
+		for(var i=0;i<16;i++)
+		{
+			var light =((i>=grid_position)&&(i<(grid_position+4))) + (i==grid_position);
+			outlet(0, 'push_grid', 'value', circle[0][i][0], circle[0][i][1], (light*2)+1);
+		}
+	}
+}
+
+//this is called every 100ms to update the GUI and HUD
+function _loop_phase(val)
+{
+	phase = val;
+	looper.position.message('float', val);
+	display_position();
 }
 
 //update the loopers internal state and forward to loopmaster
 function change_state(val)
 {
 	state = val;
+	looper.state.message('int', ['recording', 'empty', 'playing', 'overdubbing', 'awaiting_record', 'muted'].indexOf(val));
 	if(DEBUG){post('state', state, '\n');}
-	report('looper_state', [looper_id, looper_number, state, loop_end]);
 }
 
-//forward the current loopers settings to loopmaster
-function send_current_settings()
+function push_grid(x, y, z)
 {
-	messnamed('looper_master', 'current_settings', looper_id, looper_number, phase, state, speed, overdub_status, parseInt(quantize_record.enabled), parseInt(quantize_record.menu), offset, mute_status, fb_lvl, in_lvl, inertia, loop_end, parseInt(quantize_record.relative));
+	grid(x, y, z);
 }
 
-function report(name, vals)
+function grid(x, y, z)
 {
-	if(DEBUGX){post('report', name, vals, '\n');}
-	if(registered)
+	if((x<8)&&(y<8))
 	{
-		messnamed('looper_master', name, vals);
-	}
-}
-
-function distribute(func, val) 
-{
-	if(DEBUG){post('func',func, 'val', val, '\n');}
-	switch(func)
-	{
-		case 'feedback':
-			looper.feedbackui.message('float', val);
-			break;
-		case 'input':
-			looper.inputui.message('float', val);
-			break;	
-		case 'loop':
-			looper.loopui.message('bang');
-			break;	
-		case 'set_loop':
-			set_loop(val);
-			break;
-		case 'undo':
-			looper.undoui.message('bang');
-			break;		
-		case 'mute':
-			mute();
-			break;
-		case 'set_mute':
-			set_mute(val);
-			break;
-		case 'clear':
-			looper.clearui.message('bang');
-			break;	
-		case 'set_overdub':
-			//post('distribute set_overdub\n');
-			looper.overdubui.message('int', val);
-			break;
-		case 'offset':
-			looper.offsetui.message('int', val);
-			break;
-		case 'reverse':
-			looper.reverseui.message('bang');
-			break;
-		case 'speed':
-			looper.speedui.message('float', val);
-			break;
-		case 'inertia':
-			looper.inertiaui.message('int', val);
-			break;
-		case 'quantize':
-			looper.quantizerecordui.message('int', val);
-			break;
-		case 'hit_quantize':
-			looper.quantizerecordui.message('bang');
-			break;
-		case 'quantize_amount':
-			looper.quantizemenuui.message('int', val);
-			break;
-		case 'relative':
-			looper.relativerecordui.message('int', val);
-			break;
-		case 'hit_overdub':
-			//looper.overdubui.message('int', Math.abs(overdub -1));
-			//post('distribute hit_overdub\n');
-			looper.overdubui.message('bang');
-			break;
-		case 'trigger_position':
-			if((in_loop==0)&&(overdub_status==0))
+		var pos = parseInt(cell_fire[x][y][0]);
+		//post(x, y, z, pos, number, '\n');
+		if((pos > -1)&&(pos <16)&&(z>0))		//the first 16 positions are the main circle
+		{
+			//looper[number].trigger_position(pos);
+			looper.looper.message('pos', pos/16);
+			looper.looper.message('restart', 1);
+		}
+		else if((pos == 17)&&(z>0))
+		{
+			_reverse();
+		}
+		else if((pos == 18)&&(z>0))
+		{
+			_change_inertia(inertia_values[(y%8)]);
+		}
+		else if((pos == 19)&&(z>0))
+		{
+			_change_speed(speed_values[(y%8)]);
+		}
+		else if((pos ==20)&&(z>0))
+		{
+			switch(x%8)
 			{
-				//post('groove.message int', Math.floor(val*(loop_size/16)), '\n');
-				looper.looper.message('pos', val/16);
-				looper.looper.message('restart', 1);
+				case 0:
+					undo();
+					break;
+				case 1:
+					_overdub();
+					break;
+				case 2:
+					_loop();
+					break;
+				case 3:
+					_mute();
+					break;
+				case 4:
+					_clear();
+					break;
+				case 5:
+					break;
+				case 6:
+					//master.selectedui.message('int', 1);
+					if(DEBUG){post('select_device_from_key @loop1\n');}
+					outlet(0, 'select_device_from_key', '@loop1');
+					break;
+				case 7:
+					//master.selectedui.message('int', 2);
+					if(DEBUG){post('select_device_from_key @loop2\n');}
+					outlet(0, 'select_device_from_key', '@loop2');
+					break;
 			}
-			break;
-		case 'overdub':
-			//post('distribute overdub\n');
-			looper.overdubui.message('bang');
-			break;
-		case 'view_looper':
-			finder.call('select_instrument');
-			break;
-		case 'copy_buffer':
-			//post('max_looper copy_buffer', val);
-			copy_buffer_to_destination(val);
-			break;
-		case 'make_dummy_loop':
-			make_dummy_loop(val);
-			break;
-		default:
-			post('not recognized', func, val, '\n');
-			break;
+		}
+		else if((pos ==21)&&(z>0))
+		{
+			if((x%8)<5)
+			{
+				make_dummy_loop(x%8);
+			}
+			else
+			{
+				switch(x%8)
+				{
+					case 5:
+						set_quantize_record(Math.abs(quantize_record.enabled-1));
+						break;
+					case 6:
+						//master.selectedui.message('int', 3);
+						if(DEBUG){post('select_device_from_key @loop3\n');}
+						outlet(0, 'select_device_from_key', '@loop3');
+						break;
+					case 7:
+						//master.selectedui.message('int', 4);
+						if(DEBUG){post('select_device_from_key @loop4\n');}
+						outlet(0, 'select_device_from_key', '@loop4');
+						break;
+				}
+			}			
+		}
 	}
 }
+
+
+
+
 
 //called from other patches, e.g. GrainStorm mod, to transfer the loopers buffer contents to their own buffers
 //this will be broken in b995 until I make some adjustments
@@ -595,34 +666,23 @@ function copy_buffer_to_destination(dest)
 	//looper.copybuffer.message('set', dummy);
 }
 
-//called from LoopMaster....what does this do?  Is this for automation?
-//no dumbass, it does the same thing that you just coded make_dummy_loop() to do ;)
-function gen_loop(len)
+/*function multiply()
 {
-	make_undo_step();
-	//bufferloop.message('size', len*quantize_record.ms);
-	looper.looper.message('end', len*quantize_record.ms);
-	overdub(1);
-	//overdub(1);
-}
+	looper.buffetloop.message('maxswap', loop_size*2);
+	looper.bufferundo.message('size', loop_size);
+	looper.buffetloop.message('copy_to_buffer', buffer_undo, 0, loop_size-1)
+	looper.bufferloop.message('size', 0, loop_size*2);
+	looper.buffetundo.message('copy_to_buffer', buffer_loop, 0, loop_size-1);
+	looper.buffetloop.message('rotatetozero', loop_size);
+	looper.buffetundo.message('copy_to_buffer', buffer_loop, 0, loop_size-1);
+	looper.grooveend.message(loop_size*2);
+	looper.groovelength.message(loop_size*2);
+}*/
 
-//function multiply()
-//{
-//	looper.buffetloop.message('maxswap', loop_size*2);
-//	looper.bufferundo.message('size', loop_size);
-//	looper.buffetloop.message('copy_to_buffer', buffer_undo, 0, loop_size-1)
-//	looper.bufferloop.message('size', 0, loop_size*2);
-//	looper.buffetundo.message('copy_to_buffer', buffer_loop, 0, loop_size-1);
-//	looper.buffetloop.message('rotatetozero', loop_size);
-	//looper.buffetundo.message('copy_to_buffer', buffer_loop, 0, loop_size-1);
-//	looper.grooveend.message(loop_size*2);
-//	looper.groovelength.message(loop_size*2);
-//}
-	
+
 //used to reinitialize the script immediately on saving; 
 //can be turned on by changing FORCELOAD to 1;
 //should only be turned on while editing
-
 function forceload()
 {
 	if(FORCELOAD){init(1);}

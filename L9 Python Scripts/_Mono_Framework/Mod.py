@@ -3,7 +3,7 @@
 from __future__ import with_statement
 import Live
 import contextlib
-
+from _Tools.re import *
 from _Framework.ControlSurface import ControlSurface
 from _Framework.ControlSurfaceComponent import ControlSurfaceComponent
 from _Framework.ControlElement import ControlElement
@@ -45,6 +45,19 @@ def unpack_items(values):
 	#	return converted[0]
 	#else:
 	return converted
+
+
+def enumerate_track_device(track):
+	devices = []
+	if hasattr(track, 'devices'):
+		for device in track.devices:
+			devices.append(device)
+			if device.can_have_chains:
+				for chain in device.chains:
+					for chain_device in enumerate_track_device(chain):
+						devices.append(chain_device)
+	return devices
+
 
 
 class SpecialInputSignal(Signal):
@@ -581,6 +594,27 @@ class ModClient(NotifyingControlElement):
 	def set_legacy(self, value):
 		#self.log_message('set_legacy: ' + str(value))
 		self.legacy = value > 0
+	
+
+	def select_device_from_key(self, key):
+		key = str(key)
+		preset = None
+		for track in self._parent.song().tracks:
+			for device in enumerate_track_device(track):
+				if(match(key, str(device.name)) != None):
+					preset = device
+					break
+		for return_track in self._parent.song().return_tracks:
+			for device in enumerate_track_device(return_track):
+				if(match(key, str(device.name)) != None):
+					preset = device
+					break
+		for device in enumerate_track_device(self._parent.song().master_track):
+			if(match(key, str(device.name)) != None):
+				preset = device
+				break
+		if preset != None:
+			self._parent.song().view.select_device(preset)
 	
 
 
