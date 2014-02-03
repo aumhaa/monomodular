@@ -853,11 +853,9 @@ class AumPush(Push):
 		self._host._host_name = 'AumPush'
 		self._host.layer = Layer( lock_button = self._note_mode_button, button_matrix = self._matrix, shift_button = self._shift_button, alt_button = self._select_button, key_buttons = self._track_state_buttons) #, nav_up_button = OptionalElement( self._nav_up_button, self._host._alt_pressed, False), nav_down_button = OptionalElement( self._nav_down_button, self._host._alt_pressed, False), nav_left_button = OptionalElement( self._nav_left_button, self._host._alt_pressed, False), nav_right_button = OptionalElement( self._nav_right_button, self._host._alt_pressed, False)) #name_display_line=self._display_line1, value_display_line=self._display_line2, alternating_display=self._display_line3, device_controls = self._global_param_controls, encoder_touch_buttons=self._global_param_touch_buttons, lcd_displays = self._display_line1)
 		self._host.layer.priority = 5
-		self._host.alt_display_layer = Layer( name_display_line = self._display_line3, value_display_line = self._display_line4 ) #alt_controls = self._track_state_buttons, 
-		self._host.shift_display_layer = Layer( name_display_line = self._display_line3, value_display_line = self._display_line4 ) #alt_controls = self._track_state_buttons, 
-
+		self._host.alt_display_layer = AddLayerMode( self._host, Layer(name_display_line = self._display_line3, value_display_line = self._display_line4 )) #alt_controls = self._track_state_buttons, 
+		self._host.shift_display_layer = AddLayerMode( self._host, Layer(name_display_line = self._display_line3, value_display_line = self._display_line4 )) #alt_controls = self._track_state_buttons, 
 		self._host.nav_buttons_layer = AddLayerMode( self._host, Layer(nav_up_button = self._nav_up_button, nav_down_button = self._nav_down_button, nav_left_button = self._nav_left_button, nav_right_button = self._nav_right_button) )
-		
 		self.hosts = [self._host]
 	
 
@@ -875,7 +873,11 @@ class AumPush(Push):
 		self.modhandler = PushModHandler(self)
 		self.modhandler.name = 'ModHandler'
 		self.modhandler.layer = Layer( lock_button = self._note_mode_button, push_grid = self._matrix, shift_button = self._shift_button, alt_button = self._select_button, key_buttons = self._track_state_buttons)
-		# self.log_message('mod is: ' + str(self.monomodular) + ' ' + str(__builtins__['monomodular']))
+		self.log_message('mod is: ' + str(self.monomodular) + ' ' + str(__builtins__['monomodular']))
+		self.modhandler.nav_buttons_layer = AddLayerMode( self.modhandler, Layer(nav_up_button = self._nav_up_button, nav_down_button = self._nav_down_button, nav_left_button = self._nav_left_button, nav_right_button = self._nav_right_button) )
+		self.modhandler.shift_display_layer = AddLayerMode( self.modhandler, Layer( name_display_line = self._display_line3, value_display_line = self._display_line4 )) #alt_controls = self._track_state_buttons, 
+		self.modhandler.alt_display_layer = AddLayerMode( self.modhandler, Layer( alt_name_display_line = self._display_line3, alt_value_display_line = self._display_line4 )) #alt_controls = self._track_state_buttons, 
+
 	
 
 	def _init_matrix_modes(self):
@@ -1233,6 +1235,11 @@ class MonomodDisplayComponent(ControlSurfaceComponent):
 			self._value_display_line.set_data_sources(self._value_data_sources)
 	
 
+	def set_name_string(self, value, source = 0):
+		if source in range(len(self._name_data_sources)):
+			self._name_data_sources[source].set_display_string(str(value))
+	
+
 	def set_value_string(self, value, source = 0):
 		if source in range(len(self._value_data_sources)):
 			self._value_data_sources[source].set_display_string(str(value))
@@ -1292,9 +1299,6 @@ class PushMonomodComponent(MonomodComponent):
 
 		self._shift_display.set_value_string(self._is_modlocked, 0)
 	
-
-	alt_display_layer = forward_property('_alt_display')('layer')
-	shift_display_layer = forward_property('_shift_display')('layer')
 
 	def set_device_component(self, device_component):
 		if not device_component is self._device_component:
@@ -1367,7 +1371,7 @@ class PushMonomodComponent(MonomodComponent):
 		if self._shift_button != None:
 			self._shift_button.add_value_listener(self._shift_value)
 		#self._shift_modes.set_toggle_button(button)
-		self._shift_modes.set_mode_button('shift', self._shift_button)
+		#self._shift_modes.set_mode_button('shift', self._shift_button)
 		#self._shift_modes.set_mode_toggle(self._shift_button)
 	
 
@@ -1391,7 +1395,7 @@ class PushMonomodComponent(MonomodComponent):
 		self._alt_button = button
 		if self._alt_button != None:
 			self._alt_button.add_value_listener(self._alt_value)
-		self._shift_modes.set_mode_button('alt', self._alt_button)
+		#self._shift_modes.set_mode_button('alt', self._alt_button)
 	
 
 	def _alt_value(self, value):
@@ -1494,6 +1498,7 @@ class PushMonomodComponent(MonomodComponent):
 	
 
 
+
 class PushGrid(Grid):
 
 
@@ -1531,65 +1536,83 @@ class PushModHandler(ModHandler):
 
 	def __init__(self, *a, **k):
 		super(PushModHandler, self).__init__(*a, **k)
+		self._color_type = 'Push'
 		self._push_grid = None
 		self._push_grid_CC = None
 		self._keys = None
 		self._alt = None
 		self._shift = None
-		self._receive_methods = {'grid': self._receive_grid, 'push_grid': self._receive_push_grid, 'key': self._receive_key} # 'shift': self._receive_shift, 'alt': self._receive_alt}
+		self._receive_methods = {'grid': self._receive_grid, 
+								'push_grid': self._receive_push_grid,
+								'key': self._receive_key,
+								'shift': self._receive_shift, 
+								'alt': self._receive_alt,
+								'push_name_display': self._receive_push_name_display,
+								'push_value_display': self._receive_push_value_display,
+								'push_alt_name_display': self._receive_push_alt_name_display,
+								'push_alt_value_display': self._receive_push_alt_value_display}
 		self._colors = range(128)
 		self._colors[1:8] = [3, 85, 33, 95, 5, 21, 67]
 		self._colors[127] = 67
 		self._shifted = False
+		self._shift_display = MonomodDisplayComponent(self, [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '], [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '])
+		self._alt_display = MonomodDisplayComponent(self, [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '], [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '])
+
 	
 
 	def _register_addresses(self, client):
-		#if not 'grid' in client._addresses:
-		#	client._addresses['grid'] = PushGrid(client.active_handlers, 'grid', 16, 16)
 		if not 'push_grid' in client._addresses:
 			client._addresses['push_grid'] = PushGrid(client.active_handlers, 'push_grid', 8, 8)
-		if not 'grid' in client._addresses:
-			client._addresses['grid'] = client._addresses['push_grid']
 		if not 'key' in client._addresses:
 			client._addresses['key'] = Array(client.active_handlers, 'key', 8)
 		if not 'shift' in client._addresses:
 			client._addresses['shift'] = StoredElement(client.active_handlers, _name = 'shift')
 		if not 'alt' in client._addresses:
 			client._addresses['alt'] = StoredElement(client.active_handlers, _name = 'alt')
+		if not 'push_name_display' in client._addresses:
+			client._addresses['push_name_display'] = Array(client.active_handlers, 'push_name_display', 8, _value = ' ')
+		if not 'push_value_display' in client._addresses:
+			client._addresses['push_value_display'] = Array(client.active_handlers, 'push_value_display', 8, _value = ' ')
+		if not 'push_alt_name_display' in client._addresses:
+			client._addresses['push_alt_name_display'] = Array(client.active_handlers, 'push_alt_name_display', 8, _value = ' ')
+		if not 'push_alt_value_display' in client._addresses:
+			client._addresses['push_alt_value_display'] = Array(client.active_handlers, 'push_alt_value_display', 8, _value = ' ')
 	
 
 	def _receive_push_grid(self, x, y, value, is_id = False, *a, **k):
 		#self.log_message('_receive_push_grid: %s %s %s %s' % (x, y, value, is_id))
-		if not self._push_grid == None:
-			if is_id:
-				button = self._push_grid.get_button(x, y)
-				if not button is None:
-					if value._id is -1 and value._channel is -1:
-						button.use_default_message()
-						button.set_enabled(True)
-					else:
-						identifier = value._id
-						if identifier < 0:
-							identifier = button._original_identifier
-						channel = value._channel
-						if channel < 0:
-							channel = button._original_channel
-						button.set_identifier(identifier)
-						button.set_channel(channel)
-						button.set_enabled(False)
-			else:
-				#this needs to be limited to only size of the grid :(
-				if x < 8 and y < 8:
-					self._push_grid.send_value(x, y, self._colors[value], True)
-				#else:
-				#	self.log_message('out of range: ' + str(x) + ' ' + str(y) + '.')
+		if self._active_mod and not self._active_mod.legacy:
+			if not self._push_grid == None:
+				if is_id:
+					button = self._push_grid.get_button(x, y)
+					if not button is None:
+						if value._id is -1 and value._channel is -1:
+							button.use_default_message()
+							button.set_enabled(True)
+						else:
+							identifier = value._id
+							if identifier < 0:
+								identifier = button._original_identifier
+							channel = value._channel
+							if channel < 0:
+								channel = button._original_channel
+							button.set_identifier(identifier)
+							button.set_channel(channel)
+							button.set_enabled(False)
+				else:
+					if x < 8 and y < 8:
+						self._push_grid.send_value(x, y, self._colors[value], True)
+					#else:
+					#	self.log_message('out of range: ' + str(x) + ' ' + str(y) + '.')
 	
 
 	def _receive_grid(self, x, y, value, *a, **k):
-		self._receive_push_grid(x, y, value, *a, **k)
-		#if not self._push_grid is None:
-		#	if (x - self.x_offset) in range(8) and (y - self.y_offset) in range(8):
-		#		self._push_grid.send_value(x - self.x_offset, y - self.y_offset, value)	
+		#self._receive_push_grid(x, y, value, *a, **k)
+		if self._active_mod and self._active_mod.legacy:
+			if not self._push_grid is None:
+				if (x - self.x_offset) in range(8) and (y - self.y_offset) in range(8):
+					#self.log_message('receive grid %(x)s %(y)s %(v)s' % {'x':x, 'y':y, 'v':value})
+					self._push_grid.send_value(x - self.x_offset, y - self.y_offset, self._colors[value], True)
 	
 
 	def _receive_key(self, x, value):
@@ -1606,6 +1629,26 @@ class PushModHandler(ModHandler):
 	def _receive_alt(self, value):
 		if not self._alt is None:
 			self._alt.send_value(value)
+	
+
+	def _receive_push_name_display(self, x, value):
+		if not self._shift_display is None:
+			self._shift_display.set_name_string(str(value), x)
+	
+
+	def _receive_push_value_display(self, x, value):
+		if not self._shift_display is None:
+			self._shift_display.set_value_string(str(value), x)
+	
+
+	def _receive_push_alt_name_display(self, x, value):
+		if not self._alt_display is None:
+			self._alt_display.set_name_string(str(value), x)
+	
+
+	def _receive_push_alt_value_display(self, x, value):
+		if not self._alt_display is None:
+			self._alt_display.set_value_string(str(value), x)
 	
 
 	def set_push_grid(self, grid):
@@ -1637,6 +1680,27 @@ class PushModHandler(ModHandler):
 		self._alt_value.subject = self._alt
 	
 
+	def set_name_display_line(self, display):
+		if self._shift_display:
+			self._shift_display.set_name_display_line(display)
+	
+
+	def set_value_display_line(self, display):
+		if self._shift_display:
+			self._shift_display.set_value_display_line(display)
+	
+
+	def set_alt_name_display_line(self, display):
+		if self._alt_display:
+			self._alt_display.set_name_display_line(display)
+			self.log_message('setting alt display')
+	
+
+	def set_alt_value_display_line(self, display):
+		if self._alt_display:
+			self._alt_display.set_value_display_line(display)
+	
+
 	def update_device(self):
 		if not self._push_grid_value.subject == None:
 			self._device_component.update()
@@ -1653,7 +1717,15 @@ class PushModHandler(ModHandler):
 	def _push_grid_value(self, value, x, y, *a, **k):
 		#self.log_message('_base_grid_value ' + str(x) + str(y) + str(value))
 		if self._active_mod:
-			self._active_mod.send('push_grid', x, y, value)
+			if self._active_mod.legacy:
+				if self._shift_value.subject.is_pressed():
+					if value > 0 and x in range(6, 8) and y in range(6, 8):
+						self.set_offset((x - 6) * 8,  (y-6) * 8)
+						self.update()
+				else:
+					self._active_mod.send('grid', x + self.x_offset, y + self.y_offset, value)
+			else:
+				self._active_mod.send('push_grid', x, y, value)
 	
 
 	@subject_slot('value')
@@ -1667,6 +1739,7 @@ class PushModHandler(ModHandler):
 	def _shift_value(self, value, *a, **k):
 		if self._active_mod:
 			self._active_mod.send('shift', value)
+			self.update()
 	
 
 	@subject_slot('value')
@@ -1676,5 +1749,53 @@ class PushModHandler(ModHandler):
 			self.update_device()
 	
 
-		
+	def _display_nav_box(self):
+		if self._push_grid_value.subject:
+			if self._shift_value.subject and self._shift_value.subject.is_pressed():
+				for column in range(2):
+					for row in range(2):
+						if (column == int(self.x_offset/8)) and (row == int(self.y_offset/8)):
+							self._push_grid_value.subject.get_button(column +6, row+6).send_value(self.navbox_selected)
+						else:
+							self._push_grid_value.subject.get_button(column +6, row+6).send_value(self.navbox_unselected)
+	
+
+	def update(self, *a, **k):
+		if self._active_mod:
+			self._active_mod.restore()
+			if self._active_mod.legacy:
+				if self._shift_value.subject and self._shift_value.subject.is_pressed():
+					self._display_nav_box()
+					self.nav_buttons_layer and self.nav_buttons_layer.enter_mode()
+					self.shift_display_layer and self.shift_display_layer.enter_mode()
+				else:
+					self.nav_buttons_layer and self.nav_buttons_layer.leave_mode()
+					self.shift_display_layer and self.shift_display_layer.leave_mode()
+			else:
+				if self._shift_value.subject and self._shift_value.subject.is_pressed():
+					self.alt_display_layer and self.alt_display_layer.leave_mode()
+					self.shift_display_layer and self.shift_display_layer.enter_mode()
+				else:
+					self.shift_display_layer and self.shift_display_layer.leave_mode()
+					if self._alt_value.subject and self._alt_value.subject.is_pressed():
+						self.alt_display_layer and self.alt_display_layer.enter_mode()
+					else:
+						self.alt_display_layer and self.alt_display_layer.leave_mode()
+		else:
+			if not self._push_grid_value.subject is None:
+				self._push_grid_value.subject.reset()
+			if not self._keys_value.subject is None:
+				self._keys_value.subject.reset()
+	
+
+
+
+
+
+
+
+
+
+
+	
 #a

@@ -1,8 +1,8 @@
 autowatch = 1;
 
 var FORCELOAD = false;
-var DEBUG = 1;
-var DEBUGX = 0;
+var DEBUG = false;
+var DEBUGX = false;
 
 var script = this;
 var prefix = jsarguments[1];
@@ -19,10 +19,7 @@ var INSTANCE = [[6, 6], [7, 6], [6, 7], [7, 7]];
 var grid_position = 0;
 var speed_values = [2, 1, 0, -1, -2];
 var inertia_values = [0, 50, 90, 300, 600];
-var circle = [[[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [4, 1], [4, 2], [4, 3], [4, 4], [3, 4], [2, 4], [1, 4], [0, 4], [0, 3], [0, 2], [0, 1]],
-				[[8, 0], [9, 0], [10, 0], [11, 0], [12, 0], [12, 1], [12, 2], [12, 3], [12, 4], [11, 4], [10, 4], [9, 4], [8, 4], [8, 3], [8, 2], [8, 1]],
-				[[0, 8], [1, 8], [2, 8], [3, 8], [4, 8], [4, 9], [4, 10], [4, 11], [4, 12], [3, 12], [2, 12], [1, 12], [0, 12], [0, 11], [0, 10], [0, 9]],
-				[[8, 8], [9, 8], [10, 8], [11, 8], [12, 8], [12, 9], [12, 10], [12, 11], [12, 12], [11, 12], [10, 12], [9, 12], [8, 12], [8, 11], [8, 10], [8, 9]]];
+var circle = [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [4, 1], [4, 2], [4, 3], [4, 4], [3, 4], [2, 4], [1, 4], [0, 4], [0, 3], [0, 2], [0, 1]];
 var cell_fire = [];
 for(var i=0;i<16;i++)
 {
@@ -30,14 +27,11 @@ for(var i=0;i<16;i++)
 	for(var j=0;j<16;j++)
 	{
 		cell_fire[i][j] = [-1, (((i>7)+0)+(((j>7)+0)*2))];
-		for(var l=0;l<4;l++)
+		for(var p=0;p<16;p++)
 		{
-			for(var p=0;p<16;p++)
+			if((circle[p][0] == i)&&(circle[p][1] == j))
 			{
-				if((circle[l][p][0] == i)&&(circle[l][p][1] == j))
-				{
-					cell_fire[i][j][0] = p;
-				}
+				cell_fire[i][j][0] = p;
 			}
 		}
 		if(((i%8)>0)&&((i%8)<4)&&((j%8)>0)&&((j%8)<4))
@@ -108,16 +102,13 @@ function _anything()
 function anything()
 {
 	var args = arrayfromargs(arguments);
-	//if(DEBUG){post('anything', messagename, args, '\n');}
 	if(finder == null)
 	{
-		//if(DEBUG){post('adding to stack:', messagename, args, '\n');}
 		if(stored_messages.length>500)
 		{
 			stored_messages.shift();
 		}
 		stored_messages.push([messagename, args]);
-		//if(DEBUG){post('added:', stored_messages[0], '\n');}
 	}
 }
 	
@@ -170,16 +161,14 @@ function init()
 	dev.goto('live_set', 'this_device');
 	dev.goto('parameters', 20);
 	looper.state_remote.message('id', dev.id);
+	setup_translations();
 	display_position();
-	for(var i=0;i<5;i++)
-	{
-		outlet(0, 'push_grid', 'value', i, 7, 4);
-	}
-	outlet(0, 'push_grid', 'value', 0, 6, (undo_data.can*7)+1);
-	outlet(0, 'push_grid', 'value', 1, 6, (overdub_status*7)+3);	
-	outlet(0, 'push_grid', 'value', 2, 6, (in_loop*7)+5);
-	outlet(0, 'push_grid', 'value', 3, 6, (mute_status*7)+7);
-	outlet(0, 'push_grid', 'value', 4, 6, 2);
+	outlet(0, 'receive_translation', 'dummy_row_batch', 'batch_row', 4, 4, 4, 4, 4);
+	outlet(0, 'receive_translation', 'undo',  'value', (undo_data.can*7)+1);
+	outlet(0, 'receive_translation', 'overdub', 'value', (overdub_status*7)+3);	
+	outlet(0, 'receive_translation', 'record',  'value', (in_loop*7)+5);
+	outlet(0, 'receive_translation', 'mute', 'value', (mute_status*7)+7);
+	outlet(0, 'receive_translation', 'clear',  'value', 2);
 }
 
 function detect_instance(this_device)
@@ -191,7 +180,7 @@ function detect_instance(this_device)
 		if(KEYS[i].test(name))
 		{
 			this_instance_number = i;
-			outlet(0, 'push_grid', 'value', INSTANCE[i][0], INSTANCE[i][1], 1);
+			outlet(0, 'receive_translation', 'instance_'+i, 'value', 1);
 			if(DEBUG){post('found instance number:', i, '\n');}
 			break;
 		}
@@ -250,7 +239,7 @@ function begin_loop()
 	looper.looper.message('overdub', 0);
 	looper.trigger.inlet.message('start');
 	looper.input.message('float', 1);									//turn the input all the way up
-	outlet(0, 'push_grid', 'value', 2, 6, 12);
+	outlet(0, 'receive_translation', 'record', 'value', 12);
 }
 
 //this is only called from the loop() func, and only when a loop is already recording
@@ -274,8 +263,8 @@ function end_loop()
 		looper.fadein.message('list', 1., fadetime);
 	}
 	update_state();
-	outlet(0, 'push_grid', 'value', 2, 6, 5);
-	outlet(0, 'push_grid', 'value', 4, 6, 2);
+	outlet(0, 'receive_translation', 'record', 'value', 5);
+	outlet(0, 'receive_translation', 'clear', 'value', 9);
 }
 
 //change overdubbing state
@@ -307,8 +296,8 @@ function _change_overdub(val)
 	looper.trigger.state = overdub_status ? 'odub' : 'play';
 	looper.looper.message('feedback', overdub_status ? fb_lvl : 1);
 	looper.looper.message('overdub', overdub_status);
-	outlet(0, 'push_grid', 'value', 1, 6, (overdub_status*7)+3);
-	outlet(0, 'push_grid', 'value', 4, 6, 9);
+	outlet(0, 'receive_translation', 'overdub', 'value', (overdub_status*7)+3);
+	outlet(0, 'receive_translation', 'clear', 'value', 9);
 }
 
 function _mute()
@@ -346,7 +335,7 @@ function _change_mute(val)
 	mute_status = val;
 	go_to_mute = 0;
 	looper.volout.message('float', Math.abs(val-1));
-	outlet(0, 'push_grid', 'value', 3, 6, (mute_status*7)+7);
+	outlet(0, 'receive_translation', 'mute', 'value', (mute_status*7)+7);
 }
 
 //copy the current loop into the record buffer and store its relevant attributes
@@ -356,7 +345,7 @@ function make_undo_step()
 	undo_data.loop_size = loop_end;
 	undo_data.clock_start = clock_start;
 	looper.bufferundo.message('duplicate', buffer_loop);
-	outlet(0, 'push_grid', 'value', 0, 6, (undo_data.can*7)+1);	
+	outlet(0, 'receive_translation', 'undo', 'value', (undo_data.can*7)+1);
 }
 
 //move the undo buffer's contents to the loop buffer and restore it's settings
@@ -373,7 +362,7 @@ function undo()
 		looper.looper.message('play', 1);
 		undo_data.can = false;
 	}
-	outlet(0, 'push_grid', 'value', 0, 6, (undo_data.can*7)+1);	
+	outlet(0, 'receive_translation', 'undo', 'value', (undo_data.can*7)+1);
 }
 
 //store an undo step and clear the buffer
@@ -384,7 +373,7 @@ function _clear()
 	looper.bufferloop.message('clear');
 	looper.looper.message('play', 1);
 	update_state();
-	outlet(0, 'push_grid', 'value', 4, 6, 2);	
+	outlet(0, 'receive_translation', 'clear', 'value', 2);	
 }	
 
 //reverse the tape transport; force ignores inertia;  sets internal attribute and forwards to change_speed()
@@ -429,20 +418,24 @@ function _change_speed(new_speed, force)
 	}
 	speed = new_speed;
 	looper.speed.message('set', speed);
+	var s = [];
 	for(var i=0;i<5;i++)
 	{
-		outlet(0, 'push_grid', 'value', 7, i, ((speed==speed_values[i])*1)+2);
+		s.push(((speed==speed_values[i])*1)+2);
 	}
+	outlet(0, 'receive_translation', 'speed_column_batch', 'batch_column', s);
 }
 
 //change the transport inertia attribute 
 function _change_inertia(new_inertia)
 {
 	inertia = new_inertia;
+	var n = [];
 	for(var i=0;i<5;i++)
 	{
-		outlet(0, 'push_grid', 'value', 6, i, ((inertia>=inertia_values[i])*2)+3);
+		n.push(((inertia>=inertia_values[i])*2)+3);
 	}
+	outlet(0, 'receive_translation', 'inertia_column_batch', 'batch_column', n);
 }
 
 //change the record quantize amount
@@ -470,7 +463,7 @@ function _set_quantize_record(val)
 	{
 		looper.quantizerecord.message('set', 0);
 	}
-	outlet(0, 'push_grid', 'value', 5, 7, (quantize_record.enabled*6)+2);
+	outlet(0, 'receive_translation', 'quantize', 'value', ((quantize_record.enabled*6)+2));
 }
 
 //turn on/off relative quantization	
@@ -525,21 +518,20 @@ function _feedback_level(level)
 
 function _display_position()
 {
+	var s = looper.groovespeed.getvalueof();
 	grid_position = parseInt(phase*16);	
-	if(speed > 0)
+	if(s > 0)
 	{
 		for(var i=0;i<16;i++)
 		{
-			var light =((i<=grid_position)&&(i>(grid_position-4))) + (i==grid_position);
-			outlet(0, 'push_grid', 'value', circle[0][i][0], circle[0][i][1], (light*2)+1);
+			outlet(0, 'receive_translation', 'circle_'+((i+grid_position)%16), 'value', i==0 ? 5 : i>(15-s) ? 7 : 1);
 		}
 	}
 	else
 	{
 		for(var i=0;i<16;i++)
 		{
-			var light =((i>=grid_position)&&(i<(grid_position+4))) + (i==grid_position);
-			outlet(0, 'push_grid', 'value', circle[0][i][0], circle[0][i][1], (light*2)+1);
+			outlet(0, 'receive_translation', 'circle_'+((i+grid_position)%16), 'value', i==0 ? 5 : i < (1 - s) ? 7 : 1);
 		}
 	}
 }
@@ -560,20 +552,114 @@ function change_state(val)
 	if(DEBUG){post('state', state, '\n');}
 }
 
-function push_grid(x, y, z)
+function setup_translations()
+{
+	/*Here we set up some translation assignments and send them to the Python ModClient.
+	Each translation add_translation assignment has a name, a target, a group, and possibly some arguments.
+	Translations can be enabled individually using their name/target combinations, or an entire group can be enabled en masse.
+	There are not currently provisions to dynamically change translations or group assignments once they are made.*/
+
+	/*Batch translations can be handled by creating alias controls with initial arguments so that when the batch command is sent
+	the arument(s) precede the values being sent.  They are treated the same as the rest of the group regarding their
+	enabled state, and calls will be ignored to them when they are disabled.  Thus, to send a column command to an address:
+	'add_translation', 'alias_name', 'address', 'target_group', n.
+	Then, to invoke this translation, we'd call:
+	'receive_translation', 'alias_name', 'column', nn.
+	This would cause all leds on the column[n] to be lit with color[nn].  
+	
+	It's important to note that using batch_row/column calls will wrap to the next column/row, whereas column/row commands will
+	only effect their actual physical row on the controller.*/
+
+
+	//Push stuff:
+	for(var i = 0;i < 16;i++)
+	{
+		outlet(0, 'add_translation', 'circle_'+i, 'push_grid', 'circle', circle[i][0], circle[i][1]);
+	}
+	for(var i = 0;i < 4;i++)
+	{
+		outlet(0, 'add_translation', 'instance_'+i, 'push_grid', 'instance', (i%2)+6, Math.floor(i/2)+6);
+	}
+	outlet(0, 'add_translation', 'undo', 'push_grid', 'all', 0, 6);
+	outlet(0, 'add_translation', 'overdub', 'push_grid', 'all', 1, 6);
+	outlet(0, 'add_translation', 'record', 'push_grid', 'all', 2, 6);
+	outlet(0, 'add_translation', 'mute', 'push_grid', 'all', 3, 6);
+	outlet(0, 'add_translation', 'clear', 'push_grid', 'all', 4, 6);
+	outlet(0, 'add_translation', 'quantize', 'push_grid', 'all', 5, 7);
+	outlet(0, 'add_translation', 'dummy_row_batch', 'push_grid', 'all', 7);
+	outlet(0, 'add_translation', 'speed_column_batch', 'push_grid', 'all', 7);
+	outlet(0, 'add_translation', 'inertia_column_batch', 'push_grid', 'all', 6);
+
+	//Base stuff:
+	for(var i = 0;i < 8;i++)
+	{
+		outlet(0, 'add_translation', 'circle_'+i, 'base_grid', 'circle', i, 0);
+		outlet(0, 'add_translation', 'circle_'+(i+8), 'base_grid', 'circle', 7-i, 1);
+	}
+	outlet(0, 'add_translation', 'undo', 'base_grid', 'all', 0, 3);
+	outlet(0, 'add_translation', 'overdub', 'base_grid', 'all', 1, 3);
+	outlet(0, 'add_translation', 'record', 'base_grid', 'all', 2, 3);
+	outlet(0, 'add_translation', 'mute', 'base_grid', 'all', 3, 3);
+	outlet(0, 'add_translation', 'clear', 'base_grid', 'all', 4, 3);
+	outlet(0, 'add_translation', 'quantize', 'base_grid', 'all', 5, 3);
+
+}
+
+function _push_grid(x, y, z)
 {
 	grid(x, y, z);
 }
 
-function grid(x, y, z)
+function _base_grid(x, y, z)
+{
+	post('base_grid', x, y, z, '\n');
+	if(z)
+	{
+		switch(y)
+		{
+			case 0:
+				looper.looper.message('pos', x/16);
+				looper.looper.message('restart', 1);
+				break;
+			case 1:
+				looper.looper.message('pos', (Math.abs(x-7)+8)/16);
+				looper.looper.message('restart', 1);
+				break;
+			case 3:
+				switch(x)
+				{
+					case 0:
+						undo();
+						break;
+					case 1:
+						_overdub();
+						break;
+					case 2:
+						_loop();
+						break;
+					case 3:
+						_mute();
+						break;
+					case 4:
+						_clear();
+						break;
+					case 5:
+						set_quantize_record(Math.abs(quantize_record.enabled-1));
+						break;
+				}
+				break;
+		}
+	}
+}
+
+function _grid(x, y, z)
 {
 	if((x<8)&&(y<8))
 	{
 		var pos = parseInt(cell_fire[x][y][0]);
-		//post(x, y, z, pos, number, '\n');
-		if((pos > -1)&&(pos <16)&&(z>0))		//the first 16 positions are the main circle
+		post(x, y, z, pos, number, '\n');
+		if((pos > -1)&&(pos <16)&&(z>0))
 		{
-			//looper[number].trigger_position(pos);
 			looper.looper.message('pos', pos/16);
 			looper.looper.message('restart', 1);
 		}
@@ -611,12 +697,10 @@ function grid(x, y, z)
 				case 5:
 					break;
 				case 6:
-					//master.selectedui.message('int', 1);
 					if(DEBUG){post('select_device_from_key @loop1\n');}
 					outlet(0, 'select_device_from_key', '@loop1');
 					break;
 				case 7:
-					//master.selectedui.message('int', 2);
 					if(DEBUG){post('select_device_from_key @loop2\n');}
 					outlet(0, 'select_device_from_key', '@loop2');
 					break;
@@ -636,12 +720,10 @@ function grid(x, y, z)
 						set_quantize_record(Math.abs(quantize_record.enabled-1));
 						break;
 					case 6:
-						//master.selectedui.message('int', 3);
 						if(DEBUG){post('select_device_from_key @loop3\n');}
 						outlet(0, 'select_device_from_key', '@loop3');
 						break;
 					case 7:
-						//master.selectedui.message('int', 4);
 						if(DEBUG){post('select_device_from_key @loop4\n');}
 						outlet(0, 'select_device_from_key', '@loop4');
 						break;
@@ -650,8 +732,6 @@ function grid(x, y, z)
 		}
 	}
 }
-
-
 
 
 
@@ -678,7 +758,6 @@ function copy_buffer_to_destination(dest)
 	looper.grooveend.message(loop_size*2);
 	looper.groovelength.message(loop_size*2);
 }*/
-
 
 //used to reinitialize the script immediately on saving; 
 //can be turned on by changing FORCELOAD to 1;

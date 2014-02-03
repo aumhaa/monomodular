@@ -11,6 +11,10 @@ MODS_TO_REBUILD = ['Debug', 'AumPC20', 'AumPC40', 'AumPush', 'AumTroll', 'AumTro
 
 from _Framework.ControlSurface import ControlSurface 
 from _Framework.ControlSurfaceComponent import ControlSurfaceComponent
+
+if not ("/Users/amounra/monomodular_git/L9 Python Scripts/") in sys.path:
+	sys.path.append("/Users/amounra/monomodular_git/L9 Python Scripts/")
+
 class Debug(ControlSurface):
 
 
@@ -21,11 +25,12 @@ class Debug(ControlSurface):
 		#self._log_dirs()
 		self.log_message('_^_^_^_^_^_^_^_^_^_^_^_^_^_^_^_^_ DEBUG ON _^_^_^_^_^_^_^_^_^_^_^_^_^_^_^_^_')
 		self._scripts = []
+		self._log_dirs()
 
 	
 
 	def _log_dirs(self):
-		self.log_message(str())
+		#self.log_message(str())
 		self.log_message(str(sys.path))
 		#self.log_message(str(__file__) + ' working dir: ' + str(os.listdir(sys.path[5])))
 	

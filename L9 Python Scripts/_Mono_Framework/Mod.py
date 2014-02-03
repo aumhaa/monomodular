@@ -9,7 +9,7 @@ from _Framework.ControlSurfaceComponent import ControlSurfaceComponent
 from _Framework.ControlElement import ControlElement
 from _Framework.CompoundComponent import CompoundComponent # Base class for classes encompasing other components to form complex components
 from _Framework.Task import *
-from _Framework.SubjectSlot import SubjectEvent
+from _Framework.SubjectSlot import SubjectEvent, subject_slot
 from _Framework.Signal import Signal
 from _Framework.NotifyingControlElement import NotifyingControlElement
 from _Framework.Util import in_range
@@ -19,6 +19,15 @@ from _Framework.InputControlElement import InputSignal
 
 from _Mono_Framework.MonoParamComponent import MonoParamComponent
 from _Mono_Framework.ModDevices import *
+
+DEBUG = True
+
+INITIAL_SCROLLING_DELAY = 5
+INTERVAL_SCROLLING_DELAY = 1
+
+def debug():
+	return DEBUG
+
 
 def hascontrol(handler, control):
 	return control in handler._controls.keys()
@@ -149,7 +158,7 @@ class ElementTranslation(object):
 	
 
 
-class StoredElement(object):	
+class StoredElement(object):
 
 
 	def __init__(self, active_handlers, *a, **attributes):
@@ -285,10 +294,10 @@ class Grid(object):
 class Array(object):
 
 
-	def __init__(self, active_handlers, name, size):
+	def __init__(self, active_handlers, name, size, *a, **k):
 		self._active_handlers = active_handlers
 		self._name = name
-		self._cell = [StoredElement(self._name + '_' + str(num), _num = num) for num in range(size)]
+		self._cell = [StoredElement(self._name + '_' + str(num), _num = num, *a, **k) for num in range(size)]
 	
 
 	def restore(self):
@@ -333,24 +342,30 @@ class ModHandler(CompoundComponent):
 	def __init__(self, script, *a, **k):
 		super(ModHandler, self).__init__(*a, **k)
 		self._script = script
+		self._color_type = 'RGB'
 		self.log_message = script.log_message
 		self.modrouter = script.monomodular
 		self._active_mod = None
 		self._device_component = None
-		self._color_maps = [range(128) for index in range(17)]
-		self._colors = self._color_maps[0]
+		self._colors = range(128)
 		self._is_enabled = False
 		self._is_connected = False
 		self._receive_methods = {}
 		self.x_offset = 0
 		self.y_offset = 0
+		self._scroll_up_ticks_delay = -1
+		self._scroll_down_ticks_delay = -1
+		self._scroll_right_ticks_delay = -1
+		self._scroll_left_ticks_delay = -1
 		self.navbox_selected = 3
 		self.navbox_unselected = 5
 		self.modrouter.register_handler(self)
+		self._register_timer_callback(self._on_timer)
 	
 
 	def disconnect(self, *a, **k):
 		self._active_mod = None
+		self._unregister_timer_callback(self._on_timer)
 		super(ModHandler, self).disconnect(*a, **k)
 	
 
@@ -362,12 +377,14 @@ class ModHandler(CompoundComponent):
 
 	def select_mod(self, mod):
 		self._active_mod = mod
-		#self._colors = self._color_maps[number]
+		self._colors = range(128)
 		for mod in self.modrouter._mods:
 			if self in mod._active_handlers:
 				mod._active_handlers.remove(self)
 		if not self._active_mod is None:
 			self._active_mod._active_handlers.append(self)
+			if self._color_type in self._active_mod._color_maps.keys():
+				self._colors = self._active_mod._color_maps[self._color_type]
 			self._active_mod.restore()
 		self.update()
 	
@@ -404,8 +421,8 @@ class ModHandler(CompoundComponent):
 	
 
 	def set_offset(self, x, y):
-		self.x_offset = x
-		self.y_offset = y
+		self.x_offset = max(0, min(x, 8))
+		self.y_offset = max(0, min(y, 8))
 		if self._active_mod and self._active_mod.legacy:
 			self._active_mod.send('offset', self.x_offset, self.y_offset)
 			self._display_nav_box()
@@ -413,6 +430,113 @@ class ModHandler(CompoundComponent):
 
 	def _display_nav_box(self):
 		pass
+	
+
+	def set_nav_up_button(self, button):
+		self._on_nav_up_value.subject = button
+	
+
+	def set_nav_down_button(self, button):
+		self._on_nav_down_value.subject = button
+	
+
+	def set_nav_left_button(self, button):
+		self._on_nav_left_value.subject = button
+	
+
+	def set_nav_right_button(self, button):
+		self._on_nav_right_value.subject = button
+	
+
+	@subject_slot('value')
+	def _on_nav_up_value(self, value):
+		if value:
+			self._scroll_up_ticks_delay = INITIAL_SCROLLING_DELAY
+			if (not self._is_scrolling()):
+				self.set_offset(self.x_offset, self.y_offset - 1)
+				self.update()
+		else:
+			self._scroll_up_ticks_delay = -1
+	
+
+	@subject_slot('value')
+	def _on_nav_down_value(self, value):
+		if value:
+			self._scroll_down_ticks_delay = INITIAL_SCROLLING_DELAY
+			if (not self._is_scrolling()):
+				self.set_offset(self.x_offset, self.y_offset + 1)
+				self.update()
+		else:
+			self._scroll_down_ticks_delay = -1
+	
+
+	@subject_slot('value')
+	def _on_nav_left_value(self, value):
+		if value:
+			self._scroll_left_ticks_delay = INITIAL_SCROLLING_DELAY
+			if (not self._is_scrolling()):
+				self.set_offset(self.x_offset - 1, self.y_offset)
+				self.update()
+		else:
+			self._scroll_left_ticks_delay = -1
+	
+
+	@subject_slot('value')
+	def _on_nav_right_value(self, value):
+		if value:
+			self._scroll_right_ticks_delay = INITIAL_SCROLLING_DELAY
+			if (not self._is_scrolling()):
+				self.set_offset(self.x_offset + 1, self.y_offset)
+				self.update()
+		else:
+			self._scroll_right_ticks_delay = -1
+	
+
+	def _on_timer(self):
+		if self.is_enabled():
+			scroll_delays = [self._scroll_up_ticks_delay,
+							 self._scroll_down_ticks_delay,
+							 self._scroll_right_ticks_delay,
+							 self._scroll_left_ticks_delay]
+			if (scroll_delays.count(-1) < 4):
+				x_increment = 0
+				y_increment = 0
+				if (self._scroll_right_ticks_delay > -1):
+					if self._is_scrolling():
+						x_increment += 1
+						self._scroll_right_ticks_delay = INTERVAL_SCROLLING_DELAY
+					self._scroll_right_ticks_delay -= 1
+				if (self._scroll_left_ticks_delay > -1):
+					if self._is_scrolling():
+						x_increment -= 1
+						self._scroll_left_ticks_delay = INTERVAL_SCROLLING_DELAY
+					self._scroll_left_ticks_delay -= 1
+				if (self._scroll_down_ticks_delay > -1):
+					if self._is_scrolling():
+						y_increment += 1
+						self._scroll_down_ticks_delay = INTERVAL_SCROLLING_DELAY
+					self._scroll_down_ticks_delay -= 1
+				if (self._scroll_up_ticks_delay > -1):
+					if self._is_scrolling():
+						y_increment -= 1
+						self._scroll_up_ticks_delay = INTERVAL_SCROLLING_DELAY
+					self._scroll_up_ticks_delay -= 1
+				new_x_offset = max(0, (self.x_offset + x_increment))
+				new_y_offset = max(0, (self.y_offset + y_increment))
+				if ((new_x_offset != self.x_offset) or (new_y_offset != self.y_offset)):
+					self.set_offset(new_x_offset, new_y_offset)
+					self.update()
+	
+
+	def _is_scrolling(self):
+		return (0 in (self._scroll_up_ticks_delay, self._scroll_down_ticks_delay, self._scroll_right_ticks_delay, self._scroll_left_ticks_delay))
+	
+
+	def _update_nav_buttons(self):
+		self._on_nav_up_value.subject and self._on_nav_up_value.subject.send_value(int(self.y_offset > 0), True)
+		self._on_nav_down_value.subject and self._on_nav_down_value.subject.send_value(int(self.y_offset < 8), True)
+		self._on_nav_left_value.subject and self._on_nav_left_value.subject.send_value(int(self.x_offset > 0), True)
+		self._on_nav_right_value.subject and self._on_nav_right_value.subject.send_value(int(self.x_offset < 8), True)
 	
 
 
@@ -433,6 +557,7 @@ class ModClient(NotifyingControlElement):
 		self._addresses = {'grid':Grid(self.active_handlers, 'grid', 16, 16)}
 		self._translations = {}
 		self._translation_groups = {}
+		self._color_maps = {}
 		self.legacy = False
 		for handler in self._parent._handlers:
 			handler._register_addresses(self)
@@ -459,7 +584,8 @@ class ModClient(NotifyingControlElement):
 			try:
 				getattr(address, method)(*value_list)
 			except:
-				self.log_message('receive method exception')
+				if debug():
+					self.log_message('receive method exception %(a)s %(m)s %(vl)s' % {'a':address_name, 'm':method, 'vl':value_list})
 	
 
 	def distribute(self, function_name, values = 0, *a, **k):
@@ -469,7 +595,8 @@ class ModClient(NotifyingControlElement):
 			try:
 				getattr(self, function_name)(*value_list)
 			except:
-				self.log_message('distribute method exception')
+				if debug():
+					self.log_message('distribute method exception %(fn)s %(vl)s' % {'fn':function_name, 'vl':value_list})
 	
 
 	def receive_translation(self, translation_name, method = 'value', *values):
@@ -478,7 +605,8 @@ class ModClient(NotifyingControlElement):
 		try:
 			self._translations[translation_name].receive(method, *values)
 		except:
-			self.log_message('receive_translation method exception')
+			if debug():
+				self.log_message('receive_translation method exception %(n)s %(m)s %(vl)s' % {'n':translation_name, 'm':method, 'vl':values})
 	
 
 	def send(self, control_name, *a):
@@ -617,6 +745,13 @@ class ModClient(NotifyingControlElement):
 			self._parent.song().view.select_device(preset)
 	
 
+	def set_color_map(self, color_type, color_map):
+		#new_map = color_map.split('*')
+		#for index in xrange(len(new_map)):
+		#	new_map[index] = int(new_map[index])
+		#self._color_maps[color_type] = new_map
+		pass
+	
 
 
 class ModRouter(CompoundComponent):
@@ -670,13 +805,13 @@ class ModRouter(CompoundComponent):
 	
 
 	def add_mod(self, device):
-		#self._host.log_message('device: ' + str(device))
+		self._host.log_message('device: ' + str(device))
 		if not device in self.devices():
 			with self._host.component_guard():
 				#self._host.log_message('its not there...')
 				self._mods.append( ModClient(self, device, 'modClient'+str(len(self._mods))) )
 		ret = self.get_mod(device)
-		#self._host.log_message('sending back: ' + str(ret))
+		self._host.log_message('sending back: ' + str(ret))
 		return ret
 	
 
