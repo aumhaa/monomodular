@@ -186,12 +186,12 @@ class StoredElement(object):
 class Grid(object):
 
 
-	def __init__(self, active_handlers, name, width, height):
+	def __init__(self, active_handlers, name, width, height, *a, **k):
 		self._active_handlers = active_handlers
 		self._name = name
 		self._width = width
 		self._height = height
-		self._cell = [[StoredElement(active_handlers, _name = self._name + '_' + str(x) + '_' + str(y), _x = x, _y = y ) for y in range(height)] for x in range(width)]
+		self._cell = [[StoredElement(active_handlers, _name = self._name + '_' + str(x) + '_' + str(y), _x = x, _y = y , *a, **k) for y in range(height)] for x in range(width)]
 	
 
 	def restore(self):
@@ -333,6 +333,72 @@ class Array(object):
 	def mask_all(self, value):
 		for num in range(len(self.cell)):
 			self.mask(num, value)
+	
+
+
+class RingedStoredElement(StoredElement):
+
+
+	def __init__(self, active_handlers, *a, **attributes):
+		self._green = 0
+		self._led = 0
+		self._custom = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+		super(StoredElement, self).__init__()
+		for name, attribute in attributes.iteritems():
+			setattr(self, name, attribute)
+	
+
+	def green(self, value):
+		self._green = value
+		self.update_element()
+	
+
+	def led(self, value):
+		self._led = value
+		self.update_element()
+	
+
+	def custom(self, *values):
+		self._custom = values
+		self.update_element()
+	
+
+	def update_element(self):
+		for handler in self._active_handlers():
+			handler.receive_address(self._name, self._value)
+			handler.recieve_address(self._name+str('_green'), self._green)
+			handler.recieve_address(self._name+str('_led'), self._led)
+			handler.recieve_address(self._name+str('_custom'), self._custom)	
+	
+
+
+class RingedGrid(Grid):
+
+
+	def __init__(self, active_handlers, name, width, height, *a, **k):
+		self._active_handlers = active_handlers
+		self._name = name
+		self._width = width
+		self._height = height
+		self._cell = [[RingedStoredElement(active_handlers, _name = self._name + '_' + str(x) + '_' + str(y), _x = x, _y = y , *a, **k) for y in range(height)] for x in range(width)]
+	
+
+	def green(self, value):
+		element = self._cell[x][y]
+		element._green = value
+		self.update_element(element)
+	
+
+	def led(self, value):
+		element = self._cell[x][y]
+		element._led = value
+		self.update_element(element)
+	
+
+	def custom(self, *values):
+		element = self._cell[x][y]
+		element._custom = value
+		self.update_element(element)
 	
 
 
@@ -811,7 +877,7 @@ class ModRouter(CompoundComponent):
 				#self._host.log_message('its not there...')
 				self._mods.append( ModClient(self, device, 'modClient'+str(len(self._mods))) )
 		ret = self.get_mod(device)
-		self._host.log_message('sending back: ' + str(ret))
+		#self._host.log_message('sending back: ' + str(ret))
 		return ret
 	
 
@@ -830,3 +896,25 @@ class ModRouter(CompoundComponent):
 		if hasattr(__builtins__, 'monomodular'):
 			del __builtins__['monomodular']
 	
+
+	def is_mod(self, device):
+		mod_device = None
+		if isinstance(device, Live.Device.Device):
+			try:
+				if device.can_have_chains and not device.can_have_drum_pads and len(device.view.selected_chain.devices)>0:
+					device = device.view.selected_chain.devices[0]
+			except:
+				pass
+		#self.log_message('is_mod ' + str(device))
+		if not device is None:
+			#self.log_message('isnt none')
+			for mod in self._mods:
+				#self.log_message('mod in mods: ' + str(mod.device))
+				if mod.device == device:
+					mod_device = mod
+					break
+		return mod_device
+	
+
+
+

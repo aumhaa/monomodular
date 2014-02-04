@@ -6,9 +6,9 @@ inlets = 1;
 var script = this;
 
 
-var DEBUG = false;
+var DEBUG = true;
 var SHOW_STORAGE = false;
-var FORCELOAD = false;
+var FORCELOAD = true;
 
 var bgcolors = {'OFF': [0, 0, 0, 1], 'WHITE':[1, 1, 1, 1], 'YELLOW':[1, 1, 0, 1], 'CYAN':[0, 1, 1, 1], 
 				'MAGENTA':[1, 0, 1, 1], 'RED':[1, 0, 0, 1], 'GREEN':[0, 1, 0, 1], 'BLUE':[0, 0, 1, 1],
@@ -493,6 +493,7 @@ function initialize(val)
 		lock();
 		shift(0);
 		alt(0);
+		outlet(0, 'set_legacy', 1);
 	}
 	else
 	{
