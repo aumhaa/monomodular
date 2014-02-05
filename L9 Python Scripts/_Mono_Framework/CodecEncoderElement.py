@@ -70,15 +70,29 @@ class CodecEncoderElement(EncoderElement):
 	
 
 	def change_ring_mode(self, mode):
+		#deprecated
 		self._ring_mode = mode
+	
+
+	def set_ring_value(self, val):
+		#deprecated
+		self._ring_value = val
 	
 
 	def ring_mode(self):
 		return self._ring_mode
 	
 
-	def set_ring_value(self, val):
-		self._ring_value = val
+	def set_custom(self, val):
+		self._ring_custom = self._calculate_custom(''.join([str(i) for i in val]))
+	
+
+	def set_green(self, val, *a):
+		self._ring_green = int(val>0)
+	
+
+	def set_mode(self, val, *a):
+		self._ring_mode = val
 	
 
 	def _calculate_custom(self, ring_leds):

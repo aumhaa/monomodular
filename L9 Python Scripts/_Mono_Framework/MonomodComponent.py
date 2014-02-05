@@ -1,4 +1,4 @@
-# by amounra 0413 : http://www.aumhaa.com
+# by amounra 0214 : http://www.aumhaa.com
 
 from _Framework.CompoundComponent import CompoundComponent
 from _Framework.ControlSurfaceComponent import ControlSurfaceComponent
@@ -7,7 +7,7 @@ from _Framework.ButtonMatrixElement import ButtonMatrixElement
 from _Framework.EncoderElement import EncoderElement
 
 from _Mono_Framework.MonoButtonElement import MonoButtonElement
-from _Mono_Framework.EncoderMatrixElement import EncoderMatrixElement
+from _Mono_Framework.EncoderMatrixElement import EncoderMatrixElement, NewEncoderMatrixElement
 #from MonoDeviceComponent import MonoDeviceComponent
 
 DEBUG = False
@@ -682,7 +682,7 @@ class MonomodComponent(CompoundComponent):
 
 	"""Codec specific methods"""
 	def _set_dial_matrix(self, dial_matrix = None, button_matrix = None, *a, **k):
-		assert isinstance(dial_matrix, (EncoderMatrixElement, type(None)))
+		assert isinstance(dial_matrix, (EncoderMatrixElement, NewEncoderMatrixElement, type(None)))
 		if dial_matrix != self._dial_matrix:
 			if self._dial_matrix != None:
 				self._dial_matrix.remove_value_listener(self._dial_matrix_value)

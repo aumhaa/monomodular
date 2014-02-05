@@ -305,7 +305,7 @@ class Array(object):
 			self.update_element(element)
 	
 
-	def update_element(self, element):	
+	def update_element(self, element):
 		for handler in self._active_handlers():
 			handler.receive_address(self._name, element._num, element._value)
 	
@@ -341,20 +341,18 @@ class RingedStoredElement(StoredElement):
 
 	def __init__(self, active_handlers, *a, **attributes):
 		self._green = 0
-		self._led = 0
+		self._mode = 0
 		self._custom = [0, 0, 0, 0, 0, 0, 0, 0, 0]
-		super(StoredElement, self).__init__()
-		for name, attribute in attributes.iteritems():
-			setattr(self, name, attribute)
+		super(RingedStoredElement, self).__init__(active_handlers, *a, **attributes)
+	
+
+	def mode(self, value):
+		self._mode = value
+		self.update_element()
 	
 
 	def green(self, value):
 		self._green = value
-		self.update_element()
-	
-
-	def led(self, value):
-		self._led = value
 		self.update_element()
 	
 
@@ -365,10 +363,10 @@ class RingedStoredElement(StoredElement):
 
 	def update_element(self):
 		for handler in self._active_handlers():
-			handler.receive_address(self._name, self._value)
-			handler.recieve_address(self._name+str('_green'), self._green)
-			handler.recieve_address(self._name+str('_led'), self._led)
-			handler.recieve_address(self._name+str('_custom'), self._custom)	
+			handler.receive_address(self._name, value = self._value)
+			handler.receive_address(self._name, green = self._green)
+			handler.receive_address(self._name, mode = self._mode)
+			handler.receive_address(self._name, custom = self._custom)	
 	
 
 
@@ -380,25 +378,57 @@ class RingedGrid(Grid):
 		self._name = name
 		self._width = width
 		self._height = height
+		self._relative = True
+		self._local = True
 		self._cell = [[RingedStoredElement(active_handlers, _name = self._name + '_' + str(x) + '_' + str(y), _x = x, _y = y , *a, **k) for y in range(height)] for x in range(width)]
 	
 
-	def green(self, value):
+	def green(self, x, y, value):
 		element = self._cell[x][y]
 		element._green = value
 		self.update_element(element)
 	
 
-	def led(self, value):
+	def led(self, x, y, value):
 		element = self._cell[x][y]
 		element._led = value
 		self.update_element(element)
 	
 
-	def custom(self, *values):
+	def mode(self, x, y, value):
 		element = self._cell[x][y]
-		element._custom = value
+		element._mode = value
 		self.update_element(element)
+	
+
+	def custom(self, x, y, *values):
+		element = self._cell[x][y]
+		element._custom = values
+		self.update_element(element)
+	
+
+	def relative(self, value):
+		#if not self._relative == value:
+		self._relative = bool(value)
+		self.restore()
+	
+
+	def local(self, value):
+		#if not self._local == bool(value):
+		self._local = bool(value)
+		self.restore()
+	
+
+	def restore(self):
+		for handler in self._active_handlers():
+			handler.receive_address(str(self._name+'_relative'), self._relative)
+			handler.receive_address(str(self._name+'_local'), self._local)
+		super(RingedGrid, self).restore()
+	
+
+	def update_element(self, element):
+		for handler in self._active_handlers():
+			handler.receive_address(self._name, element._x, element._y, value = element._value, green = element._green, mode = element._mode, custom = element._custom)
 	
 
 
@@ -835,7 +865,7 @@ class ModRouter(CompoundComponent):
 	def set_host(self, host):
 		assert isinstance(host, ControlSurface)
 		self._host = host
-		self._host._task_group.add(repeat(self.timer))
+		self._host._get_tasks().add(repeat(self.timer))
 		self._host.log_message('host registered: ' + str(host))
 		self.log_message = host.log_message
 	
@@ -871,13 +901,13 @@ class ModRouter(CompoundComponent):
 	
 
 	def add_mod(self, device):
-		self._host.log_message('device: ' + str(device))
+		self.log_message('add mod device: ' + str(device))
 		if not device in self.devices():
 			with self._host.component_guard():
-				#self._host.log_message('its not there...')
+				self.log_message('its not there...')
 				self._mods.append( ModClient(self, device, 'modClient'+str(len(self._mods))) )
 		ret = self.get_mod(device)
-		#self._host.log_message('sending back: ' + str(ret))
+		self.log_message('sending back: ' + str(ret))
 		return ret
 	
 
@@ -905,11 +935,11 @@ class ModRouter(CompoundComponent):
 					device = device.view.selected_chain.devices[0]
 			except:
 				pass
-		#self.log_message('is_mod ' + str(device))
+		self.log_message('is_mod ' + str(device))
 		if not device is None:
-			#self.log_message('isnt none')
+			self.log_message('isnt none')
 			for mod in self._mods:
-				#self.log_message('mod in mods: ' + str(mod.device))
+				self.log_message('mod in mods: ' + str(mod.device))
 				if mod.device == device:
 					mod_device = mod
 					break

@@ -12,6 +12,7 @@ from _Framework.NotifyingControlElement import NotifyingControlElement
 from _Framework.Util import in_range
 from _Framework.Debug import debug_print
 from _Framework.Disconnectable import Disconnectable
+from _Framework.ButtonMatrixElement import ButtonMatrixElement
 
 class InputSignal(Signal):
 	"""
@@ -125,4 +126,32 @@ class EncoderMatrixElement(NotifyingControlElement):
 			callback(value, coordinates[0], coordinates[1])"""
 	
 
+class NewEncoderMatrixElement(ButtonMatrixElement):
+	' Class representing a 2-dimensional set of buttons '
+
+
+	def __init__(self, script, *a, **k):
+		super(NewEncoderMatrixElement, self).__init__(*a, **k)
+		self._script = script
+		self._dials = []
+		self._dial_coordinates = {}
+		self._max_row_width = 0
+
+
+	def disconnect(self):
+		super(NewEncoderMatrixElement, self).disconnect()
+		self._dials = None
+		self._dial_coordinates = None
+	
+
+	def get_dial(self, *a, **k):
+		self.get_button(self, *a, **k)
+	
+
+	def _dial_value(self, value, sender):
+		assert isinstance(value, int)
+		assert (sender in self._dial_coordinates.keys())
+		assert isinstance(self._dial_coordinates[sender], tuple)
+		coordinates = tuple(self._dial_coordinates[sender])
+		self.notify_value(value, coordinates[0], coordinates[1])
 
