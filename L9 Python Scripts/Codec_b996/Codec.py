@@ -21,18 +21,21 @@ from _Framework.ModeSelectorComponent import ModeSelectorComponent # Class for s
 from _Framework.NotifyingControlElement import NotifyingControlElement # Class representing control elements that can send values
 from _Framework.SessionComponent import SessionComponent # Class encompassing several scene to cover a defined section of Live's session
 from _Framework.TransportComponent import TransportComponent # Class encapsulating all functions in Live's transport section
-from _Framework.ModesComponent import AddLayerMode
+from _Framework.ModesComponent import AddLayerMode, LayerMode, MultiEntryMode, ModesComponent, SetAttributeMode, ModeButtonBehaviour, CancellableBehaviour, AlternativeBehaviour, ReenterBehaviour, DynamicBehaviourMixin, ExcludingBehaviourMixin, ImmediateBehaviour, LatchingBehaviour, ModeButtonBehaviour
 from _Framework.Layer import Layer
+from _Framework.SubjectSlot import SubjectEvent, subject_slot, subject_slot_group
 from _Framework.Task import *
 from _Generic.Devices import *
 
 from Push.M4LInterfaceComponent import M4LInterfaceComponent
-
+from Push.ComboElement import ComboElement, DoublePressElement, MultiElement, DoublePressContext
+from Push.BackgroundComponent import BackgroundComponent
 
 """Imports from _Mono_Framework"""
 from _Mono_Framework.DetailViewControllerComponent import DetailViewControllerComponent
 from _Mono_Framework.CodecEncoderElement import CodecEncoderElement
 from _Mono_Framework.EncoderMatrixElement import NewEncoderMatrixElement as EncoderMatrixElement
+from _Mono_Framework.DeviceSelectorComponent import NewDeviceSelectorComponent as DeviceSelectorComponent
 from _Mono_Framework.MonoBridgeElement import MonoBridgeElement
 from _Mono_Framework.MonoButtonElement import MonoButtonElement
 from _Mono_Framework.MonoEncoderElement import MonoEncoderElement
@@ -59,6 +62,33 @@ SLOWENCODER = (240, 0, 1, 97, 4, 30, 00, 00, 247)
 NORMALENCODER = (240, 0, 1, 97, 4, 30, 02, 00, 247)
 FASTENCODER = (240, 0, 1, 97, 4, 30, 04, 00, 247)
 SHOW_PLAYING_CLIP_DELAY = 5
+ENCODER_SPEED = [NORMALENCODER, SLOWENCODER]
+
+class CancellableBehaviourWithRelease(CancellableBehaviour):
+
+
+	def release_delayed(self, component, mode):
+		component.pop_mode(mode)
+	
+
+	def update_button(self, component, mode, selected_mode):
+		button = component.get_mode_button(mode)
+		groups = component.get_mode_groups(mode)
+		selected_groups = component.get_mode_groups(selected_mode)
+		value = (mode == selected_mode or bool(groups & selected_groups))*32 or 1
+		button.send_value(value, True)
+	
+
+class ShiftCancellableBehaviourWithRelease(CancellableBehaviour):
+
+
+	def release_delayed(self, component, mode):
+		component.pop_mode(mode)
+	
+
+	def update_button(self, component, mode, selected_mode):
+		pass
+	
 
 
 class CodecMonoButtonElement(MonoButtonElement):
@@ -728,6 +758,8 @@ class Codec(ControlSurface):
 		self._device_selection_follows_track_selection=FOLLOW
 		self._leds_last = 0
 		self._shift_pressed = False
+		self._shift_doublepressed = False
+		self._alt_enabled = False
 		with self.component_guard():
 			self._setup_controls()
 			self._setup_monobridge()
@@ -737,12 +769,11 @@ class Codec(ControlSurface):
 			self._setup_device_chooser()
 			self._setup_mixer_controls()
 			self._setup_mod()
-			self._setup_modes() 
 			self._setup_device_selector()
+			self._setup_modes() 
 			self._setup_send_reset()
 			self._setup_default_buttons()
 			self._setup_m4l_interface()
-			self.set_local_ring_control(True)
 			self.song().view.add_selected_track_listener(self._update_selected_device)
 			self.song().add_appointed_device_listener(self._on_device_changed)
 			self._initialize_code()
@@ -766,8 +797,7 @@ class Codec(ControlSurface):
 
 	def _setup_controls(self):
 		is_momentary = True
-		self._livid = CodecMonoButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, LIVID, 'Livid_Button', self)
-		
+		self._livid = DoublePressElement(CodecMonoButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, LIVID, 'Livid_Button', self))
 		self._dial = [None for index in range(8)]
 		for column in range(8):
 			self._dial[column] = [None for index in range(4)]
@@ -804,13 +834,25 @@ class Codec(ControlSurface):
 		for row in range(4):
 			button_row = [self._button[column][row] for column in range(8)]
 			self._button_matrix.add_row(tuple(button_row))
+		#self._background = BackgroundComponent()
+		#self._background.layer = Layer(code_keys = self._code_keys, code_buttons = self._code_buttons)
+		#self._background.layer.priority = 1
+		#self._background.set_enabled(True)
+
+		
 	
 
 	def _setup_modes(self):
-		self.set_shift_button(self._livid)
-		self._shift_mode = ShiftModeComponent(self._shift_update, self) 
-		self._shift_mode.name = 'Shift_Mode'
-		self._shift_mode.set_mode_buttons(tuple([self._row_button[0], self._row_button[1], self._row_button[2], self._row_button[3]]))
+		#self.set_shift_button(self._livid)
+		self._main_mode = ShiftModeComponent(self._mode_update, self) 
+		self._main_mode.name = 'Shift_Mode'
+		self._main_mode.set_mode_buttons(tuple([self._row_button[0], self._row_button[1], self._row_button[2], self._row_button[3]]))
+		self._on_shift_doublepress_value.subject = self._livid.double_press
+		self._shift_mode = ModesComponent()
+		self._shift_mode.add_mode('shift', tuple([self._enable_shift, self._disable_shift]), behaviour = ShiftCancellableBehaviourWithRelease())
+		self._shift_mode.set_mode_button('shift', self._livid)
+		self._alt_mode = ModesComponent()
+		self._alt_mode.add_mode('alt', tuple([self._enable_alt, self._disable_alt]), behaviour = CancellableBehaviourWithRelease())
 	
 
 	def _setup_transport_control(self):
@@ -819,7 +861,6 @@ class Codec(ControlSurface):
 	
 
 	def _setup_mod(self):
-		self.log_message('making newmod')
 		if isinstance(__builtins__, dict):
 			if not 'monomodular' in __builtins__.keys() or not isinstance(__builtins__['monomodular'], ModRouter):
 				__builtins__['monomodular'] = ModRouter()
@@ -829,14 +870,14 @@ class Codec(ControlSurface):
 		self.monomodular = __builtins__['monomodular']
 		if not self.monomodular.has_host():
 			self.monomodular.set_host(self)
-		else:
-			self.log_message('already had host??')
 		self.monomodular.name = 'monomodular_switcher'
 		self.modhandler = CodecModHandler(self)
 		self.modhandler.name = 'ModHandler'
-		self.modhandler.layer = Layer(code_grid = self._button_matrix, code_encoder_grid = self._encoder_matrix, code_keys = self._code_keys, code_buttons = self._code_buttons)# shift_button = self._shift_button))
+		self.modhandler.layer = Layer( code_grid = self._button_matrix, code_encoder_grid = self._encoder_matrix)# shift_button = self._shift_button))  parameter_controls = self._encoder_matrix,
 		self.modhandler.set_enabled(False)
-		self.modhandler.shift_layer = AddLayerMode(self.modhandler, Layer(code_buttons = self._code_buttons, key_buttons = self._code_keys))
+		self.modhandler.code_buttons_layer = AddLayerMode(self.modhandler, Layer(code_buttons = self._code_buttons, priority = 3))
+		self.modhandler.keys_layer = AddLayerMode(self.modhandler, Layer(key_buttons = self._code_keys, priority = 3))
+		self.modhandler.code_keys_layer = AddLayerMode(self.modhandler, Layer(code_keys = self._code_keys, priority = 3))
 	
 
 	def _setup_mixer_controls(self):
@@ -848,17 +889,15 @@ class Codec(ControlSurface):
 		self._mixer.name = 'Mixer'
 		self._mixer._next_track_value = self._mixer_next_track_value(self._mixer)
 		self._mixer._prev_track_value = self._mixer_prev_track_value(self._mixer)
-		self._mixer.set_track_offset(0) #Sets start point for mixer strip (offset from left)
-		#for index in range(8):
-			#use the bottom row of encoders for volume, so add 24 to offset the index
-		#	self._mixer.channel_strip(index).set_volume_control(self._dial[index+24])
+		self._mixer.set_track_offset(0)
 		for index in range(8):
 			self._mixer.channel_strip(index).name = 'Mixer_ChannelStrip_' + str(index)
 			self._mixer.channel_strip(index)._invert_mute_feedback = True
 			self._mixer.channel_strip(index)._mute_value = self._channelstrip_mute_value(self._mixer.channel_strip(index))
 			self._mixer.channel_strip(index)._solo_value = self._channelstrip_solo_value(self._mixer.channel_strip(index))
-			#mixer.channel_strip(index).set_select_button(ButtonElement(is_momentary, MIDI_NOTE_TYPE, CH, track_select_notes[index]))
-		self.song().view.selected_track = self._mixer.channel_strip(0)._track #set the selected strip to the first track, so that we don't, for example, try to assign a button to arm the master track, which would cause an assertion error
+			#self._mixer.channel_strip(index).select_layer = AddLayerMode(self._mixer.channel_strip(index), Layer(select_button = self._column_button[index], priority = 4))
+			#self._mixer.channel_strip(index).set_select_button(self._column_button[index])
+		self.song().view.selected_track = self._mixer.channel_strip(0)._track
 		self._session.set_mixer(self._mixer)
 	
 
@@ -902,10 +941,12 @@ class Codec(ControlSurface):
 	
 
 	def _setup_device_selector(self):
-		self._device_selector = CodecDeviceSelectorComponent(self, 'c', self._device + [self._special_device])
+		self._device_selector = DeviceSelectorComponent(self)
 		self._device_selector.name = 'Device_Selector'
-		self._device_selector.set_mode_buttons(self._column_button)
-		#self._device_selector.set_mode_toggle(self._livid)
+		self._device_selector.set_buttons(self._column_button)
+		self._device_selector.set_enabled(False)
+		#self._device_selector.layer = Layer(matrix = self._code_keys)
+		#self._device_selector.layer.priority = 2
 	
 
 	def _setup_send_reset(self):
@@ -935,13 +976,12 @@ class Codec(ControlSurface):
 		self.release_control = self._m4l_interface.release_control
 	
 
-
 	"""multiple device support"""
 	def _device_select_value(self, value, sender):
 		#self.log_message('device_select_value ' + str(value) + ' ' + str(self._device_select_buttons.index(sender)))
 		if not self._shift_pressed:
 			if sender.is_momentary or value > 0:
-				if self._shift_mode._mode_index == 2:
+				if self._main_mode._mode_index == 2:
 					self.set_device_component(self._device[self._device_select_buttons.index(sender)])
 					self._last_device_component = self._device_component
 					if self._device_component != None and isinstance(self._device_component._device, Live.Device.Device):
@@ -949,88 +989,156 @@ class Codec(ControlSurface):
 							self._device_component.display_device()
 	
 
-
-	"""livid double press mechanism"""
-	def set_shift_button(self, button):
-		assert ((button == None) or (isinstance(button, MonoButtonElement)))
-		if self._shift_button != None:
-			self._shift_button.remove_value_listener(self._shift_value)
-		self._shift_button = button
-		if self._shift_button != None:
-			self._shift_button.add_value_listener(self._shift_value)
-	
-
 	def _shift_value(self, value):
-		self._shift_pressed = int(value != 0)
-		if self._shift_pressed > 0:
-			self._send_midi(SLOWENCODER)
-			if self.modhandler.is_enabled():
-				self._shift_mode.set_enabled(False)
-				self.modhandler.shift_layer.enter_mode()
-				self.modhandler.update()
-		else:
-			self._send_midi(NORMALENCODER)
-			if self.modhandler.is_enabled():
-				self.modhandler.shift_layer.leave_mode()
-				self._shift_mode.set_enabled(True)
-		if self._shift_button != None:
-			self._shift_button.send_value(self._shift_pressed)
+		self._shift_pressed = value > 0
+		#self.log_message('shift_pressed ' + str(self._shift_pressed))
+		self._send_midi(ENCODER_SPEED[int(self._shift_pressed)])
+		self._main_mode.set_enabled(not self._shift_pressed)
+		self.update_modhandler_controls()
+		if self._shift_pressed:
+			self._alt_mode.pop_mode('alt')
+			self._alt_mode.set_mode_button('alt', None)
+		self._update_shift_button()
 	
 
-	def _shift_timer(self, *a, **k):
-		self._shift_pressed_timer = 0
+	def _update_shift_button(self):
+		if self._livid != None:
+			self._livid.send_value((self._shift_pressed > 0) or (self.modhandler.is_locked()*8), True)
 	
 
+	def _enable_alt(self):
+		self._alt_enabled = True
+		for index in range(8):
+			self._mixer.channel_strip(index).set_select_button(None)
+		self.update_modhandler_controls()
+		self._device_selector.set_enabled(True)
+	
+
+	def _disable_alt(self):
+		self._alt_enabled = False
+		self._device_selector.set_enabled(False)
+		self._mode_update()
+	
+
+	def _enable_shift(self):
+		self._shift_value(1)
+	
+
+	def _disable_shift(self):
+		self._shift_value(0)
+	
+
+	@subject_slot('value')
+	def _on_shift_doublepress_value(self, value):
+		#if not self.modhandler.is_enabled() and not self.modhandler.active_mod() is None:
+		#	self._main_mode.set_mode(3)
+		#	self.schedule_message(1, self._on_shift_doublepress_value, 1)
+
+		if self.modhandler.is_enabled():
+			self.modhandler.set_lock(not self.modhandler.is_locked())
+			if not self.modhandler.is_locked():
+				self.modhandler.select_appointed_device()
+				self._main_mode.update()
+		self._update_shift_button()
+		#self.log_message('modlock: ' + str(self.modhandler.is_locked()))
+	
+
+	def update_modhandler_controls(self):
+		handler = self.modhandler
+		if handler.is_enabled():
+			alt = self._alt_enabled
+			if self._shift_pressed:
+				if alt:
+					handler.set_mod_nav_buttons([self._code_buttons[0], self._code_buttons[1]])
+					handler.code_keys_layer.leave_mode()
+				else:
+					handler.keys_layer.leave_mode()
+					handler.code_keys_layer.enter_mode()
+					handler.code_buttons_layer.enter_mode()
+					handler.set_mod_nav_buttons([None, None])
+			else:
+				if alt: 
+					handler.set_mod_nav_buttons([self._code_buttons[0], self._code_buttons[1]])
+					handler.keys_layer.leave_mode()
+				else:
+					handler.code_keys_layer.leave_mode()
+					handler.keys_layer.enter_mode()
+					handler.set_mod_nav_buttons([None, None])
+					handler.code_buttons_layer.leave_mode()
+					
+			handler.update()
+	
 
 	"""Mode Functions"""
-	def _shift_update(self):
-		if(self._shift_mode.is_enabled()):
+	def _mode_update(self):
+		#self.log_message('_mode_update: enabled = ' + str(self._main_mode.is_enabled()))
+		if self._main_mode.is_enabled():
 			with self.component_guard():
-				self.allow_updates(False)
 				self._deassign_all()
-				if(self._shift_mode._mode_index is 0):
+				self._alt_mode.set_mode_button('alt', None)
+				if(self._main_mode._mode_index is 0):
 					self._assign_volume()
-				elif(self._shift_mode._mode_index is 1):
+				elif(self._main_mode._mode_index is 1):
 					self._assign_sends()
-				elif(self._shift_mode._mode_index is 2):
+				elif(self._main_mode._mode_index is 2):
 					self._assign_devices()
-				elif(self._shift_mode._mode_index is 3):
+				elif(self._main_mode._mode_index is 3):
 					self._assign_special_device()
-				
-				for index in range(self._shift_mode.number_of_modes()):
-					if index == self._shift_mode._mode_index:
-						self._shift_mode._modes_buttons[index].turn_on()
+			self.schedule_message(3, self._assign_alt_button, self._main_mode._mode_index+1)
+			self._update_mode_buttons()
+			self._update_shift_button()
+			self.request_rebuild_midi_map()
+	
+
+	def _assign_alt_button(self, mode):
+		if self._main_mode._mode_index is (mode-1):
+			button = self._row_button[mode-1]
+			self._alt_mode.set_mode_button('alt', button)
+			if button.is_pressed():
+				self._alt_mode.selected_mode = 'alt'
+	
+
+	def _update_mode_buttons(self):
+		if self._main_mode.is_enabled():
+			if not self._main_mode._modes_buttons is None:
+				for button in self._main_mode._modes_buttons:
+					if self._main_mode._modes_buttons.index(button) == self._main_mode._mode_index:
+						button.turn_on()
 					else:
-						self._shift_mode._modes_buttons[index].turn_off()
-				self.allow_updates(True)
-				self.request_rebuild_midi_map()
+						button.turn_off()
 	
 
 	def _deassign_all(self):
-		#self.modhandler.layer.leave_mode()
-		self.modhandler.set_enabled(False)
-		self._assign_alternate_mappings(0)
-		self._device_selector.set_enabled(False)
-		for index in range(8):
-			self._mixer.channel_strip(index).set_volume_control(None)
-			self._mixer.channel_strip(index).set_pan_control(None)
-			self._mixer.channel_strip(index).set_send_controls(tuple([None, None, None, None]))
-		for index in range(4):
-			self._device[index].set_on_off_button(None)
-			self._device[index].set_lock_button(None)
-			self._device[index].set_bank_nav_buttons(None, None)
-			self._device[index].set_nav_buttons(None, None)
-			self._device[index].set_enabled(False)
-			self._device[index]._parameter_controls = None
-		self._special_device.set_enabled(False)
-		self._special_device._parameter_controls = None
-		self._device_selector.set_enabled(False)
-		self._deassign_buttons()
-		for control in self.controls:
-			if isinstance(control, ButtonElement):
-				control.release_parameter()
-			control.reset()
+		#self._alt_mode.pop_mode('alt')
+		with self.component_guard():
+			self.modhandler.set_enabled(False)
+			if not self.modhandler._keys is None:
+				self.modhandler.keys_layer.leave_mode()
+			if not self.modhandler._code_keys is None:
+				self.modhandler.code_keys_layer.leave_mode()
+			if not self.modhandler._code_buttons is None:
+				self.modhandler.code_buttons_layer.leave_mode()
+			#self._assign_alternate_mappings(0)
+			for index in range(8):
+				self._mixer.channel_strip(index).set_volume_control(None)
+				self._mixer.channel_strip(index).set_pan_control(None)
+				self._mixer.channel_strip(index).set_send_controls(tuple([None, None, None, None]))
+			for index in range(4):
+				self._device[index].set_on_off_button(None)
+				self._device[index].set_lock_button(None)
+				self._device[index].set_bank_nav_buttons(None, None)
+				self._device[index].set_nav_buttons(None, None)
+				self._device[index].set_enabled(False)
+				self._device[index]._parameter_controls = None
+			self._special_device.set_enabled(False)
+			self._special_device._parameter_controls = None
+			self._deassign_buttons()
 		self.request_rebuild_midi_map()
+		for control in self.controls:
+			if isinstance(control, (MonoButtonElement, CodecEncoderElement)):
+				control.release_parameter()
+				control.reset(True)
+
 	
 
 	def _deassign_buttons(self):
@@ -1040,6 +1148,8 @@ class Codec(ControlSurface):
 			self._mixer.channel_strip(index).set_mute_button(None)
 		self._mixer.set_select_buttons(None, None)
 		self._send_reset.set_enabled(False)
+		for index in range(8):
+			self._mixer.channel_strip(index).set_select_button(None)
 	
 
 	def _assign_volume(self):
@@ -1047,17 +1157,20 @@ class Codec(ControlSurface):
 			self._mixer.channel_strip(index).set_volume_control(self._dial[index][3])
 			self._mixer.channel_strip(index).set_pan_control(self._dial[index][2])
 			self._mixer.channel_strip(index).set_send_controls(tuple([self._dial[index][0], self._dial[index][1]]))
-			self._mixer.channel_strip(index).set_select_button(self._column_button[index])
 			self._mixer.channel_strip(index).set_solo_button(self._button[index][2])
 			self._mixer.channel_strip(index).set_mute_button(self._button[index][3])
 		self._mixer.set_select_buttons(self._button[7][0], self._button[6][0])
+		for index in range(8):
+			self._mixer.channel_strip(index).set_select_button(self._column_button[index])
+			#self._mixer.channel_strip(index).select_layer.enter_mode()
 	
 
 	def _assign_sends(self):
 		for index in range(8):
 			self._mixer.channel_strip(index).set_send_controls(tuple([self._dial[index][0], self._dial[index][1], self._dial[index][2], self._dial[index][3]]))
-			self._mixer.channel_strip(index).set_select_button(self._column_button[index])
 			self._send_reset.set_enabled(True)
+			self._mixer.channel_strip(index).set_select_button(self._column_button[index])
+			#self._mixer.channel_strip(index).select_layer.enter_mode()	
 	
 
 	def _assign_devices(self):
@@ -1073,18 +1186,15 @@ class Codec(ControlSurface):
 			self._device[index].set_nav_buttons(self._button[6][index], self._button[7][index])
 			self._device[index].set_parameter_controls(tuple(device_param_controls))
 			self._device[index].set_enabled(True)
-		self._device_selector.set_enabled(self._use_device_selector)
-		if not self._use_device_selector:
-			for index in range(8):
-				self._mixer.channel_strip(index).set_select_button(self._column_button[index])				
+		for index in range(8):
+			self._mixer.channel_strip(index).set_select_button(self._column_button[index])
+			#self._mixer.channel_strip(index).select_layer.enter_mode()
 	
 
 	def _assign_special_device(self):
-		device = self.monomodular.is_mod(self.song().appointed_device)
-		if not device is None:
-			self.modhandler.select_mod(device)
-			#self.modhandler.layer.enter_mode()
+		if not self.modhandler.active_mod() is None:
 			self.modhandler.set_enabled(True)
+			self.update_modhandler_controls()
 		else:
 			self.set_device_component(self._special_device)
 			device_param_controls = []
@@ -1093,10 +1203,10 @@ class Codec(ControlSurface):
 					device_param_controls.append(self._dial[column][row])
 			self._special_device.set_parameter_controls(tuple(device_param_controls))
 			self._special_device.set_enabled(True)
-			self._device_selector.set_enabled(self._use_device_selector)
-			if not self._use_device_selector:
+			if not self._alt_mode.selected_mode is 'alt':
 				for index in range(8):
 					self._mixer.channel_strip(index).set_select_button(self._column_button[index])
+				#self._mixer.channel_strip(index).select_layer.enter_mode()
 	
 
 	def _assign_alternate_mappings(self, chan):
@@ -1120,9 +1230,9 @@ class Codec(ControlSurface):
 	"""general functionality"""
 	def disconnect(self):
 		"""clean things up on disconnect"""
-		if not self._shift_button is None:
-			if self._shift_button.value_has_listener(self._shift_value):
-				self._shift_button.remove_value_listener(self._shift_value)
+		#if not self._shift_button is None:
+		#	if self._shift_button.value_has_listener(self._shift_value):
+		#		self._shift_button.remove_value_listener(self._shift_value)
 		for button in self._device_select_buttons:
 			if button.value_has_listener(self._device_select_value):
 				button.remove_value_listener(self._device_select_value)
@@ -1190,45 +1300,6 @@ class Codec(ControlSurface):
 			for control in self.controls:
 				if isinstance(control, MonoButtonElement):
 					control.flash(self._timer)
-	
-
-	def send_ring_leds(self):
-		if self.modhandler.is_enabled():
-			leds = [240, 0, 1, 97, 4, 31]
-			for column in range(8):
-				for row in range(4):
-					wheel = self._dial[column][row]
-					bytes = wheel._get_ring()
-					leds.append(bytes[0])
-					leds.append(int(bytes[1]) + int(bytes[2]))
-			leds.append(247)
-			if not leds==self._leds_last:
-				self._send_midi(tuple(leds))
-				self._leds_last = leds
-	
-
-	def set_absolute_mode(self, val = 1):
-		self._absolute_mode = (val!=0)
-		if self._absolute_mode is True:
-			self._send_midi(tuple([240, 0, 1, 97, 4, 17, 0, 0, 0, 0, 0, 0, 0, 0, 247]))
-		else:
-			self._send_midi(tuple([240, 0, 1, 97, 4, 17, 127, 127, 127, 127, 127, 127, 127, 127, 247]))
-	
-
-	def set_local_ring_control(self, val = 1):
-		self._local_ring_control = (val!=0)
-		if(self._local_ring_control is True):
-			#self._send_midi(tuple([240, 0, 1, 97, 4, 32, 0, 247]))
-			self._send_midi(tuple([240, 0, 1, 97, 4, 8, 72, 247]))
-			self._encoder_matrix.reset()
-		else:
-			#self._send_midi(tuple([240, 0, 1, 97, 4, 32, 1, 247]))
-			self._send_midi(tuple([240, 0, 1, 97, 4, 8, 64, 247]))
-			self.schedule_message(2, self._clear_rings)
-	
-
-	def _clear_rings(self):
-		self._leds_last = 1
 	
 
 	def device_follows_track(self, val):
@@ -1377,9 +1448,9 @@ class Codec(ControlSurface):
 	
 
 	def _on_device_changed(self):
-		self.log_message('_on_device_changed')
-		if self._shift_mode._mode_index is 3:
-			self.schedule_message(1, self._shift_update)
+		#self.log_message('_on_device_changed')
+		if self._main_mode._mode_index is 3 and not self.modhandler.is_locked():
+			self.schedule_message(2, self._mode_update)
 	
 
 
@@ -1473,13 +1544,13 @@ class CodecModHandler(ModHandler):
 	
 
 	def _receive_code_grid(self, x, y, value, *a, **k):
-		self.log_message('_receive_code_grid: %(x)s %(y)s %(value)s ' % {'x':x, 'y':y, 'value':value})
+		#self.log_message('_receive_code_grid: %(x)s %(y)s %(value)s ' % {'x':x, 'y':y, 'value':value})
 		if self.is_enabled() and self._active_mod and not self._active_mod.legacy and not self._code_grid is None and x < 8 and y < 4:
 			self._code_grid.send_value(x, y, self._colors[value], True)
 	
 
-	def _receive_code_encoder_grid(self, x, y, **k):
-		self.log_message('_receive_code_encoder_grid: %(x)s %(y)s %(k)s' % {'x':x, 'y':y, 'k':k})
+	def _receive_code_encoder_grid(self, x, y, *a, **k):
+		#self.log_message('_receive_code_encoder_grid: %(x)s %(y)s %(k)s' % {'x':x, 'y':y, 'k':k})
 		if self.is_enabled() and self._active_mod and not self._active_mod.legacy and not self._code_encoder_grid is None and x < 8 and y < 4:
 			keys = k.keys()
 			if 'value' in keys:
@@ -1492,29 +1563,28 @@ class CodecModHandler(ModHandler):
 				self._code_encoder_grid.get_button(x, y).set_custom(k['custom'])
 	
 
-	def _receive_code_encoder_grid_relative(self, value):
-		self.log_message('_receive_code_encoder_grid_relative: %(v)s' % {'v':value})
+	def _receive_code_encoder_grid_relative(self, value, *a):
+		#self.log_message('_receive_code_encoder_grid_relative: %(v)s' % {'v':value})
 		if self.is_enabled() and self._active_mod:
 			value and self._script._send_midi(tuple([240, 0, 1, 97, 4, 17, 127, 127, 127, 127, 127, 127, 127, 127, 247])) or self._script._send_midi(tuple([240, 0, 1, 97, 4, 17, 0, 0, 0, 0, 0, 0, 0, 0, 247]))
 	
 
-	def _receive_code_encoder_grid_local(self, value):
-		self.log_message('_receive_code_encoder_grid_local: %(v)s' % {'v':value})
+	def _receive_code_encoder_grid_local(self, value, *a):
+		#self.log_message('_receive_code_encoder_grid_local: %(v)s' % {'v':value})
 		if self.is_enabled() and self._active_mod:
 			self.clear_rings()
 			self._local = value
 			value and self._script._send_midi(tuple([240, 0, 1, 97, 4, 8, 72, 247])) or self._script._send_midi(tuple([240, 0, 1, 97, 4, 8, 64, 247]))
 	
 
-	def _receive_code_button(self, num, value):
-		self._script.log_message('receive code_button' + str(num) + str(value))
+	def _receive_code_button(self, num, value, *a):
+		#self._script.log_message('receive code_button' + str(num) + str(value))
 		if self.is_enabled() and self._active_mod:
 			if not self._code_buttons is None:
-				self._script.log_message('receive code_button sending...' + str(num) + str(value))
 				self._code_buttons.send_value(num, 0, self._colors[value], True)
 	
 
-	def _receive_code_key(self, num, value):
+	def _receive_code_key(self, num, value, *a):
 		if self.is_enabled() and self._active_mod and not self._active_mod.legacy:
 			if not self._code_keys is None:
 				self._code_keys.send_value(num, 0, self._colors[value], True)
@@ -1523,18 +1593,18 @@ class CodecModHandler(ModHandler):
 	def _receive_grid(self, x, y, value, *a, **k):
 		if self.is_enabled() and self._active_mod and self._active_mod.legacy:
 			if not self._code_grid is None:
-				if (x - self.x_offset) in range(8) and (y - self.y_offset) in range(8):
+				if (x - self.x_offset) in range(8) and (y - self.y_offset) in range(4):
 					self._code_grid.send_value(x - self.x_offset, y - self.y_offset, self._colors[value], True)
 	
 
-	def _receive_key(self, num, value):
-		#self.log_message('_receive_key: %s %s' % (x, value))
-		if self.is_enabled() and self._active_mod and not self._active_mod.legacy:
+	def _receive_key(self, num, value, *a):
+		#self.log_message('_receive_key: %(num)s %(value)s' % {'num':num, 'value':value})
+		if self.is_enabled() and self._active_mod:
 			if not self._keys is None:
 				self._keys.send_value(num, 0, self._colors[value], True)
 	
 
-	def _receive_shift(self, value):
+	def _receive_shift(self, value, *a):
 		if self.is_enabled() and self._active_mod:
 			if not self._shift is None:
 				self._shift.send_value(value)
@@ -1548,6 +1618,8 @@ class CodecModHandler(ModHandler):
 	def set_code_encoder_grid(self, grid):
 		self._code_encoder_grid = grid
 		self._code_encoder_grid_value.subject = self._code_encoder_grid
+		self.set_parameter_controls(grid)
+		#self.log_message('parameter controls are: ' + str(self._parameter_controls))
 	
 
 	def set_code_keys(self, keys):
@@ -1556,6 +1628,7 @@ class CodecModHandler(ModHandler):
 	
 
 	def set_code_buttons(self, buttons):
+		#self.log_message('set code buttons ' + str(buttons))
 		self._code_buttons = buttons
 		self._code_buttons_value.subject = self._code_buttons
 	
@@ -1574,35 +1647,30 @@ class CodecModHandler(ModHandler):
 		self._shift_value.subject = self._shift
 	
 
-	def update_device(self):
-		if not self._push_grid_value.subject == None:
-			self._device_component.update()
-	
-
 	@subject_slot('value')
 	def _keys_value(self, value, x, y, *a, **k):
-		self.log_message('_code_keys_value: %(x)s %(y)s %(value)s ' % {'x':x, 'y':y, 'value':value})
+		#self.log_message('_keys_value: %(x)s %(y)s %(value)s ' % {'x':x, 'y':y, 'value':value})
 		if self._active_mod:
 			self._active_mod.send('key', x, value)
 	
 
 	@subject_slot('value')
 	def _code_keys_value(self, value, x, y, *a, **k):
-		self.log_message('_code_keys_value: %(x)s %(y)s %(value)s ' % {'x':x, 'y':y, 'value':value})
+		#self.log_message('_code_keys_value: %(x)s %(y)s %(value)s ' % {'x':x, 'y':y, 'value':value})
 		if self._active_mod:
 			self._active_mod.send('code_key', x, value)
 	
 
 	@subject_slot('value')
 	def _code_buttons_value(self, value, x, y, *a, **k):
-		self.log_message('_code_buttons_value: %(x)s %(y)s %(value)s ' % {'x':x, 'y':y, 'value':value})
+		#self.log_message('_code_buttons_value: %(x)s %(y)s %(value)s ' % {'x':x, 'y':y, 'value':value})
 		if self._active_mod:
 			self._active_mod.send('code_button', x, value)
 	
 
 	@subject_slot('value')
 	def _code_grid_value(self, value, x, y, *a, **k):
-		self.log_message('_code_grid_value: %(x)s %(y)s %(value)s ' % {'x':x, 'y':y, 'value':value})
+		#self.log_message('_code_grid_value: %(x)s %(y)s %(value)s ' % {'x':x, 'y':y, 'value':value})
 		if self._active_mod:
 			if self._active_mod.legacy:
 				self._active_mod.send('grid', x + self.x_offset, y + self.y_offset, value)
@@ -1612,7 +1680,7 @@ class CodecModHandler(ModHandler):
 
 	@subject_slot('value')
 	def _code_encoder_grid_value(self, value, x, y, *a, **k):
-		self.log_message('_code_encoder_grid_value: %(x)s %(y)s %(value)s ' % {'x':x, 'y':y, 'value':value})
+		#self.log_message('_code_encoder_grid_value: %(x)s %(y)s %(value)s ' % {'x':x, 'y':y, 'value':value})
 		if self._active_mod:
 			self._active_mod.send('code_encoder_grid', x, y, value)
 	
@@ -1636,12 +1704,14 @@ class CodecModHandler(ModHandler):
 	
 
 	def update(self, *a, **k):
-		if self.is_enabled() and self._active_mod:
-			self._active_mod.restore()
-			if self._active_mod.legacy:
+		mod = self.active_mod()
+		#self.log_message('modhandler update: ' + str(mod))
+		if self.is_enabled() and not mod is None:
+			mod.restore()
+			if mod.legacy:
 				self._shift_value.subject and self._shift_value.subject.is_pressed() and self._display_nav_box()
 		else:
-			self._script.log_message('disabling modhandler')
+			#self._script.log_message('disabling modhandler')
 			self._script._send_midi(tuple([240, 0, 1, 97, 4, 17, 0, 0, 0, 0, 0, 0, 0, 0, 247]))
 			self._script._send_midi(tuple([240, 0, 1, 97, 4, 8, 72, 247]))
 			if not self._code_grid_value.subject is None:
@@ -1655,12 +1725,11 @@ class CodecModHandler(ModHandler):
 	def send_ring_leds(self):
 		if self.is_enabled() and self._active_mod and not self._local and self._code_encoder_grid:
 			leds = [240, 0, 1, 97, 4, 31]
-			for encoder, coords in self._code_encoder_grid.iterbuttons():
+			for encoder, coords in self._code_encoder_grid.xiterbuttons():
 				bytes = encoder._get_ring()
 				leds.append(bytes[0])
 				leds.append(int(bytes[1]) + int(bytes[2]))
 			leds.append(247)
-			self._script.log_message('rings:' + str(leds) + 'last_rings' + str(self._last_sent_leds))
 			if not leds==self._last_sent_leds:
 				self._script._send_midi(tuple(leds))
 				self._last_sent_leds = leds

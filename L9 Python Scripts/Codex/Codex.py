@@ -27,10 +27,10 @@ from _Generic.Devices import *
 """Imports from _Mono_Framework"""
 from _Mono_Framework.MonoButtonElement import MonoButtonElement
 from _Mono_Framework.MonoEncoderElement import MonoEncoderElement
-from _Mono_Framework.DeviceSelectorComponent import DeviceSelectorComponent
+from _Mono_Framework.DeviceSelectorComponent import DeviceSelectorComponent, NewDeviceSelectorComponent
 from _Mono_Framework.ResetSendsComponent import ResetSendsComponent
 
-from Codec_b995_9.Codec import *
+from Codec_b996.Codec import *
 
 from _Tools.re import *
 
@@ -49,121 +49,6 @@ DEVICE_COLORS = {'midi_effect':22,
 				'AudioEffectGroupDevice':8}
 
 
-class AumTrollDeviceSelectorComponent(DeviceSelectorComponent):
-
-
-	def __init__(self, *a, **k):
-		super(AumTrollDeviceSelectorComponent, self).__init__(*a, **k)
-		self.song().add_appointed_device_listener(self._device_listener)
-	
-
-	def disconnect(self, *a, **k):
-		super(AumTrollDeviceSelectorComponent, self).disconnect()
-		if self.song().appointed_device_has_listener(self._device_listener):
-			self.song().remove_appointed_device_listener(self._device_listener)
-	
-
-	def set_matrix(self, matrix):
-		buttons = []
-		if not matrix is None:
-			for button, address in matrix.iterbuttons():
-				#self._script.log_message('button: ' + str(button))
-				button.use_default_message()
-				button.set_enabled(True)
-				buttons.append(button)
-		self.set_mode_buttons(tuple(buttons))
-	
-
-	def set_mode_buttons(self, buttons):
-		#assert(isinstance(buttons, tuple) or buttons is None)
-		if buttons == None:
-			buttons = []
-
-		for button in self._modes_buttons:
-			button.remove_value_listener(self._mode_value)
-
-		self._modes_buttons = []
-		for button in buttons:
-			if not button is None:
-				button.add_value_listener(self._mode_value, identify_sender=True)
-				self._modes_buttons.append(button)
-			self._number_of_modes = len(self._modes_buttons) + self._offset
-
-		self.update()
-	
-
-	def assign_mode_buttons(self, buttons):
-		pass
-	
-
-	def update(self):
-		if self.is_enabled():
-			name = 'None'
-			dev = self.song().appointed_device
-			if hasattr(dev, 'name'):
-				name = dev.name
-				dev_type = dev.type
-				dev_class = dev.class_name
-			if self._modes_buttons:
-				for index in range(len(self._modes_buttons)):
-					if match('p' + str(index+1) + ' ', name) != None:
-						val = (dev_class in DEVICE_COLORS and DEVICE_COLORS[dev_class]) or (dev_type in DEVICE_COLORS and DEVICE_COLORS[dev_type]) or 126
-						self._modes_buttons[index].send_value(val, True)
-					else:
-						self._modes_buttons[index].send_value(0, True)
-	
-
-	def _update_mode(self):
-		mode = self._modes_heap[-1][0]
-		assert(mode in range(self.number_of_modes()))
-		if self._mode_index != mode:
-			self._mode_index = mode
-
-		if self.is_enabled():
-			key = str('p' + str(self._mode_index + 1 + self._offset) + ' ')
-			preset = None
-			for track in self.song().tracks:
-				for device in self.enumerate_track_device(track):
-					if(match(key, str(device.name)) != None):
-						preset = device
-						break
-			for return_track in self.song().return_tracks:
-				for device in self.enumerate_track_device(return_track):
-					if(match(key, str(device.name)) != None):
-						preset = device
-						break
-			for device in self.enumerate_track_device(self.song().master_track):
-				if(match(key, str(device.name)) != None):
-					preset = device
-					break
-
-			if preset != None:
-				#self._script.log_message('preset found: ' + str(preset.name))
-				self._script.set_appointed_device(preset)
-				self.song().view.select_device(preset)
-				self._last_preset = self._mode_index + self._offset
-
-			#self.update()
-	
-
-	def set_mode(self, mode):
-		self._clean_heap()
-		self._modes_heap = [(mode, None, None)]
-		self._update_mode()
-	
-
-	def _device_listener(self, *a, **k):
-		if self.is_enabled():
-			self.update()
-	
-
-	def on_enabled_changed(self):
-		#super(AumTrollDeviceSelectorComponent, self).on_enabled_change()
-		if self.is_enabled():
-			self.update()
-	
-
-
 class Codex(Codec):
 
 
@@ -176,11 +61,11 @@ class Codex(Codec):
 			self._setup_alt_send_reset()
 			self._setup_alt_device_control()
 		self.log_message('<<<<<<<<<<<<<<<<<<<<<<<<< Codex subclass log opened >>>>>>>>>>>>>>>>>>>>>>>>>')
-		self.schedule_message(1, self._shift_update)
+		self.schedule_message(1, self._mode_update)
 	
 
 	def _setup_alt_device_selector(self):
-		self._alt_device_selector = AumTrollDeviceSelectorComponent(self)
+		self._alt_device_selector = NewDeviceSelectorComponent(self)
 		self._alt_device_selector.name = 'Alt_Device_Selector'
 	
 
@@ -189,7 +74,7 @@ class Codex(Codec):
 		self._alt_send_reset.name = 'Alt_Reset_Sends'
 	
 
-	"""these two secondary DeviceComponents are only set up if the MONOHM_LINK flag in .Map is turned on"""
+	"""these two secondary DeviceComponents are only set up if the MONOHM_LINK flag in Map is turned on"""
 	def _setup_alt_device_control(self):
 		self._device1 = NewDeviceComponent()
 		self._device1.name = 'Device_Component1'
@@ -209,38 +94,30 @@ class Codex(Codec):
 	
 
 	"""Mode Functions"""
-	def _shift_update(self):
-		if(self._shift_mode.is_enabled()):
-			with self.component_guard():
-				self.allow_updates(False)
-				self._deassign_all()
-				if(self._shift_mode._mode_index is 0):
-					#self._assign_volume()
-					self._assign_aumtroll_cntrls()
-				elif(self._shift_mode._mode_index is 1):
-					self._assign_sends()
-				elif(self._shift_mode._mode_index is 2):
-					self._assign_devices()
-				elif(self._shift_mode._mode_index is 3):
-					self._assign_special_device()
-				for index in range(self._shift_mode.number_of_modes()):
-					if index == self._shift_mode._mode_index:
-						self._shift_mode._modes_buttons[index].turn_on()
-					else:
-						self._shift_mode._modes_buttons[index].turn_off()
-				self.allow_updates(True)
-				self.request_rebuild_midi_map()
+
+
+	def _enable_alt(self):
+		if self._main_mode._mode_index == 0:
+			for encoder, _ in self._encoder_matrix.submatrix[:, 0:2].iterbuttons():
+				encoder.set_enabled(False)
+				encoder.reset()
+			self._alt_enabled = True
+			self._mode_update()
+		super(Codex, self)._enable_alt()
 	
 
-	def _shift_value(self, value):
-		super(Codex, self)._shift_value(value)
-		self._shift_update()
+	def _disable_alt(self):
+		if self._main_mode._mode_index == 0:
+			self._button_matrix.submatrix[:, 0:2].reset()
+			for encoder, _ in self._encoder_matrix.submatrix[:, 0:2].iterbuttons():
+				encoder.set_enabled(True)
+		super(Codex, self)._disable_alt()
 	
 
 	def _deassign_all(self):
 		self._alt_send_reset.set_buttons(tuple([None for index in range(4)]))
 		self._alt_send_reset.set_enabled(False)
-		self._alt_device_selector.set_mode_buttons(tuple([None for index in range(16)]))
+		self._alt_device_selector.set_buttons(None)
 		self._alt_device_selector.set_enabled(False)
 		self._mixer2.selected_strip().set_send_controls(None)
 		for index in range(8):
@@ -248,6 +125,8 @@ class Codex(Codec):
 			self._mixer2.channel_strip(index).set_select_button(None)
 			self._mixer2.channel_strip(index).set_mute_button(None)
 			self._dial[index][2].release_parameter()
+		for index in range(3):
+			self._mixer2.return_strip(index).set_volume_control(None)
 		self._device1.set_enabled(False)
 		self._device1._parameter_controls = None
 		self._device2.set_enabled(False)
@@ -256,13 +135,10 @@ class Codex(Codec):
 		self._mixer2.return_strip(1).set_send_controls(None)
 		self._mixer2.return_strip(2).set_send_controls(None)
 		super(Codex, self)._deassign_all()
-		for button, _ in self._button_matrix.iterbuttons():
-			button.send_value(0, True)
-		self._dial_matrix.reset()
 	
 
-	def _assign_aumtroll_cntrls(self):
-		if self._shift_pressed:
+	def _assign_volume(self):
+		if self._alt_enabled:
 			inputs = self.find_inputs()
 			if not inputs is None:
 				for index in range(4):
@@ -271,7 +147,7 @@ class Codex(Codec):
 			xfade = self.find_perc_crossfader()
 			if not xfade is None:
 				self._dial[7][3].connect_to(xfade)
-			self._alt_device_selector.set_mode_buttons(tuple([self._button[index%8][int(index/8)] for index in range(16)]))
+			self._alt_device_selector.set_matrix(self._button_matrix.submatrix[:, 0:2])
 			self._alt_device_selector.set_enabled(True)
 			self._mixer2.return_strip(0).set_send_controls([None, self._dial[4][2]])
 			self._mixer2.return_strip(1).set_send_controls([self._dial[5][2], None])
@@ -289,12 +165,14 @@ class Codex(Codec):
 			self._find_devices()
 			self._device1.update()
 			self._device2.update()
+			for index in range(8):
+				self._mixer2.channel_strip(index).set_select_button(self._column_button[index])
 		for index in range(8):
 			self._mixer2.channel_strip(index).set_volume_control(self._dial[index][3])
-			self._mixer2.channel_strip(index).set_select_button(self._column_button[index])
 			self._mixer2.channel_strip(index).set_mute_button(self._button[index][3])
+		self._mixer2.update()
+		self.request_rebuild_midi_map()
 		#self._mixer2.set_track_offset(TROLL_OFFSET)
-
 	
 
 	def find_inputs(self):
@@ -321,7 +199,6 @@ class Codex(Codec):
 		return found_parameter
 	
 
-
 	"""this method is used to find the devices the alt controls will latch to"""
 	def _find_devices(self):
 		if self._device1:
@@ -337,62 +214,6 @@ class Codex(Codec):
 						self._device2.set_lock_to_device(False, self._device2._device)
 					self._device2.set_lock_to_device(True, self.song().return_tracks[1].devices[0])
 	
-
-
-	"""general functionality"""
-	def disconnect(self):
-		if not self._shift_button is None:
-			if self._shift_button.value_has_listener(self._shift_value):
-				self._shift_button.remove_value_listener(self._shift_value)
-		for button in self._device_select_buttons:
-			if button.value_has_listener(self._device_select_value):
-				button.remove_value_listener(self._device_select_value)
-		if self._session._is_linked():
-			self._session._unlink()
-		self.song().view.remove_selected_track_listener(self._update_selected_device)
-		self._hosts = []
-		if self._linked_script != None:
-			self._linked_script._update_linked_device_selection = None
-		self._linked_script = None
-		self.log_message('<<<<<<<<<<<<<<<<<<<<<<<<< Codec log closed >>>>>>>>>>>>>>>>>>>>>>>>>')
-		super(Codex, self).disconnect()
-		return None
-		
-	
-
-	def connect_script_instances(self, instanciated_scripts):
-		found = False
-		for s in instanciated_scripts:
-			if '_codec_version' in dir(s):
-				if s._codec_version == self._version_check:
-					if s._host_name == ('MonOhm'):
-						self.log_message('found codec version ' + str(s._codec_version) + ' in script ' + str(s._host_name))
-						found = True
-						self._linked_script = s
-						self._linked_script._update_linked_device_selection = self._update_linked_device_selection
-						if not self._session._is_linked() and self._link_mixer is True:
-							self._session.set_offsets(LINK_OFFSET[0], LINK_OFFSET[1])
-							self._session._link()
-				else:
-					self.log_message('version mismatch: Monomod version ' + str(self._version_check) + ' vs. Host version ' + str(s._codec_version))
-					
-
-		if found == False:
-			for s in instanciated_scripts:
-				if '_codec_version' in dir(s):
-					if s._codec_version == self._version_check:
-						if s._host_name == 'BlockMod':
-							self.log_message('found codec version ' + str(s._codec_version) + ' in script ' + str(s._host_name))
-							self._linked_script = s
-							self._linked_script._update_linked_device_selection = self._update_linked_device_selection
-						if not self._session._is_linked() and self._link_mixer is True:
-							self._session.set_offsets(LINK_OFFSET[0], LINK_OFFSET[1])
-							self._session._link()
-					else:
-						self.log_message('version mismatch: Monomod version ' + str(self._version_check) + ' vs. Host version ' + str(s._codec_version))
-		#self.log_message('hosts: ' + str(self._hosts))"""
-	
-
 
 
 #

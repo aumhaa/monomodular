@@ -303,8 +303,8 @@ function initialize(val)
 		outlet(0, 'set_mod_color', modColor);
 		outlet(0, 'set_color_map', 'Monochrome', 127, 127, 127, 15, 22, 29, 36, 43);
 		outlet(0, 'set_report_offset', 1);
-		outlet(0, 'receive_device', 'mod_set_device_type', 'Hex');
-		outlet(0, 'receive_device', 'mod_set_number_params', 16);
+		outlet(0, 'receive_device', 'set_mod_device_type', 'Hex');
+		outlet(0, 'receive_device', 'set_mod_number_params', 16);
 		outlet(0, 'push_name_display', 'value', 0, 'Worky?');
 		outlet(0, 'push_alt_name_display', 'value', 1, 'Worky!');
 		var i=7;do{
@@ -3231,11 +3231,13 @@ function update_bank()
 	switch(pad_mode)
 	{
 		default:
-			//outlet(0, 'receive_device', 'mod_set_device_bank', selected.channel>0);
+			//outlet(0, 'receive_device', 'set_mod_device_bank', selected.channel>0);
 			//outlet(0, 'set_device_bank', selected.channel>0);
-			outlet(0, 'receive_device', 'mod_set_device_bank', selected.channel>0 ? 1 : drumgroup_is_present ? 0 : 1);
-			outlet(0, 'set_c_local_ring_control', 1);
-			outlet(0, 'set_local_ring_control', 1);
+			outlet(0, 'receive_device', 'set_mod_device_bank', selected.channel>0 ? 1 : drumgroup_is_present ? 0 : 1);
+			//outlet(0, 'set_c_local_ring_control', 1);
+			//outlet(0, 'set_local_ring_control', 1);
+			outlet(0, 'code_encoder_matrix', 'local', 0);
+			
 			var i=7;do{
 				params[Encoders[i]].hidden = 0;
 				params[Speeds[i]].hidden = 1;
@@ -3243,9 +3245,10 @@ function update_bank()
 			}while(i--);
 			break;
 		case 5:
-			outlet(0, 'receive_device', 'mod_set_device_bank', 2+(selected.num>7));
-			outlet(0, 'set_c_local_ring_control', 0);
-			outlet(0, 'set_local_ring_control', 0);
+			outlet(0, 'receive_device', 'set_mod_device_bank', 2+(selected.num>7));
+			//outlet(0, 'set_c_local_ring_control', 0);
+			outlet(0, 'code_encoder_matrix', 'local', 0);
+			//outlet(0, 'set_local_ring_control', 0);
 			var r = (selected.num>7)*8;
 			var i=7;do{
 				params[Encoders[i]].hidden = 1;
@@ -3440,13 +3443,13 @@ function _select_chain(chain_num)
 	{
 		//outlet(0, 'set_device_parent', devices[selected.channel]);
 		//outlet(0, 'set_device_chain', Math.max(0, Math.min(chain_num + global_offset - global_chain_offset, 112)));
-		outlet(0, 'send_explicit', 'receive_device', 'mod_set_device_parent', 'id', devices[selected.channel]);
-		outlet(0, 'receive_device', 'mod_set_device_chain', Math.max(0, Math.min(chain_num + global_offset - global_chain_offset, 112)));
+		outlet(0, 'send_explicit', 'receive_device', 'set_mod_device_parent', 'id', devices[selected.channel]);
+		outlet(0, 'receive_device', 'set_mod_device_chain', Math.max(0, Math.min(chain_num + global_offset - global_chain_offset, 112)));
 	}
 	else
 	{
 		//outlet(0, 'set_device_single', devices[selected.channel]);
-		outlet(0, 'send_explicit', 'receive_device', 'mod_set_device_parent', 'id', devices[selected.channel], 1);
+		outlet(0, 'send_explicit', 'receive_device', 'set_mod_device_parent', 'id', devices[selected.channel], 1);
 
 	}
 	if(devices[selected.channel]==0)
@@ -3492,7 +3495,7 @@ function _encoder(num, val)
 	{				
 		if(pad_mode!=5)
 		{
-			outlet(0, 'receive_device', 'mod_set_parameter_value', num, val);
+			outlet(0, 'receive_device', 'set_mod_parameter_value', num, val);
 		}
 		else
 		{

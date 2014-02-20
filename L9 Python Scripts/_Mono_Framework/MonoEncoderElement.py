@@ -139,4 +139,4 @@ class MonoEncoderElement(EncoderElement):
 			self._parameter_lcd_name = ' '
 			self._parameter_last_value = ' '
 			self._script.notification_to_bridge(' ', ' ', self)
-
+	

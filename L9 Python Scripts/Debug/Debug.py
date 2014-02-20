@@ -25,7 +25,7 @@ class Debug(ControlSurface):
 		#self._log_dirs()
 		self.log_message('_^_^_^_^_^_^_^_^_^_^_^_^_^_^_^_^_ DEBUG ON _^_^_^_^_^_^_^_^_^_^_^_^_^_^_^_^_')
 		self._scripts = []
-		self._log_dirs()
+		#self._log_dirs()
 
 	
 

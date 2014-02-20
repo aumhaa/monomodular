@@ -154,4 +154,11 @@ class NewEncoderMatrixElement(ButtonMatrixElement):
 		assert isinstance(self._dial_coordinates[sender], tuple)
 		coordinates = tuple(self._dial_coordinates[sender])
 		self.notify_value(value, coordinates[0], coordinates[1])
+	
+
+	def xiterbuttons(self):
+		for i, j in product(xrange(self.width()), xrange(self.height())):
+			button = self.get_button(i, j)
+			yield (button, (i, j))
+	
 
