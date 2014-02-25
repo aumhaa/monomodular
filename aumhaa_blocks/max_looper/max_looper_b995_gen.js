@@ -657,7 +657,7 @@ function _grid(x, y, z)
 	if((x<8)&&(y<8))
 	{
 		var pos = parseInt(cell_fire[x][y][0]);
-		post(x, y, z, pos, number, '\n');
+		//post(x, y, z, pos, number, '\n');
 		if((pos > -1)&&(pos <16)&&(z>0))
 		{
 			looper.looper.message('pos', pos/16);

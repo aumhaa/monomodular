@@ -34,7 +34,7 @@ from _Framework.SubjectSlot import subject_slot, subject_slot_group
 from _Framework.Layer import Layer
 from _Framework.ModesComponent import AddLayerMode, MultiEntryMode, ModesComponent, SetAttributeMode, CancellableBehaviour, AlternativeBehaviour, ReenterBehaviour, DynamicBehaviourMixin, ExcludingBehaviourMixin, EnablingModesComponent
 
-from Push.ComboElement import ComboElement, DoublePressElement, MultiElement, DoublePressContext
+from _Framework.ComboElement import ComboElement, DoublePressElement, MultiElement, DoublePressContext
 
 """Imports from the Monomodular Framework"""
 from _Mono_Framework.CodecEncoderElement import CodecEncoderElement

@@ -28,7 +28,7 @@
 		"description" : "",
 		"digest" : "",
 		"tags" : "",
-		"globalpatchername" : "u378001436[1][16][16][1][1][16][16][3][16][16][1][16][16][16][16][16][16][16][16][16]",
+		"globalpatchername" : "u378001436[1][16][16][1][1][16][16][3][16][16][1][16][16][16][16][16][16][16][16][16][16][16]",
 		"boxes" : [ 			{
 				"box" : 				{
 					"fontname" : "Arial",
@@ -316,7 +316,7 @@
 					"numinlets" : 1,
 					"numoutlets" : 2,
 					"outlettype" : [ "signal", "signal" ],
-					"patching_rect" : [ 307.0, 270.0, 78.0, 15.0 ],
+					"patching_rect" : [ 307.0, 270.0, 80.0, 15.0 ],
 					"text" : "gen~ sig_accum_b"
 				}
 

@@ -466,9 +466,9 @@ class ModHandler(CompoundComponent):
 
 	@subject_slot('appointed_device')
 	def _on_device_changed(self):
-		self.log_message('modhandler on_device_changed')
-		if not self.is_locked() or self.active_mod() is None:
-			self.modrouter._task_group.add(sequence(delay(1), self.select_appointed_device))
+		#self.log_message('modhandler on_device_changed')
+		if not self.is_locked():	# or self.active_mod() is None:   #not sure why this was here?  
+			self.modrouter._task_group.add(sequence(delay(2), self.select_appointed_device))
 	
 
 	def select_mod(self, mod):
@@ -486,7 +486,7 @@ class ModHandler(CompoundComponent):
 	
 
 	def select_appointed_device(self, *a):
-		self.log_message('select_appointed_device' + str(a))
+		#self.log_message('select_appointed_device' + str(a))
 		self.select_mod(self.modrouter.is_mod(self.song().appointed_device))
 	
 

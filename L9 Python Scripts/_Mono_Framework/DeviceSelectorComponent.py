@@ -115,11 +115,13 @@ class DeviceSelectorComponent(ModeSelectorComponent):
 			self._script.set_appointed_device(preset)
 			self._last_preset = self._mode_index + self._offset
 		#self._script._device._update()	
-		for button in range(len(self._modes_buttons)):
-			if (button + self._offset) == self._last_preset:
-				self._modes_buttons[button].turn_on()
-			else:
-				self._modes_buttons[button].turn_off()
+		for index in range(len(self._modes_buttons)):
+			button = self._modes_buttons[button]
+			if isinstance(button, ButtonElement):
+				if (index + self._offset) == self._last_preset:
+					self._modes_buttons[button].turn_on()
+				else:
+					self._modes_buttons[button].turn_off()
 	
 
 	def enumerate_track_device(self, track):
@@ -275,15 +277,17 @@ class NewDeviceSelectorComponent(ControlSurfaceComponent):
 				self.log_message('has buttons...')
 				for index in range(len(self._buttons)):
 					preset = self._device_registry[index]
-					if isinstance(preset, Live.Device.Device) and hasattr(preset, 'name'):
-						name = preset.name
-						dev_type = preset.type
-						dev_class = preset.class_name
-						val = (dev_class in self._device_colors and self._device_colors[dev_class]) or (dev_type in self._device_colors and self._device_colors[dev_type]) or 7
-						selected_shift = (dev == preset)*self._selected_colorshift
-						self._buttons[index].send_value(val + selected_shift)
-					else:
-						self._buttons[index].send_value(0)
+					button = self._buttons[index]
+					if isinstance(button, ButtonElement):
+						if isinstance(preset, Live.Device.Device) and hasattr(preset, 'name'):
+							name = preset.name
+							dev_type = preset.type
+							dev_class = preset.class_name
+							val = (dev_class in self._device_colors and self._device_colors[dev_class]) or (dev_type in self._device_colors and self._device_colors[dev_type]) or 7
+							selected_shift = (dev == preset)*self._selected_colorshift
+							button.send_value(val + selected_shift)
+						else:
+							button.send_value(0)
 	
 
 	def _current_device_offsets(self, dict_entry):
@@ -311,6 +315,6 @@ class NewDeviceSelectorComponent(ControlSurfaceComponent):
 			#for key in dict_entry.keys():
 			#	self.log_message('key: ' + str(key) + ' entry:' + str(dict_entry[key]))
 		return dict_entry
-
+	
 
 

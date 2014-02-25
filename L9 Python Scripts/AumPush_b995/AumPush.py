@@ -2,6 +2,8 @@
 
 from __future__ import with_statement
 import Live
+import Live.DrumPad
+
 from contextlib import contextmanager
 from functools import partial
 from itertools import izip, chain, imap, ifilter
@@ -24,15 +26,28 @@ from _Framework import Defaults
 from _Framework import Task
 from _Framework.MixerComponent import MixerComponent
 from _Framework.ButtonElement import ButtonElement
+
+
+from _Framework.M4LInterfaceComponent import M4LInterfaceComponent
+from _Framework.OptionalElement import OptionalElement
+from _Framework.ComboElement import ComboElement
+from _Framework.TransportComponent import TransportComponent
+from _Framework.ClipCreator import ClipCreator
+from _Framework.BackgroundComponent import BackgroundComponent, ModifierBackgroundComponent
+
+from _Framework.CompoundComponent import CompoundComponent
+from _Framework.SubjectSlot import subject_slot
+from _Framework.Util import find_if, in_range, NamedTuple, forward_property
+from _Framework.Disconnectable import disconnectable
+from _Framework.Dependency import depends, inject
+
+
 from Push.Push import Push
-from Push.OptionalElement import OptionalElement
-from Push.ComboElement import ComboElement
 from Push.HandshakeComponent import HandshakeComponent, make_dongle_message
 from Push.ValueComponent import ValueComponent, ParameterValueComponent, ValueDisplayComponent, ParameterValueDisplayComponent
 from Push.ConfigurableButtonElement import ConfigurableButtonElement
 from Push.SpecialSessionComponent import SpecialSessionComponent, SpecialSessionZoomingComponent
 from Push.SpecialMixerComponent import SpecialMixerComponent
-from Push.SpecialTransportComponent import SpecialTransportComponent
 from Push.SpecialPhysicalDisplay import SpecialPhysicalDisplay
 from Push.InstrumentComponent import InstrumentComponent
 from Push.StepSeqComponent import StepSeqComponent
@@ -43,51 +58,39 @@ from Push.ProviderDeviceComponent import ProviderDeviceComponent
 from Push.DeviceNavigationComponent import DeviceNavigationComponent
 from Push.SessionRecordingComponent import SessionRecordingComponent
 from Push.NoteRepeatComponent import NoteRepeatComponent
-from Push.ClipCreator import ClipCreator
 from Push.MatrixMaps import PAD_TRANSLATIONS, FEEDBACK_CHANNELS
-from Push.BackgroundComponent import BackgroundComponent, ModifierBackgroundComponent
 from Push.BrowserComponent import BrowserComponent
 from Push.BrowserModes import BrowserHotswapMode
 from Push.Actions import CreateInstrumentTrackComponent, CreateDefaultTrackComponent, CaptureAndInsertSceneComponent, DuplicateLoopComponent, SelectComponent, DeleteComponent, DeleteSelectedClipComponent, DeleteSelectedSceneComponent, CreateDeviceComponent
-from Push.M4LInterfaceComponent import M4LInterfaceComponent
 from Push.UserSettingsComponent import UserComponent
 from Push.MessageBoxComponent import DialogComponent, NotificationComponent
 from Push.TouchEncoderElement import TouchEncoderElement
 from Push.TouchStripElement import TouchStripElement
 from Push.TouchStripController import TouchStripControllerComponent, TouchStripEncoderConnection
-from Push.Selection import L9CSelection
+from Push.Selection import PushSelection
 from Push.AccentComponent import AccentComponent
 from Push.AutoArmComponent import AutoArmComponent
 from Push.MatrixMaps import *
 from Push.consts import *
 from Push.Settings import make_pad_parameters, SETTING_WORKFLOW, SETTING_THRESHOLD, SETTING_CURVE
 #from Push.PadSensitivity import PadSensitivity
-
 from Push.NavigationNode import RackNode
+from Push.MessageBoxComponent import MessageBoxComponent
+from Push.ScrollableListComponent import ScrollableListWithTogglesComponent
+from Push.NavigationNode import make_navigation_node
+from Push.SpecialMixerComponent import SpecialMixerComponent
+from Push.SpecialChanStripComponent import SpecialChanStripComponent
+from Push.consts import *
+
 from _Mono_Framework.MonomodComponent import MonomodComponent
 from _Mono_Framework.MonoDeviceComponent import NewMonoDeviceComponent as MonoDeviceComponent
 from _Mono_Framework.MonoEncoderElement import MonoEncoderElement
 from _Mono_Framework.ModDevices import *
 from _Mono_Framework.DeviceSelectorComponent import NewDeviceSelectorComponent as DeviceSelectorComponent
 from _Mono_Framework.ResetSendsComponent import ResetSendsComponent
-from Push.consts import *
-
-import Live.DrumPad
-from _Framework.CompoundComponent import CompoundComponent
-from _Framework.SubjectSlot import subject_slot
-from _Framework.Util import find_if, in_range, NamedTuple, forward_property
-from _Framework.Disconnectable import disconnectable
-from _Framework.Dependency import depends, inject
-from Push.MessageBoxComponent import MessageBoxComponent
-from Push.ScrollableListComponent import ScrollableListWithTogglesComponent
-from Push.NavigationNode import make_navigation_node
-#from Push.MelodicComponent import MelodicPattern
-from Push.SpecialMixerComponent import SpecialMixerComponent
-from Push.SpecialChanStripComponent import SpecialChanStripComponent
+from _Mono_Framework.Mod import *
 
 from MonoScaleComponent import MonoScaleComponent
-
-from _Mono_Framework.Mod import *
 
 from ModDevices import *
 
@@ -419,6 +422,7 @@ class AumPushDeviceSelectorComponent(DeviceSelectorComponent):
 		super(AumPushDeviceSelectorComponent, self).__init__(*a, **k)
 	
 
+
 class AumPushSpecialMixerComponent(SpecialMixerComponent):
 
 
@@ -542,7 +546,7 @@ class AumPushSpecialChanStripComponent(SpecialChanStripComponent):
 		if self.is_enabled() and self._track and value:
 			if self._duplicate_button and self._duplicate_button.is_pressed():
 				self._do_duplicate_track(self._track)
-			elif self._delete_button and self._delete_button.is_pressed():
+			elif hasattr(self, '._delete_button') and self._delete_button.is_pressed():
 				self._do_delete_track(self._track)
 			elif self._shift_pressed:
 				if self._track.can_be_armed:
@@ -585,6 +589,7 @@ class AumPushSpecialChanStripComponent(SpecialChanStripComponent):
 		self._on_panning_value_changed.subject = mixer and mixer.panning
 		self._on_sends_value_changed.replace_subjects(sends)
 	
+
 
 class AumPushInstrumentComponent(InstrumentComponent):
 
@@ -788,7 +793,7 @@ class AumPush(Push):
 		#self._device_navigation._on_selected_device_changed = self._make_on_selected_device_changed(self._device_navigation)
 	
 
-	def _init_mixer(self):
+	"""def _init_mixer(self):
 		self._mixer = AumPushSpecialMixerComponent(self._matrix.width())
 		self._mixer.set_enabled(False)
 		self._mixer.name = 'Mixer'
@@ -812,8 +817,10 @@ class AumPush(Push):
 		self._mixer.master_strip().name = 'Master_Channel_strip'
 		self._mixer.master_strip()._do_select_track = self._selector.on_select_track
 		#self._mixer.master_strip().layer = Layer(volume_control=self._master_volume_control, cue_volume_control=ComboElement(self._master_volume_control, [self._shift_button]), select_button=self._master_select_button, selector_button=self._select_button)
-		self._mixer.master_strip().layer = Layer(volume_control=self._master_volume_control, cue_volume_control=ComboElement(self._master_volume_control, [self._shift_button]), select_button=ComboElement(self._master_select_button, [self._select_button]), selector_button=self._select_button)  #select_button=self._master_select_button,
-		self._mixer.set_enabled(True)
+		#self._mixer.master_strip().layer = Layer(volume_control=self._master_volume_control, cue_volume_control=ComboElement(self._master_volume_control, [self._shift_button]), select_button=ComboElement(self._master_select_button, [self._select_button]), selector_button=self._select_button)  #select_button=self._master_select_button,
+		self._mixer.master_strip().layer = Layer(select_button=self._master_select_button, selector_button=self._select_button)
+
+		self._mixer.set_enabled(True)"""
 	
 
 	def _hack_stepseq(self):
@@ -826,7 +833,8 @@ class AumPush(Push):
 		self._troll.layer = Layer(top_buttons = self._select_buttons, bottom_buttons = self._track_state_buttons, matrix = self._matrix.submatrix[:, :4], display_line1=self._display_line1, display_line2=self._display_line2, display_line3=self._display_line3, display_line4=self._display_line4, encoder_buttons = self._global_param_touch_buttons, encoders = self._global_param_controls)  #shift_button = self._shift_button, 
 		self._troll.layer.priority = 6
 		self._main_modes.add_mode('troll', self._troll, behaviour=CancellableBehaviourWithRelease())
-		self._main_modes.layer = Layer(volumes_button=self._vol_mix_mode_button, pan_sends_button=self._pan_send_mix_mode_button, track_button=self._single_track_mix_mode_button, clip_button=self._clip_mode_button, device_button=self._device_mode_button, browse_button=self._browse_mode_button, add_effect_right_button=self._create_device_button, add_effect_left_button=ComboElement(self._create_device_button, [self._shift_button]), add_instrument_track_button=self._create_track_button, troll_button=self._master_select_button)
+		#self._main_modes.layer = Layer(volumes_button=self._vol_mix_mode_button, pan_sends_button=self._pan_send_mix_mode_button, track_button=self._single_track_mix_mode_button, clip_button=self._clip_mode_button, device_button=self._device_mode_button, browse_button=self._browse_mode_button, add_effect_right_button=self._create_device_button, add_effect_left_button=ComboElement(self._create_device_button, [self._shift_button]), add_instrument_track_button=self._create_track_button, troll_button=self._master_select_button)
+		self._main_modes.layer = Layer(volumes_button=self._vol_mix_mode_button, pan_sends_button=self._pan_send_mix_mode_button, track_button=self._single_track_mix_mode_button, clip_button=self._clip_mode_button, device_button=self._device_mode_button, browse_button=self._browse_mode_button, add_effect_right_button=self._create_device_button, add_effect_left_button=self._with_shift(self._create_device_button), add_instrument_track_button=self._create_track_button, troll_button=self._master_select_button)
 
 		"""self._tempo.layer = Layer(button=ComboElement(self._tempo_control_tap, [self._shift_button]))
 		self._transport.layer = Layer(shift_button=self._shift_button, play_button=self._play_button, tap_tempo_button=self._tap_tempo_button, metronome_button=self._metronome_button, quantization_button=self._quantize_button, tempo_encoder=ComboElement(self._tempo_control, [self._shift_button]), undo_button=self._undo_button)"""
@@ -836,13 +844,13 @@ class AumPush(Push):
 		self._swing_amount.display_layer = Layer(label_display=self._display_line1, value_display=self._display_line3, graphic_display=self._display_line2, clear_display1=self._display_line4)
 		self._swing_amount.display_layer.priority = DIALOG_PRIORITY"""
 
-		self._master_cue_vol = ParameterValueComponent(self.song().master_track.mixer_device.crossfader, display_label='Crossfader:', display_seg_start=3, name='Cue_Volume_Display', encoder=ComboElement(self._master_volume_control, [self._shift_button]))
-		self._master_cue_vol.layer = Layer(button=ComboElement(self._master_volume_control_tap, [self._shift_button]))
-		self._master_cue_vol.display_layer = Layer(label_display=self._display_line1, value_display=self._display_line3, graphic_display=self._display_line2, clear_display2=self._display_line4)
-		self._master_cue_vol.display_layer.priority = DIALOG_PRIORITY
+		#self._master_cue_vol = ParameterValueComponent(self.song().master_track.mixer_device.crossfader, display_label='Crossfader:', display_seg_start=3, name='Cue_Volume_Display', encoder=ComboElement(self._master_volume_control, [self._shift_button]))
+		#self._master_cue_vol.layer = Layer(button=ComboElement(self._master_volume_control_tap, [self._shift_button]))
+		#self._master_cue_vol.display_layer = Layer(label_display=self._display_line1, value_display=self._display_line3, graphic_display=self._display_line2, clear_display2=self._display_line4)
+		#self._master_cue_vol.display_layer.priority = DIALOG_PRIORITY
 
-		if len(self.song().visible_tracks)>=16:
-			self._session.set_offsets(4, 8)
+		#if self._session and len(self.song().visible_tracks)>=16:
+		#	self._session.set_offsets(4, 8)
 
 		self.schedule_message(5, self._remove_pedal)
 	
@@ -967,6 +975,7 @@ class AumPush(Push):
 					else:
 						self.log_message('button is None: ' + str(i, j))
 		return _setup_instrument_mode
+		
 	
 
 	"""def update(self):
@@ -1147,9 +1156,9 @@ class PushModHandler(ModHandler):
 								'push_value_display': self._receive_push_value_display,
 								'push_alt_name_display': self._receive_push_alt_name_display,
 								'push_alt_value_display': self._receive_push_alt_value_display}
-		self._colors = range(128)
-		self._colors[1:8] = [3, 85, 33, 95, 5, 21, 67]
-		self._colors[127] = 67
+		self._push_colors = range(128)
+		self._push_colors[1:8] = [3, 85, 33, 95, 5, 21, 67]
+		self._push_colors[127] = 67
 		self._shifted = False
 		self._shift_display = MonomodDisplayComponent(self, [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '], [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '])
 		self._alt_display = MonomodDisplayComponent(self, [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '], [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '])
@@ -1203,7 +1212,7 @@ class PushModHandler(ModHandler):
 							button.set_enabled(False)
 				else:
 					if x < 8 and y < 8:
-						self._push_grid.send_value(x, y, self._colors[value], True)
+						self._push_grid.send_value(x, y, self._push_colors[self._colors[value]], True)
 					#else:
 					#	self.log_message('out of range: ' + str(x) + ' ' + str(y) + '.')
 	
@@ -1214,13 +1223,13 @@ class PushModHandler(ModHandler):
 			if not self._push_grid is None:
 				if (x - self.x_offset) in range(8) and (y - self.y_offset) in range(8):
 					#self.log_message('receive grid %(x)s %(y)s %(v)s' % {'x':x, 'y':y, 'v':value})
-					self._push_grid.send_value(x - self.x_offset, y - self.y_offset, self._colors[value], True)
+					self._push_grid.send_value(x - self.x_offset, y - self.y_offset, self._push_colors[self._colors[value]], True)
 	
 
 	def _receive_key(self, x, value):
 		#self.log_message('_receive_key: %s %s' % (x, value))
 		if not self._keys is None:
-			self._keys.send_value(x, 0, self._colors[value], True)
+			self._keys.send_value(x, 0, self._push_colors[self._colors[value]], True)
 	
 
 	def _receive_shift(self, value):

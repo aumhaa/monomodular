@@ -293,6 +293,7 @@ function initialize(val)
 		}
 		Alive = 1;
 		clear_surface();
+		
 		storage.message('recall', 1);
 		init_device();
 		refresh_extras();
@@ -300,17 +301,17 @@ function initialize(val)
 		/*var i=3;do{
 			outlet(0, 'to_c_wheel', i, 2, 'mode', 0);
 		}while(i--);*/
-		outlet(0, 'set_mod_color', modColor);
-		outlet(0, 'set_color_map', 'Monochrome', 127, 127, 127, 15, 22, 29, 36, 43);
-		outlet(0, 'set_report_offset', 1);
+		//outlet(0, 'set_mod_color', modColor);
+		//outlet(0, 'set_color_map', 'Monochrome', 127, 127, 127, 15, 22, 29, 36, 43);
+		//outlet(0, 'set_report_offset', 1);
 		outlet(0, 'receive_device', 'set_mod_device_type', 'Hex');
 		outlet(0, 'receive_device', 'set_mod_number_params', 16);
 		outlet(0, 'push_name_display', 'value', 0, 'Worky?');
 		outlet(0, 'push_alt_name_display', 'value', 1, 'Worky!');
-		var i=7;do{
+		/*var i=7;do{
 			outlet(0, 'key', i, (i==grid_mode)*8);
 			outlet(0, 'grid', i, 6, ENC_COLORS[i]);
-		}while(i--);
+		}while(i--);*/
 		rotgate.message('int', 1);
 		messnamed(unique+'ColNOTE', ColNOTE);
 		messnamed(unique+'RowNOTE', RowNOTE);
@@ -588,7 +589,7 @@ function refresh_pads()
 			var i=15;do{
 				var v = part[i].active*2;
 				outlet(0, 'receive_translation', 'pads_'+i, 'value', v);
-				padgui.message(x, y, v);
+				padgui.message(i%4, Math.floor(i/4), v);
 			}while(i--);
 			break;
 		case 3:
@@ -597,7 +598,7 @@ function refresh_pads()
 				var v = (i==p)+3;
 				outlet(0, 'receive_translation', 'pads_'+i, 'value', v);
 				//outlet(0, 'receive_translation', 'pads_'+i, 'value', v);
-				padgui.message(x, y, v);
+				padgui.message(i%4, Math.floor(i/4), v);
 			}while(i--);
 			break;
 		case 4:
@@ -606,21 +607,21 @@ function refresh_pads()
 				var v = (i==p)+6;
 				outlet(0, 'receive_translation', 'pads_'+i, 'value', -1);
 				outlet(0, 'receive_translation', 'pads_'+i, 'value', v);
-				padgui.message(x, y, v);
+				padgui.message(i%4, Math.floor(i/4), v);
 			}while(i--);
 			break;
 		case 6:
 			var i=15;do{
 				var v=(selected.triggered.indexOf(i)>-1) + 7;
 				outlet(0, 'receive_translation', 'pads_'+i, 'value', v);
-				padgui.message(x, y, v);
+				padgui.message(i%4, Math.floor(i/4), v);
 			}while(i--);
 			break;
 		case 7:
 			var i=15;do{
 				var v=(selected.triggered.indexOf(i)>-1) + 7;
 				outlet(0, 'receive_tranlsation', 'pads_'+i, 'value', v);
-				padgui.message(x, y, v);
+				padgui.message(i%4, Math.floor(i/4), v);
 			}while(i--);
 			break;
 		default:
@@ -3615,3 +3616,4 @@ function forceload()
 
 forceload();
 
+//function _lcd(){}

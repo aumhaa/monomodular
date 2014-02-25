@@ -6,9 +6,9 @@ inlets = 1;
 var script = this;
 
 
-var DEBUG = true;
+var DEBUG = false;
 var SHOW_STORAGE = false;
-var FORCELOAD = true;
+var FORCELOAD = false;
 
 var bgcolors = {'OFF': [0, 0, 0, 1], 'WHITE':[1, 1, 1, 1], 'YELLOW':[1, 1, 0, 1], 'CYAN':[0, 1, 1, 1], 
 				'MAGENTA':[1, 0, 1, 1], 'RED':[1, 0, 0, 1], 'GREEN':[0, 1, 0, 1], 'BLUE':[0, 0, 1, 1],
