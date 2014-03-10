@@ -772,8 +772,8 @@ class ModClient(NotifyingControlElement):
 			value_list = unpack_items(values)
 			#self.log_message('address: ' + str(address) + ' value_list: ' + str(value_list))
 			try:
-				with self._parent._host.component_guard():
-					getattr(address, method)(*value_list)
+				#with self._parent._host.component_guard():
+				getattr(address, method)(*value_list)
 			except:
 				if debug():
 					self.log_message('receive method exception %(a)s %(m)s %(vl)s' % {'a':address_name, 'm':method, 'vl':values})
@@ -811,8 +811,8 @@ class ModClient(NotifyingControlElement):
 	
 
 	def send(self, control_name, *a):
-		with self._parent._host.component_guard():
-			self.notify_value(control_name, *a)
+		#with self._parent._host.component_guard():
+		self.notify_value(control_name, *a)
 	
 
 	def is_active(self):

@@ -168,6 +168,7 @@ class AumPushTrollComponent(CompoundComponent):
 		self._encoder_mode._set_protected_mode_index(0)
 		self.register_component(self._encoder_mode)
 		self.register_component(self._send_reset)
+		self.register_component(self._device_selector)
 		self._encoder_mode.set_enabled(True)
 	
 
@@ -357,7 +358,7 @@ class AumPushTrollComponent(CompoundComponent):
 	def set_enabled(self, enabled = True):
 		super(AumPushTrollComponent, self).set_enabled(enabled)
 		if not enabled:
-			self._script._select_note_mode()
+			self._script.schedule_message(1, self._script._select_note_mode)
 	
 
 	def set_mode_matrix(self, matrix):
@@ -1268,6 +1269,13 @@ class PushModHandler(ModHandler):
 	def set_push_grid(self, grid):
 		self._push_grid = grid
 		self._push_grid_value.subject = self._push_grid
+		if not self._push_grid is None:
+			for button, _ in grid.iterbuttons():
+				if not button == None:
+					button.use_default_message()
+					button.set_enabled(True)
+		if self.active_mod():
+			self.active_mod()._addresses['push_grid'].restore()
 			
 	
 
@@ -1279,6 +1287,8 @@ class PushModHandler(ModHandler):
 	def set_key_buttons(self, keys):
 		self._keys = keys
 		self._keys_value.subject = self._keys
+		if self.active_mod():
+			self.active_mod()._addresses['push_grid'].restore()
 	
 
 	def set_lock_button(self, button):
