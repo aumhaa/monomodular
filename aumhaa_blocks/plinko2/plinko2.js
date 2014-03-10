@@ -361,7 +361,7 @@ function Display()
 		{
 			for(var obj in this.layers[this.layer])
 			{
-				post('obj', obj, '\n');
+				//post('obj', obj, '\n');
 				var object = this.layers[this.layer][obj];
 				for(var prop in object)
 				{
@@ -395,6 +395,7 @@ var speed = [0, 0, 0, 0];
 var matrix = new Grid('Grid', 'grid', 16, 16);
 var keys = new Keys('Keys', 'key', 8);
 var display;
+var node;
 
 //this array contains the scripting names of objects in the top level patcher.	To include an new object to be addressed 
 //in this script, it's only necessary to add its name to this array.  It can then be addressed as a direct variable
@@ -521,11 +522,11 @@ function _dissolve()
 	{
 		if((/^_/).test(i))
 		{
-			script[i.replace('_', "")] = script['anyting'];
+			script[i.replace('_', "")] = script['anything'];
 		}
 	}
 	Alive=0;
-	post('Hex dissolved.\n');	   
+	post('Plinko dissolved.\n');	   
 }
 
 function _push_grid(x, y, val)

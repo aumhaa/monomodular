@@ -4,7 +4,7 @@ inlets = 2;
 outlets = 2;
 
 var FORCELOAD = false;
-var DEBUG = true;
+var DEBUG = false;
 var DEBUGLCD = 0;
 var SHOW_STORAGE = 0;
 

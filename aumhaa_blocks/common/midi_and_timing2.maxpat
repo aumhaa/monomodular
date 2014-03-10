@@ -8,7 +8,7 @@
 			"architecture" : "x86"
 		}
 ,
-		"rect" : [ 5.0, 46.0, 900.0, 672.0 ],
+		"rect" : [ 5.0, 46.0, 300.0, 102.0 ],
 		"bgcolor" : [ 0.168627, 0.168627, 0.168627, 1.0 ],
 		"bglocked" : 0,
 		"openinpresentation" : 1,
@@ -59,7 +59,7 @@
 					}
 ,
 					"text" : "pattr",
-					"varname" : "u470009775"
+					"varname" : "u198001670"
 				}
 
 			}
@@ -93,7 +93,7 @@
 					}
 ,
 					"text" : "pattr",
-					"varname" : "u440009779"
+					"varname" : "u983001667"
 				}
 
 			}
@@ -558,7 +558,6 @@
 , 			{
 				"box" : 				{
 					"id" : "obj-61",
-					"ignoreclick" : 1,
 					"maxclass" : "live.numbox",
 					"numinlets" : 1,
 					"numoutlets" : 2,
@@ -637,7 +636,7 @@
 					"fontname" : "Arial",
 					"fontsize" : 10.0,
 					"id" : "obj-78",
-					"items" : [ "Off", ",", "IAC Driver Bus 1", ",", "Ableton Push Live Port", ",", "Ableton Push User Port", ",", "Daemon Output 0", ",", "Daemon Output 1", ",", "Daemon Output 2", ",", "Daemon Output 3", ",", "Daemon Output 4", ",", "Daemon Output 5", ",", "Daemon Output 6", ",", "Daemon Output 7" ],
+					"items" : [ "Off", ",", "IAC Driver Bus 1", ",", "Daemon Output 0", ",", "Daemon Output 1", ",", "Daemon Output 2", ",", "Daemon Output 3", ",", "Daemon Output 4", ",", "Daemon Output 5", ",", "Daemon Output 6", ",", "Daemon Output 7" ],
 					"maxclass" : "umenu",
 					"numinlets" : 1,
 					"numoutlets" : 3,
@@ -2397,7 +2396,7 @@
 					"fontname" : "Arial",
 					"fontsize" : 10.0,
 					"id" : "obj-33",
-					"items" : [ "Off", ",", "IAC Driver Bus 1", ",", "Ableton Push Live Port", ",", "Ableton Push User Port", ",", "Daemon Input 0", ",", "Daemon Input 1", ",", "Daemon Input 2", ",", "Daemon Input 3", ",", "Daemon Input 4", ",", "Daemon Input 5", ",", "Daemon Input 6", ",", "Daemon Input 7" ],
+					"items" : [ "Off", ",", "IAC Driver Bus 1", ",", "Daemon Input 0", ",", "Daemon Input 1", ",", "Daemon Input 2", ",", "Daemon Input 3", ",", "Daemon Input 4", ",", "Daemon Input 5", ",", "Daemon Input 6", ",", "Daemon Input 7" ],
 					"maxclass" : "umenu",
 					"numinlets" : 1,
 					"numoutlets" : 3,
@@ -3669,6 +3668,37 @@
 					"source" : [ "obj-99", 0 ]
 				}
 
+			}
+ ],
+		"parameters" : 		{
+			"obj-7" : [ "inport", "inport", 0 ],
+			"obj-83::obj-143" : [ "timing[2]", "timing", 2 ],
+			"obj-58" : [ "midi_output_menu[1]", "midi_input_menu", 100 ],
+			"obj-29" : [ "in_channel", "in_channel", 406 ],
+			"obj-61" : [ "nomechan[1]", "nomechan", 100 ],
+			"obj-80" : [ "swing[2]", "swing", 3 ],
+			"obj-187" : [ "timing_master[1]", "timing_master", 415 ],
+			"obj-40" : [ "midi_thru", "midi_thru", 411 ],
+			"obj-10" : [ "outport", "outport", 0 ],
+			"obj-44" : [ "midi_input_menu", "midi_input_menu", 409 ],
+			"obj-28" : [ "start", "start", 414 ],
+			"obj-159" : [ "beat", "beat", 416 ]
+		}
+,
+		"dependency_cache" : [ 			{
+				"name" : "timing_b992.maxpat",
+				"bootpath" : "/Users/amounra/monomodular_git/aumhaa_blocks/common",
+				"patcherrelativepath" : ".",
+				"type" : "JSON",
+				"implicit" : 1
+			}
+, 			{
+				"name" : "lh_midiin.mxo",
+				"type" : "iLaX"
+			}
+, 			{
+				"name" : "lh_midiout.mxo",
+				"type" : "iLaX"
 			}
  ]
 	}

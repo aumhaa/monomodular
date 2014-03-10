@@ -27,9 +27,9 @@ from _Framework.SubjectSlot import SubjectEvent, subject_slot, subject_slot_grou
 from _Framework.Task import *
 from _Generic.Devices import *
 
-from Push.M4LInterfaceComponent import M4LInterfaceComponent
-from Push.ComboElement import ComboElement, DoublePressElement, MultiElement, DoublePressContext
-from Push.BackgroundComponent import BackgroundComponent
+from _Framework.M4LInterfaceComponent import M4LInterfaceComponent
+from _Framework.ComboElement import ComboElement, DoublePressElement, MultiElement, DoublePressContext
+from _Framework.BackgroundComponent import BackgroundComponent
 
 """Imports from _Mono_Framework"""
 from _Mono_Framework.DetailViewControllerComponent import DetailViewControllerComponent
@@ -1250,7 +1250,11 @@ class Codec(ControlSurface):
 	
 
 	def connect_script_instances(self, instanciated_scripts):
-		found = False
+		"""for s in instanciated_scripts:
+			if 'monomodular' in dir(s):
+				self.monomodular = s.monomodular
+				break"""
+		"""found = False
 		for s in instanciated_scripts:
 			if '_codec_version' in dir(s):
 				if s._codec_version == self._version_check:
@@ -1279,6 +1283,7 @@ class Codec(ControlSurface):
 							self._session._link()
 					else:
 						self.log_message('version mismatch: Monomod version ' + str(self._version_check) + ' vs. Host version ' + str(s._codec_version))
+		"""
 	
 
 	def update_display(self):

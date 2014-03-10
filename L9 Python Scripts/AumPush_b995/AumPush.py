@@ -760,9 +760,11 @@ class AumPush(Push):
 		if isinstance(__builtins__, dict):
 			if not 'monomodular' in __builtins__.keys() or not isinstance(__builtins__['monomodular'], ModRouter):
 				__builtins__['monomodular'] = ModRouter()
+				self.log_message('first bit...')
 		else:
 			if not hasattr(__builtins__, 'monomodular') or not isinstance(__builtins__['monomodular'], ModRouter):
 				setattr(__builtins__, 'monomodular', ModRouter())
+				self.log_message('second bit...')
 		self.monomodular = __builtins__['monomodular']
 		if not self.monomodular.has_host():
 			self.monomodular.set_host(self)
@@ -770,6 +772,7 @@ class AumPush(Push):
 		self.modhandler = PushModHandler(self)
 		self.modhandler.name = 'ModHandler'
 		self.modhandler.layer = Layer( lock_button = self._note_mode_button, push_grid = self._matrix, shift_button = self._shift_button, alt_button = self._select_button, key_buttons = self._track_state_buttons)
+		self.modhandler.layer.priority = 4
 		self.modhandler.nav_buttons_layer = AddLayerMode( self.modhandler, Layer(nav_up_button = self._nav_up_button, nav_down_button = self._nav_down_button, nav_left_button = self._nav_left_button, nav_right_button = self._nav_right_button) )
 		self.modhandler.shift_display_layer = AddLayerMode( self.modhandler, Layer( name_display_line = self._display_line3, value_display_line = self._display_line4 )) #alt_controls = self._track_state_buttons, 
 		self.modhandler.alt_display_layer = AddLayerMode( self.modhandler, Layer( alt_name_display_line = self._display_line3, alt_value_display_line = self._display_line4 )) #alt_controls = self._track_state_buttons, 
@@ -907,6 +910,7 @@ class AumPush(Push):
 					self.log_message('assigning mod mode')
 					self._note_modes.selected_mode = 'disabled'
 					self._note_modes.selected_mode = 'mod'
+					self.modhandler.update()
 				elif track and track.has_audio_input:
 					self._note_modes.selected_mode = 'looperhack'
 				#elif channelized:
@@ -927,9 +931,7 @@ class AumPush(Push):
 	
 
 	def disconnect(self):
-		#if self.monomodular._host is self:
-		#	self.monomodular.disconnect()
-		self.monomodular = None
+		self.log_message('<<<<<<<<<<<<<<<<<<<<<<<< AumPush ' + str(self._monomod_version) + ' log closed >>>>>>>>>>>>>>>>>>>>>>>>') 
 		super(AumPush, self).disconnect()
 	
 
@@ -1168,6 +1170,7 @@ class PushModHandler(ModHandler):
 	def select_mod(self, mod):
 		super(PushModHandler, self).select_mod(mod)
 		self._script._select_note_mode()
+		self.update()
 		self.log_message('modhandler select mod: ' + str(mod))
 	
 
@@ -1265,6 +1268,7 @@ class PushModHandler(ModHandler):
 	def set_push_grid(self, grid):
 		self._push_grid = grid
 		self._push_grid_value.subject = self._push_grid
+			
 	
 
 	def set_push_grid_CC(self, grid):

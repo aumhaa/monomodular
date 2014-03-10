@@ -33,6 +33,7 @@ class CodecEncoderElement(EncoderElement):
 
 	def __init__(self, msg_type, channel, identifier, map_mode, name, num, script, *a, **k):
 		super(CodecEncoderElement, self).__init__(msg_type, channel, identifier, map_mode, *a, **k)
+		self._mapping_feedback_delay = 1
 		self._script = script
 		self.name = name
 		self.num = num

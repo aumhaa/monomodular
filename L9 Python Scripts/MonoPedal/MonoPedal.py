@@ -89,7 +89,7 @@ class LoopPedalExpressionElement(EncoderElement):
 	
 
 	def receive_value(self, value):
-		#self._script.log_message('exp val ' + str(value))
+		self._script.log_message('exp val ' + str(value))
 		#value = min(127, max(0, (value - 96)*4))
 		#self._script.log_message('exp new val ' + str(value))
 		self._verify_value(value)
@@ -1059,7 +1059,7 @@ class MonoPedal(ControlSurface):
 		self._button_modes.add_mode('launcher', self._launcher)
 		self._button_modes.add_mode('looper', self._looper)
 		self._button_modes.add_mode('device', self._device_control)
-		self._button_modes.selected_mode = 'device'
+		self._button_modes.selected_mode = 'looper'
 		self._button_modes.set_enabled(True)
 	
 

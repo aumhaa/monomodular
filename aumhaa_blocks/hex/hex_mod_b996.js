@@ -31,7 +31,7 @@ DEBUGANYTHING = false;
 SHOW_POLYSELECTOR = false;
 SHOW_STORAGE = false;
 
-
+var finder;
 
 var unique = jsarguments[1];
 
@@ -264,7 +264,7 @@ function initialize(val)
 			part[i].obj.get = [];
 			for(var j in Objs)
 			{
-				if(DEBUG){post(Objs[j].Name, '\n');}
+				//if(DEBUG){post(Objs[j].Name, '\n');}
 				part[i].obj[Objs[j].Name] = this.patcher.getnamed('poly').subpatcher(poly_num).getnamed(Objs[j].Name);
 				part[i].obj.set[Objs[j].Name] = make_obj_setter(part[i], Objs[j]);
 				part[i].obj.get[Objs[j].Name] = make_obj_getter(part[i], Objs[j]);
@@ -276,6 +276,7 @@ function initialize(val)
 			//part[i].note = default_note.slice();
 			//part[i].note = i;
 		}
+		
 		script.rulemap = this.patcher.getnamed('settings').subpatcher().getnamed('rulemap');
 		this.patcher.getnamed('poly').message('target', 0);
 		selected_filter.message('offset', 1);
@@ -284,10 +285,12 @@ function initialize(val)
 		messnamed(unique+'restart', 1);
 		transport_change.message('set', -1);
 		selected = part[0];
+		init_device();
 		for(var i in script)
 		{
 			if((/^_/).test(i))
 			{
+				//debug('replacing', i, '\n');
 				script[i.replace('_', "")] = script[i];
 			}
 		}
@@ -295,23 +298,16 @@ function initialize(val)
 		clear_surface();
 		
 		storage.message('recall', 1);
-		init_device();
+
 		refresh_extras();
 		select_pattern(0);
-		/*var i=3;do{
-			outlet(0, 'to_c_wheel', i, 2, 'mode', 0);
-		}while(i--);*/
-		//outlet(0, 'set_mod_color', modColor);
-		//outlet(0, 'set_color_map', 'Monochrome', 127, 127, 127, 15, 22, 29, 36, 43);
-		//outlet(0, 'set_report_offset', 1);
+		
+
 		outlet(0, 'receive_device', 'set_mod_device_type', 'Hex');
 		outlet(0, 'receive_device', 'set_mod_number_params', 16);
 		outlet(0, 'push_name_display', 'value', 0, 'Worky?');
 		outlet(0, 'push_alt_name_display', 'value', 1, 'Worky!');
-		/*var i=7;do{
-			outlet(0, 'key', i, (i==grid_mode)*8);
-			outlet(0, 'grid', i, 6, ENC_COLORS[i]);
-		}while(i--);*/
+
 		rotgate.message('int', 1);
 		messnamed(unique+'ColNOTE', ColNOTE);
 		messnamed(unique+'RowNOTE', RowNOTE);
@@ -322,6 +318,16 @@ function initialize(val)
 			this.patcher.getnamed('storage').message('storagewindow');
 		}
 		post("Hex initialized.\n");
+		//outlet(0, 'set_mod_color', modColor);
+		//outlet(0, 'set_color_map', 'Monochrome', 127, 127, 127, 15, 22, 29, 36, 43);
+		//outlet(0, 'set_report_offset', 1);
+		/*var i=7;do{
+			outlet(0, 'key', i, (i==grid_mode)*8);
+			outlet(0, 'grid', i, 6, ENC_COLORS[i]);
+		}while(i--);*/
+		/*var i=3;do{
+			outlet(0, 'to_c_wheel', i, 2, 'mode', 0);
+		}while(i--);*/
 	}
 	else
 	{
@@ -492,6 +498,7 @@ function _dissolve()
 	{
 		if((/^_/).test(i))
 		{
+			post('replacing', i);
 			script[i.replace('_', "")] = script['anything'];
 		}
 	}
@@ -3291,7 +3298,7 @@ function pop(val)
 			break;
 	}		
 }
-
+function pop(){}
 
 /*///////////////////////////
 //	   Device Component	   //
@@ -3465,27 +3472,33 @@ function _lcd(obj, type, val)
 {
 	//post('new_lcd', obj, type, val, '\n');
 	if(DEBUG_LCD){post('lcd', obj, type, val, '\n');}
-	if((type=='lcd_name')&&(val!=undefined))
-	{
-		if(pns[obj])
+	//try:
+		if((type=='lcd_name')&&(val!=undefined))
 		{
-			pns[obj].message('text', val.replace(/_/g, ' '));
+			//if(pns[obj])
+			if(obj in pns)
+			{
+				pns[obj].message('text', val.replace(/_/g, ' '));
+			}
 		}
-	}
-	else if((type == 'lcd_value')&&(val!=undefined))
-	{
-		if(mps[obj])
+		else if((type == 'lcd_value')&&(val!=undefined))
 		{
-			mps[obj].message('text', val.replace(/_/g, ' '));
+			//if(mps[obj])
+			if(obj in mps)
+			{
+				mps[obj].message('text', val.replace(/_/g, ' '));
+			}
 		}
-	}
-	else if(type == 'encoder_value')
-	{
-		if(params[obj]!=undefined)
+		else if((type == 'encoder_value')&&(val!=undefined))
 		{
-			params[obj].message('set', val);
+			//if(params[obj]!=undefined)
+			if(obj in params)
+			{
+				params[obj].message('set', val);
+			}
 		}
-	}
+	//catch:
+	//	if(DEBUG_LCD){post('lcd exception');}
 }
 
 //distribute gui knobs to their destinations
@@ -3614,6 +3627,10 @@ function forceload()
 	if(FORCELOAD){post('FORCELOAD!!!!!!!\n');init(1);}
 }
 
+//function _lcd(){}//if(DEBUG_LCD){post('lcd', obj, type, val, '\n');}}
+
+//function initialize(){}
+
 forceload();
 
-//function _lcd(){}
+//function initialize(){}

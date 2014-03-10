@@ -7,12 +7,14 @@ var DEBUGX = false;
 var script = this;
 var prefix = jsarguments[1];
 var max_time = jsarguments[2];
+var alive = false;
 var buffer_loop = prefix+'loop';
 var buffer_undo = prefix+'undo';
 var dummy = prefix+'dummy';
 var resync = prefix+'resync';
 var looper = [];
 var finder;
+var dev;
 var this_instance_number = -1;
 
 var INSTANCE = [[6, 6], [7, 6], [6, 7], [7, 7]];
@@ -113,7 +115,7 @@ function anything()
 }
 	
 //called when live.this_device bangs
-function init()
+function initialize()
 {
 	if(DEBUG){post('init\n');}
 	for(var obj in POBJ)
@@ -154,21 +156,35 @@ function init()
 	looper.trigger.buffer_size.message(max_time);
 	looper.looper.message('play', 0);
 	looper.bufferloop.message('clear');
-	var dev = new LiveAPI('live_set', 'this_device');
+	if(!(dev instanceof LiveAPI))
+	{
+		dev = new LiveAPI(dummy_callback, 'live_set', 'this_device');
+	}
+	dev.goto('this_device');
 	detect_instance(dev);
 	dev.goto('parameters', 19);
 	looper.position_remote.message('id', dev.id);
 	dev.goto('live_set', 'this_device');
 	dev.goto('parameters', 20);
 	looper.state_remote.message('id', dev.id);
-	setup_translations();
-	display_position();
-	outlet(0, 'receive_translation', 'dummy_row_batch', 'batch_row', 4, 4, 4, 4, 4);
-	outlet(0, 'receive_translation', 'undo',  'value', (undo_data.can*7)+1);
-	outlet(0, 'receive_translation', 'overdub', 'value', (overdub_status*7)+3);	
-	outlet(0, 'receive_translation', 'record',  'value', (in_loop*7)+5);
-	outlet(0, 'receive_translation', 'mute', 'value', (mute_status*7)+7);
-	outlet(0, 'receive_translation', 'clear',  'value', 2);
+	dev.id = 0;
+	alive = true;
+	init();
+}
+
+function init()
+{
+	if(alive)
+	{
+		setup_translations();
+		display_position();
+		outlet(0, 'receive_translation', 'dummy_row_batch', 'batch_row', 4, 4, 4, 4, 4);
+		outlet(0, 'receive_translation', 'undo',  'value', (undo_data.can*7)+1);
+		outlet(0, 'receive_translation', 'overdub', 'value', (overdub_status*7)+3);	
+		outlet(0, 'receive_translation', 'record',  'value', (in_loop*7)+5);
+		outlet(0, 'receive_translation', 'mute', 'value', (mute_status*7)+7);
+		outlet(0, 'receive_translation', 'clear',  'value', 2);
+	}
 }
 
 function detect_instance(this_device)
@@ -733,7 +749,7 @@ function _grid(x, y, z)
 	}
 }
 
-
+function _lcd(){}
 
 //called from other patches, e.g. GrainStorm mod, to transfer the loopers buffer contents to their own buffers
 //this will be broken in b995 until I make some adjustments
@@ -745,6 +761,8 @@ function copy_buffer_to_destination(dest)
 	//looper.buffetloop.message('copy_to_buffer', dest, 0, loop_end-1);
 	//looper.copybuffer.message('set', dummy);
 }
+
+function dummy_callback(){}
 
 /*function multiply()
 {

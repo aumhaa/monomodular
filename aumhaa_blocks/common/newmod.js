@@ -3,7 +3,7 @@ autowatch = 1;
 outlets = 2;
 
 var finder;
-
+var this_device;
 var patch_type = jsarguments[1];
 var unique = jsarguments[2];
 var wiki_addy = 'http://www.aumhaa.com/wiki/index.php?title='+patch_type;
@@ -19,15 +19,19 @@ var modAddresses = [];
 var this_device_id = 0;
 var stored_messages = [];
 var legacy = false;
+var alive = false;
+
 
 function init()
 {
+
+	if(DEBUG){post('patch:', patch_type, 'init');}
 	var found = false;
 	if(DEBUG){post('init_b996\n');}
 	assign_attributes();
-	if(!finder)
+	if(!(finder instanceof LiveAPI))
 	{
-		finder = new LiveAPI(callback, 'this_device');
+		finder = new LiveAPI(callback, 'control_surfaces');
 	}
 	finder.goto('this_device');
 	this_device_id = parseInt(finder.id);
@@ -38,7 +42,7 @@ function init()
 	for(var i=0;i<number_children;i++)
 	{
 		if(DEBUG){post('Checking control surface #:', i, '\n');}
-	   	finder.goto('control_surfaces', i);
+		finder.goto('control_surfaces', i);
 		var children = finder.info.toString().split(new RegExp("\n"));
 		var functions = [];
 		var properties = [];
@@ -65,6 +69,7 @@ function init()
 				var new_id = finder.get('monomodular');
 				if(DEBUG){post('found, focusing on', new_id, '\n');}
 				finder.id = parseInt(new_id[1]);
+				if(DEBUG){post('new object name is', finder.get('name'), '\n');}
 				finder.id = parseInt(finder.call('add_mod', 'id', this_device_id)[1]);
 				if(DEBUG){post('client id returned is: ', finder.id, '\n');}
 				finder.property = 'value';
@@ -95,8 +100,12 @@ function init()
 				}
 				outlet(1, 'init');
 				send_stored_messages();
-				return;
+				//return;
 			}
+		}
+		if(found)
+		{
+			break;
 		}
 	}
 }
@@ -171,6 +180,8 @@ function callback(args)
 	}
 }
 
+function dummy_callback(){}
+
 function send_stored_messages()
 {
 	if(DEBUG){post('send_stored_messages()');}
@@ -183,6 +194,7 @@ function send_stored_messages()
 			script[stored_messages[index][0]].apply(this, (stored_messages[index][1]));
 		}
 	}
+	stored_messages = [];
 }
 
 function send_explicit()
@@ -192,3 +204,17 @@ function send_explicit()
 	finder.call(args[0], args[1], args[2], args[3], args[4], args[5]);
 }
 
+function disconnect()
+{
+	post('received disconnect!');
+}
+
+//function send_explicit(){}
+
+//function init(){}
+
+//function send_stored_messages(){}
+
+//function anything(){}
+
+//function callback(){}

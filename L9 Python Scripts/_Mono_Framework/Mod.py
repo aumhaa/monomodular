@@ -1,6 +1,8 @@
-# by amounra 0513 : http://www.aumhaa.com
+# by amounra 0513: http://www.aumhaa.com
 
 from __future__ import with_statement
+import sys
+import os
 import Live
 import contextlib
 from _Tools.re import *
@@ -25,6 +27,8 @@ DEBUG = True
 
 INITIAL_SCROLLING_DELAY = 5
 INTERVAL_SCROLLING_DELAY = 1
+
+CS_LIST_KEY = 'control_surfaces'
 
 def debug():
 	return DEBUG
@@ -68,6 +72,16 @@ def enumerate_track_device(track):
 						devices.append(chain_device)
 	return devices
 
+
+def get_control_surfaces():
+	if isinstance(__builtins__, dict):
+		if CS_LIST_KEY not in __builtins__.keys():
+			__builtins__[CS_LIST_KEY] = []
+		return __builtins__[CS_LIST_KEY]
+	else:
+		if not hasattr(__builtins__, CS_LIST_KEY):
+			setattr(__builtins__, CS_LIST_KEY, [])
+		return getattr(__builtins__, CS_LIST_KEY)
 
 
 class SpecialInputSignal(Signal):
@@ -758,7 +772,8 @@ class ModClient(NotifyingControlElement):
 			value_list = unpack_items(values)
 			#self.log_message('address: ' + str(address) + ' value_list: ' + str(value_list))
 			try:
-				getattr(address, method)(*value_list)
+				with self._parent._host.component_guard():
+					getattr(address, method)(*value_list)
 			except:
 				if debug():
 					self.log_message('receive method exception %(a)s %(m)s %(vl)s' % {'a':address_name, 'm':method, 'vl':values})
@@ -796,7 +811,8 @@ class ModClient(NotifyingControlElement):
 	
 
 	def send(self, control_name, *a):
-		self.notify_value(control_name, *a)
+		with self._parent._host.component_guard():
+			self.notify_value(control_name, *a)
 	
 
 	def is_active(self):
@@ -955,18 +971,20 @@ class ModRouter(CompoundComponent):
 	def set_host(self, host):
 		assert isinstance(host, ControlSurface)
 		self._host = host
-		self._host._get_tasks().add(repeat(self.timer))
+		#self._host._get_tasks().add(repeat(self.timer))
 		self._task_group = host._task_group
 		self._host.log_message('host registered: ' + str(host))
 		self.log_message = host.log_message
+		#self._host._register_component(self)
 	
 
 	def has_host(self):
-		from _Framework.ControlSurface import ControlSurface
-		result = False
-		if hasattr(self._host, '_task_group'):
-			result = self._host._task_group.find(self.timer)
-		return result
+		#from _Framework.ControlSurface import ControlSurface
+		#result = False
+		#if hasattr(self._host, '_task_group'):
+		#	result = self._host._task_group.find(self.timer)
+		#return result
+		return not self._host is None
 	
 
 	def _log_message(self, *a, **k):
@@ -1010,7 +1028,7 @@ class ModRouter(CompoundComponent):
 			with self._host.component_guard():
 				self._mods.append( ModClient(self, device, 'modClient'+str(len(self._mods))) )
 		ret = self.get_mod(device)
-		self.log_message('add mod device: ' + str(device) + ' ' + str(ret))
+		self.log_message('add mod device: ' + str(device.name) + ' ' + str(ret))
 		return ret
 	
 
@@ -1025,9 +1043,20 @@ class ModRouter(CompoundComponent):
 	def disconnect(self):
 		super(ModRouter, self).disconnect()
 		self._host = None
-		self.log_message = self._log_message
-		if hasattr(__builtins__, 'monomodular'):
+		self._handlers = []
+		for mod in self._mods:
+			mod.disconnect()
+		self._mods = []
+		for surface in get_control_surfaces():
+			if hasattr(surface, 'monomodular'):
+				self.log_message('deleting monomodular for ' + str(surface))
+				del surface.monomodular
+		if hasattr(__builtins__, 'monomodular') or 'monomodular' in __builtins__.keys():
+			self.log_message('deleting monomodular for from builtins')
 			del __builtins__['monomodular']
+		self.log_message('monomodular is disconnecting....')
+		self.log_message = self._log_message
+
 	
 
 	def is_mod(self, device):
