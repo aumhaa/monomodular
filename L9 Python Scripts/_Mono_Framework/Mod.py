@@ -73,6 +73,19 @@ def enumerate_track_device(track):
 	return devices
 
 
+def get_monomodular(host):
+		if isinstance(__builtins__, dict):
+			if not 'monomodular' in __builtins__.keys() or not isinstance(__builtins__['monomodular'], ModRouter):
+				__builtins__['monomodular'] = ModRouter()
+		else:
+			if not hasattr(__builtins__, 'monomodular') or not isinstance(__builtins__['monomodular'], ModRouter):
+				setattr(__builtins__, 'monomodular', ModRouter())
+		monomodular = __builtins__['monomodular']
+		if not monomodular.has_host():
+			monomodular.set_host(host)
+		return monomodular
+
+
 def get_control_surfaces():
 	if isinstance(__builtins__, dict):
 		if CS_LIST_KEY not in __builtins__.keys():
@@ -612,6 +625,16 @@ class ModHandler(CompoundComponent):
 
 	def _display_nav_box(self):
 		pass
+	
+
+	def set_nav_buttons(self, buttons):
+		assert buttons is None or len(buttons)==4
+		if buttons is None:
+			buttons = [None for index in range(4)]
+		self.set_nav_up_button(buttons[0])
+		self.set_nav_down_button(buttons[1])
+		self.set_nav_left_button(buttons[2])
+		self.set_nav_right_button(buttons[3])
 	
 
 	def set_nav_up_button(self, button):

@@ -19,8 +19,8 @@ autowatch = 1;
 outlets = 4;
 inlets = 5;
 
-FORCELOAD = false;
-DEBUG = false;
+FORCELOAD = true;
+DEBUG = true;
 DEBUG_LCD = false;
 DEBUG_PTR = false;
 DEBUG_STEP = false;
@@ -39,7 +39,7 @@ var unique = jsarguments[1];
 //in this script, it's only necessary to add its name to this array.  It can then be addressed as a direct variable
 var Vars = ['poly', 'pipe', 'selected_filter', 'step', 'storepattr', 'storage', 'preset_selector', 'padgui', 'padmodegui', 'keygui', 'keymodegui', 'repeatgui', 
 			'rotleftgui', 'rotrightgui', 'notevaluesgui', 'notetypegui', 'stepmodegui', 'keymodeadv', 'Groove', 'Random', 'Channel', 'Mode', 'PolyOffset', 'BaseTime',
-			'timeupgui', 'timedngui', 'pitchupgui', 'pitchdngui', 'transposegui', 'playgui', 'recgui', 'directiongui', 'lockgui','lockgui',
+			'timeupgui', 'timedngui', 'pitchupgui', 'pitchdngui', 'transposegui', 'playgui', 'recgui', 'directiongui', 'lockgui','lockgui', 'Speed',
 			'Speed1', 'Speed2', 'Speed3', 'Speed4', 'Speed5', 'Speed6', 'Speed7', 'Speed8', 'Speed9', 'Speed10', 'Speed11', 'Speed12', 'Speed13', 'Speed14', 'Speed15', 'Speed16',
 			'rotgate', 'transport_change', 'midiout'];
 
@@ -304,7 +304,7 @@ function initialize(val)
 		
 
 		outlet(0, 'receive_device', 'set_mod_device_type', 'Hex');
-		outlet(0, 'receive_device', 'set_mod_number_params', 16);
+		outlet(0, 'receive_device', 'set_number_params', 16);
 		outlet(0, 'push_name_display', 'value', 0, 'Worky?');
 		outlet(0, 'push_alt_name_display', 'value', 1, 'Worky!');
 
@@ -3225,6 +3225,7 @@ function update_gui()
 	Mode.message('set', selected.obj.mode.getvalueof());
 	BaseTime.message('set', selected.obj.basetime.getvalueof());
 	PolyOffset.message('set', selected.obj.polyoffset.getvalueof());
+	Speed.message('set', script['Speed'+(selected.num+1)].getvalueof());
 	if((pad_mode == 6)||(key_mode == 6))
 	{
 		//outlet(0, 'c_button', 3, 2, selected.hold);
@@ -3246,18 +3247,18 @@ function update_bank()
 			//outlet(0, 'set_local_ring_control', 1);
 			outlet(0, 'code_encoder_matrix', 'local', 0);
 			
-			var i=7;do{
+			/*var i=7;do{
 				params[Encoders[i]].hidden = 0;
 				params[Speeds[i]].hidden = 1;
 				params[Speeds[i+8]].hidden = 1;
-			}while(i--);
+			}while(i--);*/
 			break;
 		case 5:
 			outlet(0, 'receive_device', 'set_mod_device_bank', 2+(selected.num>7));
 			//outlet(0, 'set_c_local_ring_control', 0);
 			outlet(0, 'code_encoder_matrix', 'local', 0);
 			//outlet(0, 'set_local_ring_control', 0);
-			var r = (selected.num>7)*8;
+			/*var r = (selected.num>7)*8;
 			var i=7;do{
 				params[Encoders[i]].hidden = 1;
 				params[Speeds[i]].hidden = selected.num>7;
@@ -3272,7 +3273,7 @@ function update_bank()
 				outlet(0, 'to_c_wheel', i, 2, 'mode', 0);
 				outlet(0, 'to_c_wheel', i, 2, 'green', 0);
 			}while(i--);
-			break;
+			break;*/
 	}
 	//rotgate.message('int', ((pad_mode==5)||(key_mode==5)||(grid_mode==1)));	
 }
@@ -3313,7 +3314,7 @@ var dials = [];
 
 var Encoders = ['Encoder_0', 'Encoder_1', 'Encoder_2', 'Encoder_3', 'Encoder_4', 'Encoder_5', 'Encoder_6', 'Encoder_7', 'Encoder_8', 'Encoder_9', 'Encoder_10', 'Encoder_11'];
 var Speeds = ['Speed1', 'Speed2', 'Speed3', 'Speed4', 'Speed5', 'Speed6', 'Speed7', 'Speed8', 'Speed9', 'Speed10', 'Speed11', 'Speed12', 'Speed13', 'Speed14', 'Speed15', 'Speed16'];
-var Dials =  ['Channel', 'Groove', 'Random', 'RotSize', 'Repeat', 'GlobSpeed', 'PolyOffset', 'Mode'];
+var Dials =  ['Channel', 'Groove', 'Random', 'RotSize', 'Repeat', 'GlobSpeed', 'PolyOffset', 'Mode', 'BaseTime', 'Speed'];
 Warning = ['missing', 'device', 'assignment', 'for', 'the', 'currently', 'selected', 'channel', ' ', ' ', ' ', ' '];
 
 // called from init
@@ -3339,7 +3340,7 @@ function init_device()
 		mps[Encoders[i+8]]=this.patcher.getnamed('mp'+(i+9));
 		mps[Encoders[i+8]].message('text', ' ');
 	}
-	for(var i=0;i<8;i++)
+	for(var i=0;i<10;i++)
 	{
 		dials[Encoders[i+8]]=this.patcher.getnamed(Dials[i]);
 		dials[Encoders[i+8]].message('set', 0);
@@ -3472,55 +3473,53 @@ function _lcd(obj, type, val)
 {
 	//post('new_lcd', obj, type, val, '\n');
 	if(DEBUG_LCD){post('lcd', obj, type, val, '\n');}
-	//try:
-		if((type=='lcd_name')&&(val!=undefined))
+	if((type=='lcd_name')&&(val!=undefined))
+	{
+		//if(pns[obj])
+		if(obj in pns)
 		{
-			//if(pns[obj])
-			if(obj in pns)
-			{
-				pns[obj].message('text', val.replace(/_/g, ' '));
-			}
+			pns[obj].message('text', val.replace(/_/g, ' '));
 		}
-		else if((type == 'lcd_value')&&(val!=undefined))
+	}
+	else if((type == 'lcd_value')&&(val!=undefined))
+	{
+		//if(mps[obj])
+		if(obj in mps)
 		{
-			//if(mps[obj])
-			if(obj in mps)
-			{
-				mps[obj].message('text', val.replace(/_/g, ' '));
-			}
+			mps[obj].message('text', val.replace(/_/g, ' '));
 		}
-		else if((type == 'encoder_value')&&(val!=undefined))
+	}
+	else if((type == 'encoder_value')&&(val!=undefined))
+	{
+		//if(params[obj]!=undefined)
+		if(obj in params)
 		{
-			//if(params[obj]!=undefined)
-			if(obj in params)
-			{
-				params[obj].message('set', val);
-			}
+			params[obj].message('set', val);
 		}
-	//catch:
-	//	if(DEBUG_LCD){post('lcd exception');}
+	}
 }
 
 //distribute gui knobs to their destinations
 function _encoder(num, val)
 {
 	if(DEBUG){post('encoder in', num, val, '\n');}
-	if(num<8)
+	if(num<12)
 	{				
-		if(pad_mode!=5)
+		/*if(pad_mode!=5)
 		{
 			outlet(0, 'receive_device', 'set_mod_parameter_value', num, val);
 		}
 		else
 		{
 			set_speed(num, val);
-		}
+		}*/
+		outlet(0, 'receive_device', 'set_mod_parameter_value', num, val);
 	}
 	else
 	{
 		switch(num)
 		{
-			case 8:
+			case 12:
 				//neither are pattr linked
 				//selected.channel = val;
 				//selected.polyenable = selected.channel > 0;
@@ -3530,39 +3529,45 @@ function _encoder(num, val)
 				selected.obj.set.channel(val);
 				_select_chain(selected.num);
 				break;
-			case 9:
+			case 13:
 				//selected.swing = (val+50)/100;
 				//selected.obj.swing.message('float', selected.swing);
 				selected.obj.set.swing((val+50)/100);
 				break;
-			case 10:
+			case 14:
 				//selected.random = val;
 				//selected.obj.random.message('float', selected.random);
 				selected.obj.set.random(val);
 				break;
-			case 11:
+			case 15:
 				rot_length = val;
 				break;
-			case 12:
+			case 16:
 				//not pattr linked or exposed
 				//selected.repeat = val;
 				//selected.obj.repeat.message('int', selected.repeat);
 				//selected.obj.set.repeat(val);
 				selected.obj.set.basetime(val);
 				break;
-			case 13:
+			case 17:
 				//global speed
 				break;
-			case 14:
+			case 18:
 				//not pattr linked
 				//selected.polyoffset = val;
 				//selected.obj.polyoffset.message('int', selected.polyoffset);
 				selected.obj.set.polyoffset(val);
 				break;
-			case 15:
+			case 19:
 				//selected.mode = val;
 				//selected.obj.mode.message('int', selected.mode);
 				selected.obj.set.mode(val);
+				break;
+			case 20:
+				//repeat
+				break;
+			case 21:
+				script['Speed'+(selected.num+1)].message('int', val);
 				break;
 		}
 	}	 
