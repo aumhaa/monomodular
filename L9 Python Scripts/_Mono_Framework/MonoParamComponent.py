@@ -23,7 +23,7 @@ class MonoParamComponent(DeviceComponent):
 		self.log_message = parent.log_message
 		self._chain = 0
 		self._device_chain = 0
-		self._number_params = 12
+		self._number_params = 16
 		self._params = []
 		self._custom_parameter = []
 		self._nodevice = NoDevice()
@@ -166,6 +166,13 @@ class MonoParamComponent(DeviceComponent):
 			elif name == 'Mod_Chain_Vol':
 				if device.canonical_parent.mixer_device.panning != None:
 					result = device.canonical_parent.mixer_device.volume
+			elif(match('Mod_Chain_Send_', name)):
+				name = int(name.replace('Mod_Chain_Send_', ''))
+				if device.canonical_parent != None:
+					if device.canonical_parent.mixer_device != None:
+						if device.canonical_parent.mixer_device.sends != None:
+							if len(device.canonical_parent.mixer_device.sends)>name:
+								result = device.canonical_parent.mixer_device.sends[name]
 			elif(match('ModDevice_', name) and self._parent.device != None):
 				name = name.replace('ModDevice_', '')
 				#self.log_message('modDevice with name: ' + str(name))
@@ -179,7 +186,7 @@ class MonoParamComponent(DeviceComponent):
 				if len(self._custom_parameter)>index:
 					 if isinstance(self._custom_parameter[index], Live.DeviceParameter.DeviceParameter):
 						result = self._custom_parameter[index]
-	#	self.log_message('found: ' + str(result))	
+		self.log_message('found: ' + str(result))	
 		return result
 	
 
@@ -278,8 +285,6 @@ class MonoParamComponent(DeviceComponent):
 	
 
 	def _update_params(self):
-		count = self._number_params
-		used_host = None
 		if self._number_params > 0:
 			count = self._number_params
 		if count != len(self._params):
@@ -386,18 +391,18 @@ class MonoParamComponent(DeviceComponent):
 		return self._device.parameters[1:]
 	
 
-	def mod_set_number_params(self, number, *a):
+	def set_number_params(self, number, *a):
 		#self.log_message('set number params' + str(number))
 		self._number_params = number
 		#self._parent._host.schedule_message(1, self.update)
 		self.update()
 	
 
-	def mod_set_number_custom(self, number, *a):
+	def set_number_custom(self, number, *a):
 		self._custom_parameter = [None for index in range(number)]
 	
 
-	def mod_set_custom_parameter(self, number, parameter, *a):
+	def set_custom_parameter(self, number, parameter, *a):
 		if number < len(self._custom_parameter):
 			#self.log_message('custom='+str(parameter))
 			if isinstance(parameter, Live.DeviceParameter.DeviceParameter) or parameter is None:
@@ -406,7 +411,7 @@ class MonoParamComponent(DeviceComponent):
 				self.update()
 	
 
-	def mod_set_device_type(self, mod_device_type, *a):
+	def set_mod_device_type(self, mod_device_type, *a):
 		#self.log_message('set type ' + str(mod_device_type))
 		#for host in self._parent._active_host:
 		#	host.on_enabled_changed()
@@ -415,35 +420,35 @@ class MonoParamComponent(DeviceComponent):
 		self._set_type(mod_device_type)
 	
 
-	def mod_set_device(self, mod_device, *a):
+	def set_mod_device(self, mod_device, *a):
 		#self.log_message('set device ' + str(mod_device))
 		self.set_device(mod_device, True)
 		#for host in self._parent._active_host:
 		#	host.update()
 	
 
-	def mod_set_device_parent(self, mod_device_parent, single=None, *a):
+	def set_mod_device_parent(self, mod_device_parent, single=None, *a):
 		#self.log_message('set parent ' + str(mod_device_parent))
 		self._set_device_parent(mod_device_parent, single)
 		#for host in self._parent._active_host:
 		#	host.update()
 	
 
-	def mod_set_device_chain(self, chain, *a):
+	def set_mod_device_chain(self, chain, *a):
 		#self.log_message('set_chain ' + str(chain))
 		self._select_parent_chain(chain, True)
 		#for host in self._parent._active_host:
 		#	host.update()
 	
 
-	def mod_set_parameter_value(self, num, val, *a):
+	def set_mod_parameter_value(self, num, val, *a):
 		#self._parent._host.log_message('set_pval ' + str(num) + ' ' + str(val))
 		if self._device != None:
 			if num < len(self._params):
 				self._params[num]._change_value(val)
 	
 
-	def mod_set_custom_parameter_value(self, num, value, *a):
+	def set_custom_parameter_value(self, num, value, *a):
 		if num < len(self._custom_parameter):
 			parameter = self._custom_parameter[num]
 			if parameter != None:
@@ -451,7 +456,7 @@ class MonoParamComponent(DeviceComponent):
 				parameter.value = newval
 	
 
-	def mod_set_device_bank(self, bank_index, *a):
+	def set_mod_device_bank(self, bank_index, *a):
 		#self.log_message('set bank ' + str(bank_index))
 		if self.is_enabled():
 			if (self._device != None):
