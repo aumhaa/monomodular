@@ -19,8 +19,8 @@ autowatch = 1;
 outlets = 4;
 inlets = 5;
 
-FORCELOAD = true;
-DEBUG = true;
+FORCELOAD = false;
+DEBUG = false;
 DEBUG_LCD = false;
 DEBUG_PTR = false;
 DEBUG_STEP = false;
@@ -518,7 +518,7 @@ function setup_translations()
 	There are not currently provisions to dynamically change translations or group assignments once they are made.*/
 
 	/*Batch translations can be handled by creating alias controls with initial arguments so that when the batch command is sent
-	the arument(s) precede the values being sent.  They are treated the same as the rest of the group regarding their
+	the argument(s) precede the values being sent.  They are treated the same as the rest of the group regarding their
 	enabled state, and calls will be ignored to them when they are disabled.  Thus, to send a column command to an address:
 	'add_translation', 'alias_name', 'address', 'target_group', n.
 	Then, to invoke this translation, we'd call:
@@ -567,6 +567,24 @@ function setup_translations()
 	}
 	outlet(0, 'add_translation', 'buttons_batch', 'push_grid', 'push_buttons', 6);
 	outlet(0, 'add_translation', 'extras_batch', 'push_grid', 'push_extras', 7);
+
+	//CNTRLR stuff:
+	for(var i = 0;i < 16;i++)
+	{
+		outlet(0, 'add_translation', 'pads_'+i, 'cntrlr_grid', 'cntrlr_pads', i%4, Math.floor(i/4));
+		outlet(0, 'add_translation', 'keys_'+i, 'cntrlr_key', 'cntrlr_keys', i, 0);
+		outlet(0, 'add_translation', 'keys2_'+i, 'cntrlr_key', 'cntrlr_keys2', i, 1);
+	}
+	outlet(0, 'add_translation', 'pads_batch', 'cntrlr_grid', 'cntrlr_pads', 0);
+	outlet(0, 'add_translation', 'keys_batch', 'cntrlr_key', 'cntrlr_keys', 0);
+	outlet(0, 'add_translation', 'keys2_batch', 'cntrlr_key', 'cntrlr_keys2', 1); 
+	for(var i=0;i<8;i++)
+	{
+		outlet(0, 'add_translation', 'buttons_'+i, 'cntrlr_encoder_button_grid', 'cntrlr_buttons', i);
+		outlet(0, 'add_translation', 'extras_'+i, 'cntrlr_encoder_button_grid', 'cntrlr_extras', i);
+	}
+	outlet(0, 'add_translation', 'buttons_batch', 'cntrlr_encoder_button_grid', 'cntrlr_buttons');
+	outlet(0, 'add_translation', 'extras_batch', 'cntrlr_encoder_button_grid', 'cntrlr_extras');
 }
 
 function refresh_pads()
@@ -962,6 +980,7 @@ function anything()
 	}
 }
 
+var _cntrlr_encoder_button_grid = _c_button;
 function _c_button(x, y, val)
 {
 	if(DEBUG){post('button_in', x, y, val, '\n');}
@@ -1110,9 +1129,11 @@ function _c_button(x, y, val)
 	}	 
 }
 
-function _c_key(num, val)
+var _cntrlr_key = _c_key;
+function _c_key(x, y, val)
 {
-	if(DEBUG){post('key in', num, val, '\n');}
+	if(DEBUG){post('key in', x, y, val, '\n');}
+	num = (x + (y*16));
 	if((num>15)&&(val>0))
 	{
 		num -= 16;
@@ -1248,6 +1269,7 @@ function _c_key(num, val)
 	}
 }
 
+var _cntrlr_grid = _c_grid;
 function _c_grid(x, y, val)
 {
 	switch(pad_mode)
