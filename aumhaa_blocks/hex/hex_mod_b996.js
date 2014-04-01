@@ -20,8 +20,8 @@ outlets = 4;
 inlets = 5;
 
 FORCELOAD = false;
-DEBUG = false;
-DEBUG_LCD = false;
+DEBUG = true;
+DEBUG_LCD = true;
 DEBUG_PTR = false;
 DEBUG_STEP = false;
 DEBUG_BLINK = false;
@@ -3336,7 +3336,8 @@ var dials = [];
 
 var Encoders = ['Encoder_0', 'Encoder_1', 'Encoder_2', 'Encoder_3', 'Encoder_4', 'Encoder_5', 'Encoder_6', 'Encoder_7', 'Encoder_8', 'Encoder_9', 'Encoder_10', 'Encoder_11'];
 var Speeds = ['Speed1', 'Speed2', 'Speed3', 'Speed4', 'Speed5', 'Speed6', 'Speed7', 'Speed8', 'Speed9', 'Speed10', 'Speed11', 'Speed12', 'Speed13', 'Speed14', 'Speed15', 'Speed16'];
-var Dials =  ['Channel', 'Groove', 'Random', 'RotSize', 'Repeat', 'GlobSpeed', 'PolyOffset', 'Mode', 'BaseTime', 'Speed'];
+var Dials =  ['Channel', 'Groove', 'Random', 'BaseTime', 'GlobSpeed', 'PolyOffset', 'Mode', 'RotSize', 'Speed'];
+var Dial_Mappings = ['Encoder_8', 'Encoder_9', 'Encoder_10', 'Encoder_11', 'Encoder_11', 'Encoder_4', 'Encoder_5', 'Encoder_10', 'Encoder_6'];
 Warning = ['missing', 'device', 'assignment', 'for', 'the', 'currently', 'selected', 'channel', ' ', ' ', ' ', ' '];
 
 // called from init
@@ -3344,28 +3345,24 @@ function init_device()
 {
 	finder = new LiveAPI(callback, 'this_device');
 	pns['device_name']=this.patcher.getnamed('device_name');
-	for(var i=0;i<8;i++)
+	for(var i=0;i<12;i++)
 	{
 		pns[Encoders[i]]=this.patcher.getnamed('pn'+(i+1));
 		pns[Encoders[i]].message('text', ' ');
 		mps[Encoders[i]]=this.patcher.getnamed('mp'+(i+1));
 		mps[Encoders[i]].message('text', ' ');
-		params[Speeds[i]] = this.patcher.getnamed(Speeds[i]);
-		params[Speeds[i+8]] = this.patcher.getnamed(Speeds[i+8]);
 		params[Encoders[i]]=this.patcher.getnamed(Encoders[i]);
 		params[Encoders[i]].message('set', 0);
 	}
-	for(var i=0;i<4;i++)
+	for(var i=0;i<8;i++)
 	{
-		pns[Encoders[i+8]]=this.patcher.getnamed('pn'+(i+9));
-		pns[Encoders[i+8]].message('text', ' ');
-		mps[Encoders[i+8]]=this.patcher.getnamed('mp'+(i+9));
-		mps[Encoders[i+8]].message('text', ' ');
+		params[Speeds[i]] = this.patcher.getnamed(Speeds[i]);
+		params[Speeds[i+8]] = this.patcher.getnamed(Speeds[i+8]);
 	}
-	for(var i=0;i<10;i++)
+	for(var i=0;i<9;i++)
 	{
-		dials[Encoders[i+8]]=this.patcher.getnamed(Dials[i]);
-		dials[Encoders[i+8]].message('set', 0);
+		params[Dials[i]]=this.patcher.getnamed(Dial_Mappings[i]);
+		params[Dials[i]].message('set', 0);
 	}
 	detect_drumrack();
 }
@@ -3483,6 +3480,7 @@ function _select_chain(chain_num)
 		outlet(0, 'send_explicit', 'receive_device', 'set_mod_device_parent', 'id', devices[selected.channel], 1);
 
 	}
+	outlet(0, 'receive_device', 'refresh_lcd');
 	if(devices[selected.channel]==0)
 	{
 		showerror();
@@ -3497,24 +3495,21 @@ function _lcd(obj, type, val)
 	if(DEBUG_LCD){post('lcd', obj, type, val, '\n');}
 	if((type=='lcd_name')&&(val!=undefined))
 	{
-		//if(pns[obj])
-		if(obj in pns)
+		if(pns[obj])
 		{
 			pns[obj].message('text', val.replace(/_/g, ' '));
 		}
 	}
 	else if((type == 'lcd_value')&&(val!=undefined))
 	{
-		//if(mps[obj])
-		if(obj in mps)
+		if(mps[obj])
 		{
 			mps[obj].message('text', val.replace(/_/g, ' '));
 		}
 	}
 	else if((type == 'encoder_value')&&(val!=undefined))
 	{
-		//if(params[obj]!=undefined)
-		if(obj in params)
+		if(params[obj])
 		{
 			params[obj].message('set', val);
 		}
@@ -3526,15 +3521,7 @@ function _encoder(num, val)
 {
 	if(DEBUG){post('encoder in', num, val, '\n');}
 	if(num<12)
-	{				
-		/*if(pad_mode!=5)
-		{
-			outlet(0, 'receive_device', 'set_mod_parameter_value', num, val);
-		}
-		else
-		{
-			set_speed(num, val);
-		}*/
+	{
 		outlet(0, 'receive_device', 'set_mod_parameter_value', num, val);
 	}
 	else
@@ -3555,6 +3542,7 @@ function _encoder(num, val)
 				//selected.swing = (val+50)/100;
 				//selected.obj.swing.message('float', selected.swing);
 				selected.obj.set.swing((val+50)/100);
+				post('swing val', val, '\n');
 				break;
 			case 14:
 				//selected.random = val;
