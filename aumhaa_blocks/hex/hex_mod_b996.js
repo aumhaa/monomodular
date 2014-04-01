@@ -20,8 +20,9 @@ outlets = 4;
 inlets = 5;
 
 FORCELOAD = false;
-DEBUG = true;
-DEBUG_LCD = true;
+DEBUG_NEW = true;
+DEBUG = false;
+DEBUG_LCD = false;
 DEBUG_PTR = false;
 DEBUG_STEP = false;
 DEBUG_BLINK = false;
@@ -191,6 +192,22 @@ for(var i=0;i<7;i++){
 }
 
 var current_rule = 0;
+
+function debug()
+{
+	if(DEBUG_NEW)
+	{
+		var args = arrayfromargs(arguments);
+		for(var i in args)
+		{
+			if(args[i] instanceof Array)
+			{
+				args[i] = args[i].join(' ');
+			}
+		}
+		post('debug->', args, '\n');
+	}
+}
 	
 /*/////////////////////////////////////////
 ///// script initialization routines //////
@@ -1132,12 +1149,14 @@ function _c_button(x, y, val)
 var _cntrlr_key = _c_key;
 function _c_key(x, y, val)
 {
-	if(DEBUG){post('key in', x, y, val, '\n');}
+	if(DEBUG){post('c key in', x, y, val, '\n');}
 	num = (x + (y*16));
-	if((num>15)&&(val>0))
+	if((y==1)&&(val>0))
 	{
-		num -= 16;
+		num -= 16;;
+		debug('pattern is:', selected.pattern, 'num is:', num);
 		selected.pattern[num] = Math.abs(selected.pattern[num]-1);
+		debug('pattern is:', selected.pattern);
 		selected.obj.set.pattern(selected.pattern);
 		if((edit_preset == presets[selected.num])&&(grid_mode==1))
 		{
@@ -1147,7 +1166,7 @@ function _c_key(x, y, val)
 		step.message('zoom', 1, 1);
 		refresh_c_keys();
 		refresh_grid();
-		outlet(0, 'to_c_wheel', selected.num%4, Math.floor(selected.num/4)%2, 'custom', 'x'+(selected.pattern.join('')));
+		//outlet(0, 'to_c_wheel', selected.num%4, Math.floor(selected.num/4)%2, 'custom', 'x'+(selected.pattern.join('')));
 	}	 
 	else
 	{
@@ -1446,9 +1465,13 @@ function _grid(x, y, val)
 			{
 				_c_grid(x%4, Math.floor(x/4)+(y*2), val);
 			}
+			else if (y<4)
+			{
+				_c_key(x + 8*(y-2), 0, val);
+			}
 			else if (y<6)
 			{
-				_c_key(x + 8*(y-2), val);
+				_c_key(x + 8*(y-4), 1, val);
 			}
 			else if (y==6)
 			{
@@ -1585,8 +1608,8 @@ function _grid(x, y, val)
 				else if(val>0)
 				{
 					var note = (x<<6) + (y<<10) + 32;
-					//if(DEBUG){post('new note', current_step, x, y, note, '\n');}
-					//if(DEBUG){post('decoded:', (note>>6)%16, note>>10, '\n');}
+					debug('new note', current_step, x, y, note);
+					debug('decoded:', (note>>6)%16, note>>10);
 					if(selected.note[0]<32)
 					{
 						selected.obj.offset.message('int', 0);
@@ -1594,7 +1617,7 @@ function _grid(x, y, val)
 					}
 					selected.note[curSteps[selected.num]] = note;
 					selected.obj.set.note(selected.note);
-					if(DEBUG){post('new notes:', selected.obj.note.getvalueof(), '\n');}
+					debug('new notes:', selected.obj.note.getvalueof());
 					step.message('pitch', 1, selected.note);
 					selected.pattern[curSteps[selected.num]] = 1;
 					selected.obj.set.pattern(selected.pattern);
@@ -1623,7 +1646,9 @@ function _grid(x, y, val)
 				}
 				else
 				{
-					play_sequence(selected, ((x-(selected.obj.note.getvalueof()[0]>>6)%16)<<6) + (y-(selected.obj.note.getvalueof()[0]>>10)<<10) + 32, val);
+					var root = selected.obj.note.getvalueof()[0];
+					//play_sequence(selected, ((x-(root>>6)%16)<<6) + (y-(root>>10)<<10) + 32, val);
+					play_sequence(selected, (x<<6) + (y<<10) + 32, val);
 					refresh_c_keys();
 					refresh_grid();	
 				}
@@ -2562,6 +2587,7 @@ function play_sequence(part, note, press)
 {
 	if(press>0)
 	{
+		debug('play sequence', note);
 		var trig = part.triggered.indexOf(note);
 		//if the num wasn't already being held
 		if(trig == -1)
