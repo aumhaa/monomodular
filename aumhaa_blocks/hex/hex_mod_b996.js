@@ -20,7 +20,7 @@ outlets = 4;
 inlets = 5;
 
 FORCELOAD = false;
-DEBUG_NEW = true;
+DEBUG_NEW = false;
 DEBUG = false;
 DEBUG_LCD = false;
 DEBUG_PTR = false;
@@ -1656,18 +1656,16 @@ function _grid(x, y, val)
 			break;
 		case 3:
 			//Cafe_Play_mode
-			if(DEBUG){post('cafe play', presets[x]);} 
+			debug('cafe play', presets[x]);
 			var Part = part[y];
 			if(((x+1)==presets[y])&&(val==0)&&(altVal==0))
 			{
-				//Part.clutch = 0;
-				//Part.obj.clutch.message('int', 0);
 				Part.obj.set.clutch(0);
 				var i=15;do{
 					outlet(0, 'grid', 'value', i, y, 0);
 				}while(i--);
 			}
-			else if(val==1)
+			else if(val>0)
 			{
 				if((x+1)!=presets[y])
 				{
@@ -1675,10 +1673,7 @@ function _grid(x, y, val)
 					storage.message('recall', 'poly.'+(y+1), presets[y]);
 					Part.pattern = Part.obj.pattern.getvalueof();	
 				}
-				//Part.obj.offset.message('int', 15);
-				Part.obj.set.offset(15);
-				//Part.clutch = 1;
-				//Part.obj.clutch.message('int', 1);
+				Part.obj.restartcount.message(0);
 				Part.obj.set.clutch(1);
 			}
 			break;
@@ -2074,8 +2069,8 @@ function _padgui_in(val)
 function _keygui_in(val)
 {
 	if(DEBUG){post('keyguiin', val, '\n');}
-	_c_key(val, 1);
-	_c_key(val, 0);
+	_c_key(val%16, Math.floor(val/16), 1);
+	_c_key(val%16, Math.floor(val/16), 0);
 	
 }
 
@@ -2807,7 +2802,7 @@ function rotate_wheel(num, pos)
 			//cafe mode
 			//var pat = part[num-1].pattern.slice();
 			var _num=num-1, Part = part[_num];
-			if(DEBUG){post('cafe_pos', _num, Part.clutch, '\n');}
+			//debug('cafe_pos', _num, Part.clutch)
 			if(Part.clutch > 0)
 			{
 				var i=15;do{
