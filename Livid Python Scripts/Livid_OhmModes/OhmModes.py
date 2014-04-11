@@ -25,7 +25,7 @@ from _Framework.SessionZoomingComponent import SessionZoomingComponent
 from _Framework.SliderElement import SliderElement
 from _Framework.TrackFilterComponent import TrackFilterComponent
 from _Framework.TransportComponent import TransportComponent
-
+from _Framework.M4LInterfaceComponent import M4LInterfaceComponent
 
 from _Mono_Framework.MonomodComponent import MonomodComponent
 from _Mono_Framework.MonoBridgeElement import MonoBridgeElement
@@ -840,6 +840,7 @@ class OhmModes(ControlSurface):
 		with self.component_guard():
 			self._setup_monobridge()
 			self._setup_controls()
+			self._setup_m4l_interface()
 			self._setup_transport_control()
 			self._setup_mixer_control()
 			self._setup_session_control()
@@ -968,6 +969,14 @@ class OhmModes(ControlSurface):
 		self._key_matrix.add_row(tuple(button_row))
 	
 
+	def _setup_m4l_interface(self):
+		self._m4l_interface = M4LInterfaceComponent(controls=self.controls, component_guard=self.component_guard)
+		self.get_control_names = self._m4l_interface.get_control_names
+		self.get_control = self._m4l_interface.get_control
+		self.grab_control = self._m4l_interface.grab_control
+		self.release_control = self._m4l_interface.release_control
+	
+
 	def _setup_ohmmod(self):
 		self._host = OhmModesMonomodComponent(self)
 		self._host.name = 'Monomod_Host'
@@ -1070,7 +1079,7 @@ class OhmModes(ControlSurface):
 		self.log_message('assign session colors')
 		num_tracks = 7
 		num_scenes = 5
-		self._session.set_stop_track_clip_value(STOP_CLIP_COLOR[self._rgb])
+		self._session.set_stop_clip_value(STOP_CLIP_COLOR[self._rgb])
 		for row in range(num_scenes):
 			for column in range(num_tracks):
 				self._scene[row].clip_slot(column).set_triggered_to_play_value(CLIP_TRIGD_TO_PLAY_COLOR[self._rgb])

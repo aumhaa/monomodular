@@ -790,7 +790,7 @@ class Cntrlr(ControlSurface):
 		self._session = SessionComponent(num_tracks, num_scenes)				#we create our SessionComponent with the variables we set above it
 		self._session.name = "Session"											#we name it so we can access it in m4l
 		self._session.set_offsets(0, 0)											#we set the initial offset to the far left, top of the session grid
-		self._session.set_stop_track_clip_value(STOP_CLIP[self._rgb])			#we assign the colors that will be displayed when the stop_clip button is pressed. This value comes from CNTRLR_Map.py, which is imported in the header of our script
+		self._session.set_stop_clip_value(STOP_CLIP[self._rgb])			#we assign the colors that will be displayed when the stop_clip button is pressed. This value comes from CNTRLR_Map.py, which is imported in the header of our script
 		self._scene = [None for index in range(4)]								#we create an array to hold the Scene subcomponents so that we can get to them if we need them.
 		for row in range(num_scenes):											#now we'll fill the array with different objects that were created when we called the SessionComponent() module
 			self._scene[row] = self._session.scene(row)							#each session row is a SceneComponent
@@ -818,7 +818,7 @@ class Cntrlr(ControlSurface):
 	def _assign_session_colors(self):
 		num_tracks = 4
 		num_scenes = 4 
-		self._session.set_stop_track_clip_value(STOP_ALL[self._rgb])
+		self._session.set_stop_clip_value(STOP_ALL[self._rgb])
 		for row in range(num_scenes): 
 			for column in range(num_tracks):
 				self._scene[row].clip_slot(column).set_triggered_to_play_value(CLIP_TRG_PLAY[self._rgb])

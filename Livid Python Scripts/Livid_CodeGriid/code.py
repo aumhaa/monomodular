@@ -143,7 +143,7 @@ class code(ControlSurface):
 		session.name = "Session"
 		session.set_offsets(0, 0)
 		self._session = session
-		self._session.set_stop_track_clip_value(0)
+		self._session.set_stop_clip_value(0)
 		self._scene = [None for index in range(ROWS)]
 		for row in range(num_scenes):
 			self._scene[row] = session.scene(row)

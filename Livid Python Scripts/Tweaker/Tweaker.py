@@ -359,8 +359,8 @@ class DeviceComponent(ControlSurfaceComponent):
 			if (self._parameter_controls != None):
 				old_bank_name = self._bank_name #added
 				self._assign_parameters()
-				if self._bank_name != old_bank_name: #added
-					self._show_msg_callback(self._device.name + ' Bank: ' + self._bank_name) #added
+				#if self._bank_name != old_bank_name: #added
+				#	self._show_msg_callback(self._device.name + ' Bank: ' + self._bank_name) #added
 			if ((self._bank_up_button != None) and (self._bank_down_button != None)):
 				if (self.number_of_parameter_banks()) > (self._bank_index + 1):
 					self._bank_up_button.turn_on()
@@ -646,8 +646,8 @@ class Tweaker(ControlSurface):
 			#self._mixer._reassign_tracks()	#this is to update rebuild the cf_assign closure, otherwise the colors aren't correct
 			#self.schedule_message(30, self._detect_devices)
 
-			self.show_message('Tweaker Control Surface Loaded')
-		self.show_message('Tweaker Control Surface Loaded')
+			#self.show_message('Tweaker Control Surface Loaded')
+		#self.show_message('Tweaker Control Surface Loaded')
 		#self._shift_value(0)  #this updates the pads so that they transmit to Live on the assigned PAD_CHANNEL...also, lights shift button
 		self.assign_main_configuration()
 		#self.schedule_message(2, self._shift_value, 0)
@@ -726,7 +726,7 @@ class Tweaker(ControlSurface):
 		self._session = SessionComponent(num_tracks, num_scenes)
 		self._session.name = "Session"
 		self._session.set_offsets(0, 0)	 
-		self._session.set_stop_track_clip_value(STOP_CLIP)
+		self._session.set_stop_clip_value(STOP_CLIP)
 		self._scene = [None for index in range(3)]
 		for row in range(num_scenes):
 			self._scene[row] = self._session.scene(row)
