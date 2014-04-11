@@ -28,7 +28,7 @@ from _Framework.SliderElement import SliderElement # Class representing a slider
 from _Framework.TrackEQComponent import TrackEQComponent # Class representing a track's EQ, it attaches to the last EQ device in the track
 from _Framework.TrackFilterComponent import TrackFilterComponent # Class representing a track's filter, attaches to the last filter in the track
 from _Framework.TransportComponent import TransportComponent # Class encapsulating all functions in Live's transport section
-
+from _Framework.M4LInterfaceComponent import M4LInterfaceComponent
 
 """Imports from the Monomodular Framework"""
 from _Mono_Framework.CodecEncoderElement import CodecEncoderElement
@@ -660,6 +660,7 @@ class Cntrlr(ControlSurface):
 			"""Initialization methods - comments included in the corresponding method"""
 			self._setup_monobridge()
 			self._setup_controls()
+			self._setup_m4l_interface()
 			self._setup_transport_control() 
 			self._setup_mixer_control()
 			self._setup_session_control()
@@ -756,6 +757,14 @@ class Cntrlr(ControlSurface):
 		for column in range(16):			#We use the ButtonMatrixObject because it takes care of setting up callbacks for all the buttons easily when we need them later
 			button_row.append(self._button[16 + column])
 		self._key_matrix.add_row(tuple(button_row))
+	
+
+	def _setup_m4l_interface(self):
+		self._m4l_interface = M4LInterfaceComponent(controls=self.controls, component_guard=self.component_guard)
+		self.get_control_names = self._m4l_interface.get_control_names
+		self.get_control = self._m4l_interface.get_control
+		self.grab_control = self._m4l_interface.grab_control
+		self.release_control = self._m4l_interface.release_control
 	
 
 	"""the transport component allows us to assign controls to transport functions in Live"""

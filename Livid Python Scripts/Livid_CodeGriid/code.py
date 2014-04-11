@@ -24,10 +24,9 @@ from _Framework.SliderElement import SliderElement # Class representing a slider
 from _Framework.TransportComponent import TransportComponent # Class encapsulating all functions in Live's transport section
 from _Framework.EncoderElement import EncoderElement
 from _Framework.DeviceComponent import DeviceComponent 
+from _Framework.M4LInterfaceComponent import M4LInterfaceComponent
 
 from ShiftModeComponent import ShiftModeComponent
-
-
 ##from DetailViewCntrlComponent import DetailViewCntrlComponent
 
 
@@ -66,6 +65,7 @@ class code(ControlSurface):
 			self._setup_transport_control()
 			self._setup_session_control()  # Setup the session object - do this last
 			self._setup_modes()
+			self._setup_m4l_interface()
 			#self.set_suppress_rebuild_requests(False) # Turn rebuild back on, once we're done setting up
 			##self.assign_page_2()
 
@@ -74,6 +74,15 @@ class code(ControlSurface):
 		#response = [long(0),long(0)]
 		#self.log_message(str(response))
 	
+
+	def _setup_m4l_interface(self):
+		self._m4l_interface = M4LInterfaceComponent(controls=self.controls, component_guard=self.component_guard)
+		self.get_control_names = self._m4l_interface.get_control_names
+		self.get_control = self._m4l_interface.get_control
+		self.grab_control = self._m4l_interface.grab_control
+		self.release_control = self._m4l_interface.release_control
+	
+
 	def _setup_controls(self):
 		is_momentary = True
 		self._dial = [None for index in range(DIALCOUNT)]

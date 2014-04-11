@@ -27,6 +27,7 @@ from _Framework.SliderElement import SliderElement # Class representing a slider
 from _Framework.TrackEQComponent import TrackEQComponent # Class representing a track's EQ, it attaches to the last EQ device in the track
 from _Framework.TrackFilterComponent import TrackFilterComponent # Class representing a track's filter, attaches to the last filter in the track
 from _Framework.TransportComponent import TransportComponent # Class encapsulating all functions in Live's transport section
+from _Framework.M4LInterfaceComponent import M4LInterfaceComponent
 
 """Custom files, overrides, and files from other scripts"""
 from _Mono_Framework.MonoButtonElement import MonoButtonElement
@@ -71,6 +72,7 @@ class Alias(ControlSurface):
 			self._update_linked_device_selection = None
 			self._setup_monobridge()
 			self._setup_controls()
+			self._setup_m4l_interface()
 			self._setup_mixer_control()
 			self._setup_session_control()
 			self._setup_mixer_nav() 
@@ -88,6 +90,14 @@ class Alias(ControlSurface):
 		self._button = [MonoButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, ALIAS_BUTTONS[index], 'Button_' + str(index), self) for index in range(16)]
 		self._dial = [MonoEncoderElement(MIDI_CC_TYPE, CHANNEL, ALIAS_DIALS[index], Live.MidiMap.MapMode.absolute, 'Dial_' + str(index), index + 8, self) for index in range(16)]
 		self._encoder = MonoEncoderElement(MIDI_CC_TYPE, CHANNEL, ALIAS_ENCODER, Live.MidiMap.MapMode.absolute, 'Encoder', 0, self)
+	
+
+	def _setup_m4l_interface(self):
+		self._m4l_interface = M4LInterfaceComponent(controls=self.controls, component_guard=self.component_guard)
+		self.get_control_names = self._m4l_interface.get_control_names
+		self.get_control = self._m4l_interface.get_control
+		self.grab_control = self._m4l_interface.grab_control
+		self.release_control = self._m4l_interface.release_control
 	
 
 	def _setup_mixer_control(self):
