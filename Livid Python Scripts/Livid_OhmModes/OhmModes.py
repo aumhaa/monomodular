@@ -38,6 +38,9 @@ from _Mono_Framework.MonoClient import MonoClient
 from _Mono_Framework.CodecEncoderElement import CodecEncoderElement
 from _Mono_Framework.EncoderMatrixElement import EncoderMatrixElement
 from _Mono_Framework.LiveUtils import *
+from _Mono_Framework.ModDevices import *
+
+from MonoDeviceComponent import MonoDeviceComponent
 
 from _Generic.Devices import *
 from Map import *
@@ -985,6 +988,7 @@ class OhmModes(ControlSurface):
 		for index in range(6):
 			self._client[index] = OhmModesMonoClient(self, index)
 			self._client[index].name = 'Client_' + str(index)
+			self._client[index]._device_component = MonoDeviceComponent(self._client[index], MOD_BANK_DICT, MOD_TYPES)
 			#self._client[index]._device_component.set_parameter_controls(tuple([ self._dial[num] for num in range(12) ]))
 			self._client[index]._control_defs = {'dials': self._dial_matrix,
 			 'buttons': self._dial_button_matrix,

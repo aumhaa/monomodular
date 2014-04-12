@@ -41,7 +41,7 @@ from _Mono_Framework.ResetSendsComponent import ResetSendsComponent
 from _Mono_Framework.DetailViewControllerComponent import DetailViewControllerComponent
 from _Mono_Framework.DeviceSelectorComponent import DeviceSelectorComponent
 from _Mono_Framework.MonomodComponent import MonomodComponent
-from _Mono_Framework.MonoDeviceComponent import MonoDeviceComponent
+#from _Mono_Framework.MonoDeviceComponent import MonoDeviceComponent
 from _Mono_Framework.SwitchboardElement import SwitchboardElement
 from _Mono_Framework.MonoClient import MonoClient
 from _Mono_Framework.LiveUtils import *
@@ -49,6 +49,7 @@ from _Mono_Framework.LiveUtils import *
 """Custom files, overrides, and files from other scripts"""
 
 from _Generic.Devices import *
+from MonoDeviceComponent import MonoDeviceComponent
 from ModDevices import *
 from Map import *
 
@@ -68,7 +69,7 @@ SLOWENCODER = (240, 0, 1, 97, 8, 30, 69, 00, 247)
 NORMALENCODER = (240, 0, 1, 97, 8, 30, 00, 00, 247)
 FASTENCODER = (240, 0, 1, 97, 8, 30, 04, 00, 247)
 
-
+	
 class ShiftModeComponent(ModeSelectorComponent):
 
 
@@ -201,6 +202,7 @@ class CntrlrMonoClient(MonoClient):
 	def __init__(self, *a, **k):
 		super(CntrlrMonoClient, self).__init__(*a, **k)
 		self._raw = False
+		self._device_component = CntrlrMonoDevice(self, MOD_BANK_DICT, MOD_TYPES)
 	
 
 	def _banner(self):
