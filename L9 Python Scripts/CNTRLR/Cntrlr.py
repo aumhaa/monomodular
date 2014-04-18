@@ -40,7 +40,6 @@ from _Framework.ComboElement import ComboElement, DoublePressElement, MultiEleme
 """Imports from the Monomodular Framework"""
 from _Mono_Framework.CodecEncoderElement import CodecEncoderElement
 from _Mono_Framework.EncoderMatrixElement import NewEncoderMatrixElement as EncoderMatrixElement
-from _Mono_Framework.MonoChopperComponent import MonoChopperComponent
 from _Mono_Framework.MonoBridgeElement import MonoBridgeElement
 from _Mono_Framework.MonoButtonElement import MonoButtonElement
 from _Mono_Framework.MonoEncoderElement import MonoEncoderElement
@@ -74,6 +73,22 @@ NORMALENCODER = (240, 0, 1, 97, 8, 30, 00, 00, 247)
 FASTENCODER = (240, 0, 1, 97, 8, 30, 04, 00, 247)
 
 
+class CancellableBehaviourWithRelease(CancellableBehaviour):
+
+
+	def release_delayed(self, component, mode):
+		component.pop_mode(mode)
+	
+
+	def update_button(self, component, mode, selected_mode):
+		button = component.get_mode_button(mode)
+		groups = component.get_mode_groups(mode)
+		selected_groups = component.get_mode_groups(selected_mode)
+		value = (mode == selected_mode or bool(groups & selected_groups))*32 or 1
+		button.send_value(value, True)
+	
+
+
 class ShiftModeComponent(ModeSelectorComponent):
 
 
@@ -99,7 +114,7 @@ class ShiftModeComponent(ModeSelectorComponent):
 	
 
 	def number_of_modes(self):
-		return 5
+		return 3
 	
 
 	def set_mode(self, mode):
@@ -166,6 +181,234 @@ class MonomodModeComponent(ModeSelectorComponent):
 	
 
 
+class DeviceNavigator(ControlSurfaceComponent):
+	__module__ = __name__
+	__doc__ = ' Component that can toggle the device chain- and clip view of the selected track '
+
+
+	def __init__(self, device_component, mixer, script):
+		super(DeviceNavigator, self).__init__()
+		self._prev_button = None
+		self._next_button = None
+		self._enter_button = None
+		self._exit_button = None
+		self._chain_prev_button = None
+		self._chain_next_button = None
+		self._device = device_component
+		self._mixer = mixer
+		self._script = script
+		return None
+	
+
+	def deassign_all(self):
+		self.set_nav_buttons(None, None)
+		self.set_layer_buttons(None, None)
+		self.set_chain_nav_buttons(None, None)
+	
+
+	def set_nav_buttons(self, prev_button, next_button):
+		#self._script.log_message('set nav: ' + str(prev_button) + ' ' + str(next_button))
+		identify_sender = True
+		if self._prev_button != None:
+			if self._prev_button.value_has_listener(self._nav_value):
+				self._prev_button.remove_value_listener(self._nav_value)
+		self._prev_button = prev_button
+		if self._prev_button != None:
+			self._prev_button.add_value_listener(self._nav_value, identify_sender)
+		if self._next_button != None:
+			if self._next_button.value_has_listener(self._nav_value):
+				self._next_button.remove_value_listener(self._nav_value)
+		self._next_button = next_button
+		if self._next_button != None:
+			self._next_button.add_value_listener(self._nav_value, identify_sender)
+		self.update()
+		return None
+	
+
+	def set_chain_nav_buttons(self, chain_prev_button, chain_next_button):
+		#self._script.log_message('set nav: ' + str(prev_button) + ' ' + str(next_button))
+		identify_sender = True
+		if self._chain_prev_button != None:
+			if self._chain_prev_button.value_has_listener(self._chain_nav_value):
+				self._chain_prev_button.remove_value_listener(self._chain_nav_value)
+		self._chain_prev_button = chain_prev_button
+		if self._chain_prev_button != None:
+			self._chain_prev_button.add_value_listener(self._chain_nav_value, identify_sender)
+		if self._chain_next_button != None:
+			if self._chain_next_button.value_has_listener(self._chain_nav_value):
+				self._chain_next_button.remove_value_listener(self._chain_nav_value)
+		self._chain_next_button = chain_next_button
+		if self._chain_next_button != None:
+			self._chain_next_button.add_value_listener(self._chain_nav_value, identify_sender)
+		self.update()
+		return None
+	
+
+	def set_layer_buttons(self, enter_button, exit_button):
+		#self._script.log_message('set nav: ' + str(prev_button) + ' ' + str(next_button))
+		identify_sender = True
+		if self._enter_button != None:
+			if self._enter_button.value_has_listener(self._enter_value):
+				self._enter_button.remove_value_listener(self._enter_value)
+		self._enter_button = enter_button
+		if self._enter_button != None:
+			self._enter_button.add_value_listener(self._enter_value)
+		if self._exit_button != None:
+			if self._exit_button.value_has_listener(self._exit_value):
+				self._exit_button.remove_value_listener(self._exit_value)
+		self._exit_button = exit_button
+		if self._exit_button != None:
+			self._exit_button.add_value_listener(self._exit_value)
+		self.update()
+		return None
+	
+
+	def set_shift_button(self, shift_button):
+		self._shift_value.subject = shift_button
+	
+
+	def update(self):
+		track = self._mixer.selected_strip()._track
+		if self._device._device and isinstance(self._device._device.canonical_parent, Live.Chain.Chain):
+			track = self._device._device.canonical_parent
+		if track != None:
+			if not self._prev_button is None:
+				if self._device._device and len(track.devices)>0 and self._device._device in track.devices and [t for t in track.devices].index(self._device._device)>0:
+					self._prev_button.turn_on()
+				else:
+					self._prev_button.turn_off()
+			if not self._next_button is None:
+				if self._device._device and len(track.devices)>0 and self._device._device in track.devices and [t for t in track.devices].index(self._device._device)<(len(track.devices)-1):
+					self._next_button.turn_on()
+				else:
+					self._next_button.turn_off()
+			if not self._chain_prev_button is None:
+				if self._device._device and isinstance(self._device._device.canonical_parent, Live.Chain.Chain):
+					parent_chain = self._device._device.canonical_parent
+					parent = parent_chain.canonical_parent
+					if len(parent.chains)>0 and parent_chain in parent.chains and [c for c in parent.chains].index(parent_chain)>0:
+						self._chain_prev_button.turn_on()
+					else:
+						self._chain_prev_button.turn_off()
+			if not self._chain_next_button is None:
+				if self._device._device and isinstance(self._device._device.canonical_parent, Live.Chain.Chain):
+					parent_chain = self._device._device.canonical_parent
+					parent = parent_chain.canonical_parent
+					if len(parent.chains)>0 and parent_chain in parent.chains and [c for c in parent.chains].index(parent_chain)<(len(parent.chains)-1):
+						self._chain_next_button.turn_on()
+					else:
+						self._chain_next_button.turn_off()
+			if not self._enter_button is None:
+				if self._device._device and self._device._device.can_have_chains and len(self._device._device.chains):
+					self._enter_button.turn_on()
+				else:
+					self._enter_button.turn_off()
+			if not self._exit_button is None:
+				if self._device._device and self._device._device.canonical_parent and isinstance(self._device._device.canonical_parent, Live.Chain.Chain):
+					self._exit_button.turn_on()
+				else:
+					self._exit_button.turn_off()
+	
+
+	def _nav_value(self, value, sender):
+		if self.is_enabled():
+			if ((not sender.is_momentary()) or (value != 0)):
+				track = self._mixer.selected_strip()._track
+				if self._device._device and isinstance(self._device._device.canonical_parent, Live.Chain.Chain):
+					track = self._device._device.canonical_parent
+				if track != None:
+					if(sender == self._prev_button):
+						#self._script.log_message('prev button')
+						if self._device._device and self._device._device in track.devices:
+							device = track.devices[min(len(track.devices)-1, max(0, [item for item in track.devices].index(self._device._device)-1))]
+							self._script.set_appointed_device(device)
+							self.song().view.select_device(device)
+					elif(sender == self._next_button):
+						if self._device._device and self._device._device in track.devices:
+							#self._script.log_message('next button')
+							device = track.devices[min(len(track.devices)-1, max(0, [item for item in track.devices].index(self._device._device)+1))]
+							self._script.set_appointed_device(device)
+							self.song().view.select_device(device)	
+	
+
+	def _chain_nav_value(self, value, sender):
+		if self.is_enabled():
+			if self.shifted():
+				if(sender == self._chain_prev_button):
+					self._exit_value(value)
+				else:
+					self._enter_value(value)
+			else:
+				if ((not sender.is_momentary()) or (value != 0)):
+					track = self._mixer.selected_strip()._track
+					if track != None:
+						if(sender == self._chain_prev_button):
+							#self._script.log_message('prev button')
+							if self._device._device and isinstance(self._device._device.canonical_parent, Live.Chain.Chain):
+								parent_chain = self._device._device.canonical_parent
+								parent = parent_chain.canonical_parent
+								device = parent.chains[min(len(parent.chains)-1, max(0, [item for item in parent.chains].index(parent_chain)-1))].devices[0]
+								self._script.set_appointed_device(device)
+								self.song().view.select_device(device)
+						elif(sender == self._chain_next_button):
+							if self._device._device and isinstance(self._device._device.canonical_parent, Live.Chain.Chain):
+								parent_chain = self._device._device.canonical_parent
+								parent = parent_chain.canonical_parent
+								device = parent.chains[min(len(parent.chains)-1, max(0, [item for item in parent.chains].index(parent_chain)+1))].devices[0]
+								self._script.set_appointed_device(device)
+								self.song().view.select_device(device)
+	
+
+	def _enter_value(self, value):
+		#self._script.log_message('enter: ' + str(value) + ' ; ' + str(self._device._device.can_have_chains) + ' ' + str(len(self._device._device.chains)))
+		if value:
+			if self._device._device and self._device._device.can_have_chains and len(self._device._device.chains):
+				device = self._device._device.chains[0].devices[0]
+				self._script.set_appointed_device(device)
+				self.song().view.select_device(device)
+	
+
+	def _exit_value(self, value):
+		#self._script.log_message('exit: ' + str(value) + ' ; ' + str(self._device._device.canonical_parent) + ' ' + str(isinstance(self._device._device.canonical_parent, Live.Chain.Chain)))
+		if value:
+			if self._device._device and self._device._device.canonical_parent and isinstance(self._device._device.canonical_parent, Live.Chain.Chain):
+				device = self._device._device.canonical_parent.canonical_parent
+				self._script.set_appointed_device(device)
+				self.song().view.select_device(device)
+	
+
+	@subject_slot('value')
+	def _shift_value(self, value):
+		self._shifted = value > 0
+	
+
+	def shifted(self):
+		return self._shifted
+	
+
+	def disconnect(self):
+		if self._prev_button != None:
+			if self._prev_button.value_has_listener(self._nav_value):
+				self._prev_button.remove_value_listener(self._nav_value)
+		if self._next_button != None:
+			if self._next_button.value_has_listener(self._nav_value):
+				self._next_button.remove_value_listener(self._nav_value)	
+	
+
+	def _find_track(self, obj):
+		if(type(obj.canonical_parent) == type(self.song().tracks[0])):
+			return obj.canonical_parent
+		elif(type(obj.canonical_parent)==type(None)) or (type(obj.canonical_parent)==type(self.song())):
+			return None
+		else:
+			return self.find_track(obj.canonical_parent)
+	
+
+	def on_enabled_changed(self):
+		pass
+	
+
+
 class CntrlrDetailViewControllerComponent(DetailViewControllerComponent):
 
 
@@ -203,6 +446,7 @@ class Cntrlr(ControlSurface):
 		self._timer = 0									#used for flashing states, and is incremented by each call from self._update_display()
 		self._touched = 0								#used by the LCD patch to determine the last time a control was changed
 		self.flash_status = 1							#used to determine whether button LED's use flashing states or not
+		self._alt_enabled = False
 		self._device_selection_follows_track_selection = FOLLOW
 		with self.component_guard():
 			"""Initialization methods - comments included in the corresponding method"""
@@ -215,7 +459,6 @@ class Cntrlr(ControlSurface):
 			self._setup_device_control()
 			self._setup_device_selector()
 			self._setup_mod()
-			self._setup_chopper()
 			self._setup_modes() 
 		self.schedule_message(1, self._open_log)
 		self.song().view.add_selected_track_listener(self._update_selected_device)		#Add a listener so that when the track content changes our device selection will aslo be updated
@@ -234,8 +477,8 @@ class Cntrlr(ControlSurface):
 		self._monobridge.name = 'MonoBridge'
 	
 
-	"""it is valuable to set up all of our controls at the beginning of our script so that """
-	"""don't make the mistake of double assignments of identifiers, which is not tolerated by """
+	"""it is valuable to set up all of our controls at the beginning of our script so that we"""
+	"""don't make the mistake of double assignments of identifiers, something that is not tolerated by """
 	"""the components they are assigned to.	 Each control element will also be named, so that it """
 	"""can be accessed via m4l if we need to listen to it or send messages to it"""
 	def _setup_controls(self):
@@ -386,8 +629,12 @@ class Cntrlr(ControlSurface):
 		self._device.update = self._device_update(self._device)
 		self._device.set_parameter_controls(tuple([self._encoder[index+4] for index in range(8)]))		#set its controls to the bottom 8 encoders;	 we use [index+4] to offset past the first 4 encoders
 		self.set_device_component(self._device)		#assign our component to the control_surface main script;  this allows special updating, like being able to lock the devicecomponent to the currently selected device
-		self._device_navigator = CntrlrDetailViewControllerComponent(self)		#this is a special component taken out of the APC scripts; its used to move from one device to another with the controller
-		self._device_navigator.name = 'Device_Navigator'					#name it so that we can access it in m4l
+		
+		self._device_navigator = DeviceNavigator(self._device, self._mixer, self)
+		self._device_navigator.name = 'Device_Navigator'
+		
+		#self._device_navigator = CntrlrDetailViewControllerComponent(self)		#this is a special component taken out of the APC scripts; its used to move from one device to another with the controller
+		#self._device_navigator.name = 'Device_Navigator'					#name it so that we can access it in m4l
 		self._device_selection_follows_track_selection = FOLLOW				#_device_selection_follows_track_selection is a property of the main ControlSurface script, and does what it says it does.	The FOLLOW variable is taken from CNTRLR_Map.py
 	
 
@@ -397,6 +644,7 @@ class Cntrlr(ControlSurface):
 	def _setup_device_selector(self):
 		self._device_selector = DeviceSelectorComponent(self)
 		self._device_selector.name = 'Device_Selector'
+		self._device_selector.set_matrix(self._matrix)
 	
 
 	"""this method finds or creates a new modselector component and links to its instance"""
@@ -405,13 +653,7 @@ class Cntrlr(ControlSurface):
 		self.monomodular.name = 'monomodular_switcher'
 		self.modhandler = CntrlrModHandler(self)
 		self.modhandler.name = 'ModHandler' 
-	
-
-	"""the clipchopper component is a custom component we can access by switching modes"""
-	def _setup_chopper(self):
-		self._chopper = MonoChopperComponent(self, self._mixer)		#create the chopper module, and pass it our mixer so that we can use it to navigate which clip is being manipulated
-		self._chopper.name = 'Chopper'					#name it so we can access it via m4l
-		self._chopper._set_button_matrix(self._key_matrix.submatrix[0:16, 1:1])	#set its controls to the ButtonMatrixElement we created in _setup_controls()
+		self.modhandler.set_lock_button(self._encoder_button[1])
 	
 
 	"""since there are many different configurations possible with the modButtons, we'll need to create a ModeSelectorComponent"""
@@ -419,9 +661,26 @@ class Cntrlr(ControlSurface):
 	def _setup_modes(self):
 		self._shift_mode = ShiftModeComponent(self, self.shift_update)			#here we call a new component by passing this module and its shift_update method
 		self._shift_mode.name = 'Mod_Mode'										#name it so we can access it
-		self._shift_mode.set_mode_buttons([self._encoder_button[index] for index in range(4)])		#set the mode buttons that we will use to change states
+		self._shift_mode.set_mode_buttons([self._encoder_button[0], self._encoder_button[3]])		#set the mode buttons that we will use to change states
+		self._alt_mode = ModesComponent()
+		self._alt_mode.add_mode('alt', tuple([self._enable_alt, self._disable_alt]), behaviour = CancellableBehaviourWithRelease())
+		self._alt_mode.set_mode_button('alt', self._encoder_button[2])
 	
 
+	def _enable_alt(self):
+		self.modhandler.set_cntrlr_grid(None)
+		for column in range(4): 
+			for row in range(4):
+				self._scene[row].clip_slot(column).set_launch_button(None)
+		self._alt_enabled = True
+		self._device_selector.set_enabled(True)
+	
+
+	def _disable_alt(self):
+		self._alt_enabled = False
+		self._device_selector.set_enabled(False)
+		self.shift_update()
+	
 
 	"""cntrlr modes"""
 	"""here we set up some methods that will be used to update the control assignments when we change between different modes"""
@@ -459,7 +718,9 @@ class Cntrlr(ControlSurface):
 			self._button[index].set_on_off_values(127, 0)					#reset the on/off values for the key buttons
 			self._button[index].reset()										#turn the buttons LEDs off
 			self._button[index].release_parameter()							#remove the parameter assignment that was assigned to the keys
-		self._device_navigator.set_device_nav_buttons(None, None)			#remove the assignment of the device nav buttons
+		self._device_navigator.set_nav_buttons(None, None)			#remove the assignment of the device nav buttons
+		self._device_navigator.set_chain_nav_buttons(None, None)
+		self._device_navigator.set_shift_button(None)
 		self._device_navigator.set_enabled(False)							#turn off the device navigator
 		self._device.set_on_off_button(None)								#remove the assignment of the on/off button from the device component
 		self._device.set_lock_button(None)									#remove the assignment of the lock button from the device component 
@@ -551,15 +812,19 @@ class Cntrlr(ControlSurface):
 
 		"""this section assigns the encoders and encoder buttons"""
 		self._device.set_parameter_controls(tuple([self._encoder[index+4] for index in range(8)]))			#assign the encoders from the device component controls - we are doing this here b
-		self._encoder_button[7].set_on_value(DEVICE_LOCK[self._rgb])					#set the on color for the Device lock encoder button
-		self._device.set_lock_button(self._encoder_button[7])							#assign encoder button 7 to the device lock control
+		self._encoder_button[5].set_on_value(DEVICE_LOCK[self._rgb])					#set the on color for the Device lock encoder button
+		self._device.set_lock_button(self._encoder_button[5])							#assign encoder button 7 to the device lock control
 		self._encoder_button[4].set_on_value(DEVICE_ON[self._rgb])						#set the on color for the Device on/off encoder button 
 		self._device.set_on_off_button(self._encoder_button[4])							#assing encoder button 4 to the device on/off control
 		for index in range(2):															#setup a recursion to generate indexes so that we can reference the correct controls to assing to the device_navigator functions
 			self._encoder_button[index + 8].set_on_value(DEVICE_NAV[self._rgb])			#assign the on color for the device navigator
-			self._encoder_button[index + 10].set_on_value(DEVICE_BANK[self._rgb])		#assign the on color for the device bank controls
-		self._device_navigator.set_device_nav_buttons(self._encoder_button[10], self._encoder_button[11])	#set the device navigators controls to encoder buttons 10 and 11
-		self._device.set_bank_nav_buttons(self._encoder_button[8], self._encoder_button[9])		#set the device components bank nav controls to encoder buttons 8 and 9
+			self._encoder_button[index + 10].set_on_value(DEVICE_NAV[self._rgb])		#assign the on color for the device bank controls
+			self._encoder_button[index + 6].set_on_value(DEVICE_BANK[self._rgb])		#assign the on color for the device bank controls
+
+		self._device_navigator.set_nav_buttons(self._encoder_button[8], self._encoder_button[9])	#set the device navigators controls to encoder buttons 10 and 11
+		self._device_navigator.set_chain_nav_buttons(self._encoder_button[10], self._encoder_button[11])
+		self._device_navigator.set_shift_button(self._button[31])
+		self._device.set_bank_nav_buttons(self._encoder_button[6], self._encoder_button[7])		#set the device components bank nav controls to encoder buttons 8 and 9
 		self._session_zoom.set_zoom_button(self._button[31])							#assign the lower right key button to the shift function of the Zoom component
 
 		"""now we turn on and update some of the components we've just made assignments to"""
@@ -571,113 +836,35 @@ class Cntrlr(ControlSurface):
 		self._session.update()															#tell the Session component to update so that the grid will display the currently selected session region
 	
 
-	"""this assigns the CNTRLR's controls on for 4th empty modSlot"""
-	"""these assignments mirror the main section; commenting is restricted to the differences"""
-	def assign_chopper_controls(self):
-		"""the following lines update all of the controls' last_sent properties, so that they forward the next value they receive regardless of whether or not it is the same as the last it recieved"""
-		"""we also reset the encoder rings and buttons, since the device component will not update them if it is not locked to a device in Live"""
-		for index in range(16):
-			self._grid[index].clear_send_cache()
-		for index in range(32):
-			self._button[index].clear_send_cache()
-		for index in range(8):
-			self._encoder_button[index+4].send_value(0, True)
-			self._encoder_button[index+4].clear_send_cache()
-		for index in range(12):
-			self._encoder[index].send_value(0, True)
-			self._encoder[index].clear_send_cache()
-
-
-		"""the following lines differ from the assignments in self.assign_live_controls()"""
-		"""the assignments merely moving certain elements from their original positions"""
-		for index in range(4):
-			self._button[index].set_on_value(MUTE[self._rgb])
-			self._mixer.channel_strip(index).set_mute_button(self._button[index])
-			self._button[index+4].set_on_value(SELECT[self._rgb])
-			self._mixer.channel_strip(index).set_select_button(self._button[index+4])
-		self._session.set_stop_track_clip_buttons(tuple(self._button[index+8] for index in range(4)))
-		for index in range(4):
-			self._button[index + 8].set_on_off_values(STOP_CLIP[self._rgb], STOP_CLIP[self._rgb])
-			self._button[index+8].send_value(STOP_CLIP[self._rgb], True)
-		for index in range(4):
-			self._button[index + 12].set_on_off_values(SESSION_NAV[self._rgb], SESSION_NAV_OFF[self._rgb])
-		self._session.set_scene_bank_buttons(self._button[13], self._button[12])
-		self._session.set_track_bank_buttons(self._button[15], self._button[14])
-
-		"""the rest of this method mirrors self._assign_live_controls, comments can be found there"""
-		for index in range(2):
-			self._mixer.return_strip(index).set_volume_control(self._fader[index+4])
-		self._mixer.master_strip().set_volume_control(self._fader[7])
-		self._mixer.set_prehear_volume_control(self._fader[6])
-		for track in range(4):
-			channel_strip_send_controls = []
-			for control in range(2):
-				channel_strip_send_controls.append(self._dial_left[track + (control * 4)])
-			self._mixer.channel_strip(track).set_send_controls(tuple(channel_strip_send_controls))
-			self._mixer.channel_strip(track).set_pan_control(self._dial_left[track + 8])
-			gain_controls = []
-			self._mixer.track_eq(track).set_gain_controls(tuple([self._dial_right[track+8], self._dial_right[track+4], self._dial_right[track]]))
-			self._mixer.track_eq(track).set_enabled(True)	
-		for column in range(4):
-			for row in range(4):
-				self._scene[row].clip_slot(column).set_launch_button(self._grid[(row*4)+column])
-		self._encoder_button[7].set_on_value(DEVICE_LOCK[self._rgb])
-		self._device.set_lock_button(self._encoder_button[7])
-		self._encoder_button[4].set_on_value(DEVICE_ON[self._rgb])
-		self._device.set_on_off_button(self._encoder_button[4])
-		for index in range(2):
-			self._encoder_button[index + 8].set_on_value(DEVICE_NAV[self._rgb])
-			self._encoder_button[index + 10].set_on_value(DEVICE_BANK[self._rgb])
-		self._device_navigator.set_device_nav_buttons(self._encoder_button[10], self._encoder_button[11]) 
-		self._device.set_bank_nav_buttons(self._encoder_button[8], self._encoder_button[9]) 
-		self._device.set_enabled(True)
-		self._device_navigator.set_enabled(True)
-		self._session.set_enabled(True)
-		self._session_zoom.set_enabled(True)
-		self._device.update()
-		self._session.update()	
-		self.request_rebuild_midi_map()
-	
-
 	"""this method changes modes when we press a modButton.	 It is also called from Monomod when it needs to update the modDial assignments"""
 	def shift_update(self):
 		#self.log_message('shift_update')
-		self.assign_alternate_mappings(0)				#first, we remove any channel reassingments we might have made by assigning alternate mappings, but to channel 0 (the original channel)
-		self._chopper.set_enabled(False)				#disable the chopper, we will enable it later if we are in chopper mode
-		#mod_button_colors should go here
-		if self._shift_mode._mode_index is 0:			#if the shift mode is 0, meaning we've selecte the main script mode:
-			self.modhandler.set_cntrlr_encoder_grid(None)
-			self.modhandler.set_cntrlr_encoder_button_grid(None)
-			self.modhandler.set_cntrlr_grid(None)
-			self.modhandler.set_cntrlr_keys(None)
-			self.modhandler.set_enabled(False)
-			self.assign_live_controls()					#assign our top level control assignments
-		elif CHOPPER_ENABLE and not self._host._client[3].is_connected() and self._shift_mode._mode_index == 4:		#if the fourth mod button has been pressed and there is no mod installed
-			self.deassign_live_controls()				#deassign the top level assignments
-			for index in range(4):						#set up a recursion of 4
-				if self._shift_mode._mode_index == (index + 1):			#for each recursion, if the recursion number is the same as the shift_mode_index +1
-					self._shift_mode._modes_buttons[index].send_value(1)		#turn on the LED below the modButton
-			self.modhandler.set_cntrlr_encoder_grid(None)
-			self.modhandler.set_cntrlr_encoder_button_grid(None)
-			self.modhandler.set_cntrlr_grid(None)
-			self.modhandler.set_cntrlr_keys(None)
-			self.modhandler.set_enabled(False)
-			self.assign_chopper_controls()				#assign the controls for the Chopper Component
-			self._chopper.set_enabled(True)				#turn the Chopper Component on
-		else:											#otherwise, if we are in modMode
-			self.deassign_live_controls()				#remove all of our assignments from the controls and refresh their caches
+
+		mode = self._shift_mode._mode_index
+
+		self.deassign_live_controls()
+		self.assign_alternate_mappings(0)
+		self._device_selector.set_enabled(False)
+		self.modhandler.set_cntrlr_encoder_grid(None)
+		self.modhandler.set_cntrlr_encoder_button_grid(None)
+		self.modhandler.set_cntrlr_grid(None)
+		self.modhandler.set_cntrlr_keys(None)
+		self.modhandler.set_mod_nav_buttons([None, None])
+		self.modhandler.set_enabled(False)
+		if mode is 0:
+			self.assign_live_controls()
+		elif mode is 1:
 			self.assign_mixer_controls()
 			self.modhandler.set_cntrlr_encoder_grid(self._dial_matrix)
 			self.modhandler.set_cntrlr_encoder_button_grid(self._dial_button_matrix)
 			self.modhandler.set_cntrlr_grid(self._matrix)
 			self.modhandler.set_cntrlr_keys(self._key_matrix)
+			self.modhandler.set_mod_nav_buttons([self._encoder_button[2], self._encoder_button[3]])
 			self.modhandler.set_enabled(True)
-			for index in range(4):														#set up a recursion for each of our modButtons
-				if self._shift_mode._mode_index == (index + 1):							#if the button is the mode we've chosen
-					self._shift_mode._modes_buttons[index].send_value(1)				#turn the LED white
-			"""if not self._host._active_client.is_connected():							#if there is not a mod in the currently selected modSlot
-				self.assign_alternate_mappings(self._shift_mode._mode_index)			#assign a different MIDI channel that the controls translated to when entering Live
-			"""
+		elif mode is 2:
+			self.assign_alternate_mappings(1)
+		for button in self._shift_mode._modes_buttons:
+			button.send_value((self._shift_mode._modes_buttons.index(button) == (mode-1))*3, True)
 	
 
 	def assign_mixer_controls(self):
@@ -816,6 +1003,7 @@ class Cntrlr(ControlSurface):
 
 	"""midi functionality"""
 	
+
 	"""this method needs to be here so that Live knows what to do (nothing, in this case) when it receives sysex from the CNTRLR"""
 	def handle_sysex(self, midi_bytes):
 		pass
@@ -989,7 +1177,7 @@ class CntrlrModHandler(ModHandler):
 	
 
 	def _receive_cntrlr_grid(self, x, y, value, *a, **k):
-		self.log_message('_receive_cntrlr_grid: %(x)s %(y)s %(value)s ' % {'x':x, 'y':y, 'value':value})
+		#self.log_message('_receive_cntrlr_grid: %(x)s %(y)s %(value)s ' % {'x':x, 'y':y, 'value':value})
 		if self.is_enabled() and self._active_mod and not self._active_mod.legacy and not self._cntrlr_grid is None and x < 4 and y < 4:
 			self._cntrlr_grid.send_value(x, y, self._colors[value], True)
 	
@@ -1029,7 +1217,7 @@ class CntrlrModHandler(ModHandler):
 	
 
 	def _receive_cntrlr_key(self, x, y=0, value=0, *a):
-		self.log_message('_receive_cntrlr_key: %(x)s %(y)s %(value)s ' % {'x':x, 'y':y, 'value':value})
+		#self.log_message('_receive_cntrlr_key: %(x)s %(y)s %(value)s ' % {'x':x, 'y':y, 'value':value})
 		if self.is_enabled() and self._active_mod and not self._active_mod.legacy:
 			if not self._cntrlr_keys is None:
 				self._cntrlr_keys.send_value(x, y, self._colors[value], True)
@@ -1080,10 +1268,6 @@ class CntrlrModHandler(ModHandler):
 	def set_key_buttons(self, keys):
 		self._keys = keys
 		self._keys_value.subject = self._keys
-	
-
-	def set_lock_button(self, button):
-		pass
 	
 
 	def set_shift_button(self, button):
@@ -1166,6 +1350,8 @@ class CntrlrModHandler(ModHandler):
 				self._cntrlr_encoder_button_grid_value.subject.reset()
 			if not self._keys_value.subject is None:
 				self._keys_value.subject.reset()
+		if not self._on_lock_value.subject is None:
+			self._on_lock_value.subject.send_value((not mod is None) + ((not mod is None) and self.is_locked() * 4))
 	
 
 	def send_ring_leds(self):

@@ -489,6 +489,7 @@ class ModHandler(CompoundComponent):
 		self.modrouter.register_handler(self)
 		self._register_timer_callback(self._on_timer)
 		self._on_device_changed.subject = self.song()
+		self.modrouter._task_group.add(sequence(delay(5), self.select_appointed_device))
 	
 
 	@subject_slot('appointed_device')
@@ -697,6 +698,17 @@ class ModHandler(CompoundComponent):
 			self._scroll_right_ticks_delay = -1
 	
 
+	def set_lock_button(self, button):
+		self._on_lock_value.subject = button
+	
+
+	@subject_slot('value')
+	def _on_lock_value(self, value):
+		if value>0:
+			self.set_lock(not self.is_locked())
+		self.update()
+	
+
 	def _on_timer(self):
 		if self.is_enabled():
 			scroll_delays = [self._scroll_up_ticks_delay,
@@ -750,6 +762,8 @@ class ModHandler(CompoundComponent):
 
 	def set_lock(self, value):
 		self._is_locked = value > 0
+		if not self._on_lock_value.subject is None:
+			self._on_lock_value.subject.send_value(self.is_locked())
 	
 
 		
@@ -1035,13 +1049,17 @@ class ModRouter(CompoundComponent):
 	def get_next_mod(self, active_mod):
 		if not active_mod is None:
 			return self._mods[(self._mods.index(active_mod) +1) % len(self._mods)]
+		elif not len(self._mods) is 0:
+			return self._mods[0]
 		else:
-			return active_mod
+			return None
 	
 
 	def get_previous_mod(self, active_mod):
 		if not active_mod is None:
 			return self._mods[(self._mods.index(active_mod) + len(self._mods) -1) % len(self._mods)]
+		elif not len(self._mods) is 0:
+			return self._mods[-1]
 		else:
 			return active_mod
 	
