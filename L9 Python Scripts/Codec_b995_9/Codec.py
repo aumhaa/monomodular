@@ -24,7 +24,7 @@ from _Framework.TransportComponent import TransportComponent # Class encapsulati
 from _Framework.Task import *
 from _Generic.Devices import *
 
-from Push.M4LInterfaceComponent import M4LInterfaceComponent
+from _Framework.M4LInterfaceComponent import M4LInterfaceComponent
 
 
 """Imports from _Mono_Framework"""

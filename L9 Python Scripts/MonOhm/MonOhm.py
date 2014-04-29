@@ -27,17 +27,24 @@ from _Framework.SliderElement import SliderElement # Class representing a slider
 from _Framework.TrackEQComponent import TrackEQComponent # Class representing a track's EQ, it attaches to the last EQ device in the track
 from _Framework.TrackFilterComponent import TrackFilterComponent # Class representing a track's filter, attaches to the last filter in the track
 from _Framework.TransportComponent import TransportComponent # Class encapsulating all functions in Live's transport section
-from _Framework.SubjectSlot import subject_slot, subject_slot_group
+from _Framework.ModesComponent import AddLayerMode, LayerMode, MultiEntryMode, ModesComponent, SetAttributeMode, ModeButtonBehaviour, CancellableBehaviour, AlternativeBehaviour, ReenterBehaviour, DynamicBehaviourMixin, ExcludingBehaviourMixin, ImmediateBehaviour, LatchingBehaviour, ModeButtonBehaviour
+from _Framework.Layer import Layer
+from _Framework.SubjectSlot import SubjectEvent, subject_slot, subject_slot_group
+from _Framework.Task import *
+from _Framework.M4LInterfaceComponent import M4LInterfaceComponent
+from _Framework.ComboElement import ComboElement, DoublePressElement, MultiElement, DoublePressContext
 
 """Imports from _Mono_Framework"""
 from _Mono_Framework.MonoBridgeElement import MonoBridgeElement
 from _Mono_Framework.MonoButtonElement import MonoButtonElement
 from _Mono_Framework.MonoEncoderElement import MonoEncoderElement
-from _Mono_Framework.DeviceSelectorComponent import DeviceSelectorComponent
+from _Mono_Framework.DeviceSelectorComponent import NewDeviceSelectorComponent as DeviceSelectorComponent
 from _Mono_Framework.ResetSendsComponent import ResetSendsComponent
 from _Mono_Framework.DetailViewControllerComponent import DetailViewControllerComponent
 from _Mono_Framework.MonomodComponent import MonomodComponent
 from _Mono_Framework.LiveUtils import *
+from _Mono_Framework.ModDevices import *
+from _Mono_Framework.Mod import *
 
 """Custom files, overrides, and files from other scripts"""
 from _Generic.Devices import *
@@ -86,7 +93,7 @@ class MonOhmSessionComponent(SessionComponent):
 		self._script.log_message(str(self.name) + ' is enabled: ' + str(self.is_enabled()))
 	
 
-	@subject_slot_group('value')
+	@subject_slot('value')
 	def _on_stop_track_value(self, value, sender):
 		#if self.is_enabled():
 		if value is not 0 or not sender.is_momentary():
@@ -264,9 +271,9 @@ class MonOhm(ControlSurface):
 
 	def __init__(self, *a, **k):
 		super(MonOhm, self).__init__(*a, **k)
-		self._monomod_version = 'b995'
-		self._codec_version = 'b995'
-		self._cntrlr_version = 'b995'
+		self._monomod_version = 'b996'
+		self._codec_version = 'b996'
+		self._cntrlr_version = 'b996'
 		self._cntrlr = None
 		self._host_name = 'MonOhm'
 		self._color_type = 'OhmRGB'
@@ -303,7 +310,7 @@ class MonOhm(ControlSurface):
 			self._setup_device_control()
 			self._setup_crossfader()
 			self._setup_device_selector()
-			self._setup_monomod()
+			self._setup_mod()
 			self._setup_modes() 
 			self.song().view.add_selected_track_listener(self._update_selected_device)
 			if FORCE_TYPE is True:
@@ -561,11 +568,11 @@ class MonOhm(ControlSurface):
 		self._device_selector.name = 'Device_Selector'
 	
 
-	def _setup_monomod(self):
-		self._host = MonomodComponent(self)
-		self._host.name = 'Monomod_Host'
-		self._host._host_name = 'MonOhm'
-		self.hosts = [self._host]
+	def _setup_mod(self):
+		self.monomodular = get_monomodular(self)
+		self.monomodular.name = 'monomodular_switcher'
+		self.modhandler = OhmModHandler(self)
+		self.modhandler.name = 'ModHandler' 
 	
 
 	def _setup_modes(self):
@@ -588,7 +595,7 @@ class MonOhm(ControlSurface):
 	"""shift/zoom methods"""
 	def deassign_matrix(self):
 		for session in self._sessions:
-			session.set_stop_track_clip_buttons(None)
+			#session.set_stop_track_clip_buttons(None)
 			session.set_track_bank_buttons(None, None)
 			session.set_scene_bank_buttons(None, None)
 		for zoom in self._zooms:
@@ -695,8 +702,8 @@ class MonOhm(ControlSurface):
 		for index in range(5):
 			self._grid[7][index].set_off_value(self._color_defs['SCENE_LAUNCH'])
 			self._scene[index].set_launch_button(self._grid[7][index])
-		self._session.set_stop_track_clip_buttons(tuple(track_stop_buttons))
-		self._session2.set_stop_track_clip_buttons(tuple(track_stop_buttons2))
+		#self._session.set_stop_track_clip_buttons(tuple(track_stop_buttons))
+		#self._session2.set_stop_track_clip_buttons(tuple(track_stop_buttons2))
 		self._session_zoom.set_button_matrix(self._matrix)
 		self._grid[0][5].set_on_value(self._color_defs['RECORD'])
 		self._transport.set_record_button(self._grid[0][5])
@@ -711,7 +718,8 @@ class MonOhm(ControlSurface):
 		self._send_reset.set_buttons(tuple(self._grid[index + 4][5] for index in range(4)))
 		for index in range(4):
 			self._button[index + 4].set_off_value(self._color_defs['DEVICE_SELECT'])
-		self._device_selector.assign_buttons(tuple(self._button[index + 4] for index in range(4)), 4)
+		self._device_selector.set_buttons(self._button[4:8])
+		self._device_selector.set_offset(4)
 	
 	
 	def zoom_right(self):
@@ -725,14 +733,14 @@ class MonOhm(ControlSurface):
 		for index in range(5):
 			self._grid[7][index].set_off_value(self._color_defs['SCENE_LAUNCH'])
 			self._scene2[index].set_launch_button(self._grid[7][index])
-		self._session.set_stop_track_clip_buttons(tuple(track_stop_buttons))
+		#self._session.set_stop_track_clip_buttons(tuple(track_stop_buttons))
 		if(self._r_function_mode._mode_index < 3):
 			for index in range(4):
 				self._grid[index + 4][6].set_on_value(self._color_defs['CROSSFADE_TOGGLE'])
 				self._mixer2.channel_strip(index).set_crossfade_toggle(self._grid[index + 4][6])
 				self._grid[index + 4][7].set_off_value(self._color_defs['TRACK_STOP'])
 				track_stop_buttons2.append(self._grid[index + 4][7])
-			self._session2.set_stop_track_clip_buttons(tuple(track_stop_buttons2))
+			#self._session2.set_stop_track_clip_buttons(tuple(track_stop_buttons2))
 		else:
 			for index in range(4):
 				self._grid[index + 4][6].set_on_value(self._color_defs['CROSSFADE_TOGGLE'])
@@ -751,7 +759,8 @@ class MonOhm(ControlSurface):
 		self._send_reset.set_buttons(tuple(self._grid[index + 4][5] for index in range(4)))
 		for index in range(4):
 			self._button[index]._off_value = self._color_defs['DEVICE_SELECT']
-		self._device_selector.assign_buttons(tuple(self._button[index] for index in range(4)), 0)
+		self._device_selector.set_buttons(self._button[:4])
+		self._device_selector.set_offset(0)
 
 	
 
@@ -765,7 +774,7 @@ class MonOhm(ControlSurface):
 		for index in range(5):
 			self._grid[7][index].set_on_value(self._color_defs['SCENE_LAUNCH'])
 			self._scene_main[index].set_launch_button(self._grid[7][index])
-		self._session_main.set_stop_track_clip_buttons(tuple(track_stop_buttons))
+		#self._session_main.set_stop_track_clip_buttons(tuple(track_stop_buttons))
 		self._session_zoom_main.set_button_matrix(self._matrix)
 		self._grid[0][5].set_on_value(self._color_defs['RECORD'])
 		self._transport.set_record_button(self._grid[0][5])
@@ -780,7 +789,8 @@ class MonOhm(ControlSurface):
 		self._send_reset.set_buttons(tuple(self._grid[index + 4][5] for index in range(4)))
 		for index in range(4):
 			self._button[index + 4].set_off_value(self._color_defs['DEVICE_SELECT'])
-		self._device_selector.assign_buttons(tuple(self._button[index + 4] for index in range(4)), 4)
+		self._device_selector.set_buttons(self._button[4:8])
+		self._device_selector.set_offset(4)
 
 	
 
@@ -893,8 +903,6 @@ class MonOhm(ControlSurface):
 		self.deassign_channel_select_buttons()
 		self.deassign_matrix()
 		self.deassign_menu()
-		if(self._cntrlr != None):
-			self._cntrlr._monohm_shift(self._shift_mode._mode_index)
 		if(self._monomod_mode._mode_index is 0):		#if monomod is not on
 			if(self._shift_mode._mode_index is 0):							#if no shift is pressed
 				self._shift_mode._mode_toggle1.turn_off()
@@ -994,14 +1002,16 @@ class MonOhm(ControlSurface):
 					self._shift_mode._mode_toggle1.turn_on()
 					for index in range(4):
 						self._button[index + 4]._off_value = self._color_defs['DEVICE_SELECT']
-					self._device_selector.assign_buttons(tuple(self._button[index + 4] for index in range(4)), 4)
+					self._device_selector.set_buttons(self._button[4:8])
+					self._device_selector.set_offset(4)
 					self._l_function_mode.set_enabled(True)
 					self._session.set_show_highlight(True)
 				elif(self._shift_mode._mode_index is 3):				#if shift right
 					self._shift_mode._mode_toggle2.turn_on()
 					for index in range(4):
 						self._button[index]._off_value = self._color_defs['DEVICE_SELECT']
-					self._device_selector.assign_buttons(tuple(self._button[index] for index in range(4)), 0)
+					self._device_selector.set_buttons(self._button[:4])
+					self._device_selector.set_offset(0)
 					self._r_function_mode.set_enabled(True)
 					self.assign_shift_controls()
 					if(self._r_function_mode._mode_index < 4):
@@ -1012,15 +1022,13 @@ class MonOhm(ControlSurface):
 					self._shift_mode._mode_toggle2.turn_on()
 					for index in range(4):
 						self._button[index + 4]._off_value = self._color_defs['DEVICE_SELECT']
-					self._device_selector.assign_buttons(tuple(self._button[index + 4] for index in range(4)), 4)
+					self._device_selector.set_buttons(self._button[4:8])
+					self._device_selector.set_offset(4)
 					self._m_function_mode.set_enabled(True)
 					self.assign_shift_controls()
 					self._session_main.set_show_highlight(True)
 				self._device_selector.set_enabled(True)
-			if self._shift_mode._mode_index > 1:
-				self._host._shift_value(1)
-			else:
-				self._host._shift_value(0)
+			self.modhandler._shift_value(int(self._shift_mode._mode_index>1))
 		self.allow_updates(True)
 		self._clutch_device_selection = False
 		self.request_rebuild_midi_map()
@@ -1032,30 +1040,26 @@ class MonOhm(ControlSurface):
 
 	def monomod_mode_update(self):
 		if(self._monomod_mode._mode_index == 0):
-			self._host.set_enabled(False)
-			self._host._set_button_matrix(None)
-			self._host._set_nav_buttons(None)
-			self._host._set_lock_button(None)
-			self._host._set_alt_button(None)
+			self.modhandler.set_enabled(False)
+			self.modhandler.set_grid(None)
+			self.modhandler.set_nav_buttons(None)
+			self.modhandler.set_shiftlock_button(None)
+			self.modhandler.set_alt_button(None)
 			self._livid.turn_off()
 			self._shift_mode.update()
 			#self._session._reassign_scenes()
 			
 		elif(self._monomod_mode._mode_index == 1):
 			self._livid.turn_on()
-			#self.deassign_matrix()			#moved to set_mode so that the matrix doesn't clear AFTER it has been loaded by monomod
-			if(self._host._active_client == None):
-				self.assign_alternate_mappings()
-			else:
-				self.deassign_matrix()
-				self.deassign_menu()
-				self._monomod.reset()
-				self._host._set_button_matrix(self._monomod)
-				self._host._set_nav_buttons([self._menu[0], self._menu[3], self._menu[4], self._menu[5]])
-				self._host._set_lock_button(self._menu[1])
-				self._host._set_alt_button(self._menu[2])
-				self._host.set_enabled(True)
-				self._shift_mode.update()
+			self.deassign_matrix()
+			self.deassign_menu()
+			#self._monomod.reset()
+			self.modhandler.set_grid(self._monomod)
+			self.modhandler.set_nav_buttons([self._menu[0], self._menu[3], self._menu[4], self._menu[5]])
+			self.modhandler.set_shiftlock_button(self._menu[1])
+			self.modhandler.set_alt_button(self._menu[2])
+			self.modhandler.set_enabled(True)
+			self._shift_mode.update()
 			#self.show_message('Monomod grid enabled')
 	
 
@@ -1524,12 +1528,13 @@ class MonOhm(ControlSurface):
 				self.set_rgb_colors()
 			elif midi_bytes[:11] == tuple([240, 126, 0, 6, 2, 0, 1, 97, 1, 0, 2]):
 				self.set_monochrome_colors()
+	
 
 	def set_monochrome_colors(self):
 		self.show_message(str('Ohm64 Monochrome detected...setting color map'))
 		self.log_message(str('Ohm64 Monochrome detected...setting color map'))
 		self._rgb = 1
-		self._host._host_name = 'Ohm64'
+		#self._host._host_name = 'Ohm64'
 		self._color_type = 'Monochrome'
 		for button in self._button:
 			button._color_map = [127 for index in range(0, 7)]
@@ -1538,15 +1543,15 @@ class MonOhm(ControlSurface):
 				button._color_map = [127 for index in range(0, 7)]
 		self._color_defs = MONOCHROME_COLOR_DEFS
 		self._assign_session_colors()
-		self._host._navbox_selected = 8
+		self.modhandler._navbox_selected = 8
 	
 
 	def set_rgb_colors(self):
 		self.show_message(str('Ohm64 RGB detected...setting color map'))
 		self.log_message(str('Ohm64 RGB detected...setting color map'))
 		self._rgb = 0
-		self._host._host_name = 'OhmRGB'
-		self._color_type = 'OhmRGB'
+		#self._host._host_name = 'OhmRGB'
+		self._color_type = 'RGB'
 		for button in self._button:
 			button._color_map = COLOR_MAP
 		for column in self._grid:
@@ -1754,6 +1759,85 @@ class MonOhm(ControlSurface):
 		#self.log_message('new device ' + str(type(device)))
 		if self._update_linked_device_selection != None:
 			self._update_linked_device_selection(device)
+	
+
+
+class OhmModHandler(ModHandler):
+
+
+	def __init__(self, *a, **k):
+		super(OhmModHandler, self).__init__(*a, **k)
+		self._color_type = 'RGB'
+	
+
+	def _receive_grid(self, x, y, value, *a, **k):
+		#self._receive_grid(x, y, value, *a, **k)
+		if self._active_mod:
+			if not self._grid_value.subject is None:
+				if self.active_mod().legacy:
+					adj_x = x - self.x_offset 
+					adj_y = y - self.y_offset - (int(self._is_shifted) * 2)
+				else:
+					adj_x = x
+					adj_y = y
+				if (adj_x) in range(8) and (adj_y) in range(8):
+					try:
+						self._grid_value.subject.send_value(adj_x, adj_y, self._colors[value], True)
+					except:
+						pass
+	
+
+	@subject_slot('value')
+	def _grid_value(self, value, x, y, *a, **k):
+		#self.log_message('_base_grid_value ' + str(x) + str(y) + str(value))
+		if self.active_mod():
+			if self._active_mod.legacy:
+				if self.is_shifted():
+					if value > 0:
+						if x in range(6, 8) and y in range(2,4):
+							self.set_offset((x - 6) * 8,  (y - 2) * 8)
+							self.update()
+				else:
+					self._active_mod.send('grid', x + self.x_offset, y + self.y_offset, value)
+			else:
+				self._active_mod.send('grid', x, y, value)
+	
+
+	def _display_nav_box(self):
+		if self._grid_value.subject:
+			if self.is_shifted():
+				for column in range(2):
+					for row in range(2):
+						if (column == int(self.x_offset/8)) and (row == int(self.y_offset/8)):
+							self._grid_value.subject.get_button(column +6, row+2).send_value(self.navbox_selected)
+						else:
+							self._grid_value.subject.get_button(column +6, row+2).send_value(self.navbox_unselected)
+	
+
+	def update(self, *a, **k):
+		mod = self.active_mod()
+		if not mod is None:
+			if self._grid:
+				if self.is_shifted() or self.is_shiftlocked():
+					self._grid_value.subject = self._grid.submatrix[:, 3:7]
+					self.set_channel_buttons(self._grid.submatrix[:, 1:2])
+					self.set_key_buttons(self._grid.submatrix[:, 7:8])
+				else:
+					self._device_selector.set_matrix(None)
+					self.set_channel_buttons(None)
+					self.set_key_buttons(None)
+					self._grid_value.subject = self._grid
+			mod.restore()
+			if mod.legacy:
+				if self.is_shifted():
+					self._display_nav_box()
+		else:
+			if not self._grid_value.subject is None:
+				self._grid_value.subject.reset()
+			if not self._keys_value.subject is None:
+				self._keys_value.subject.reset()
+		if self.is_shifted():
+			self._device_selector.set_matrix(self._grid.submatrix[:, :1])
 	
 
 

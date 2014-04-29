@@ -6,7 +6,7 @@ inlets = 1;
 var script = this;
 
 
-var DEBUG = false;
+var DEBUG = true;
 var SHOW_STORAGE = false;
 var FORCELOAD = false;
 
@@ -390,6 +390,7 @@ var alted = false;
 var trigger_mode = false;
 var preset = 1;
 var slotlist = [];
+var channel = 0;
 
 var speed = [0, 0, 0, 0];
 var matrix = new Grid('Grid', 'grid', 16, 16);
@@ -682,6 +683,12 @@ function _key(num, val)
 			display_gameboard();
 		}
 	}
+}
+
+function _channel(num)
+{
+	debug('channel', num);
+	outlet(0, 'channel', 'value', num);
 }
 
 function display_node(num)

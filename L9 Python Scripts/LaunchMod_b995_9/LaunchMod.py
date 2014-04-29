@@ -16,7 +16,7 @@ from _Mono_Framework.MonoButtonElement import MonoButtonElement
 
 from MonomodComponent import MonomodComponent
 
-from Push.M4LInterfaceComponent import M4LInterfaceComponent
+from _Framework.M4LInterfaceComponent import M4LInterfaceComponent
 
 SIDE_NOTES = (8, 24, 40, 56, 72, 88, 104, 120)
 DRUM_NOTES = (41, 42, 43, 44, 45, 46, 47, 57, 58, 59, 60, 61, 62, 63, 73, 74, 75, 76, 77, 78, 79, 89, 90, 91, 92, 93, 94, 95, 105, 106, 107)

@@ -195,7 +195,7 @@ class NameServerClipSlotComponent(ClipSlotComponent):
 	def __init__(self, script, *a, **k):
 		self._script = script
 		super(NameServerClipSlotComponent, self).__init__(*a, **k)
-		self._on_name_changed_slot = self.register_slot(None, self._name_listener, 'name')
+		self._on_name_changed = self.register_slot(None, self._name_listener, 'name')
 	
 
 	def set_clip_slot(self, clip_slot):
@@ -204,7 +204,7 @@ class NameServerClipSlotComponent(ClipSlotComponent):
 			clip = clip_slot.clip 
 		else:
 			clip = None
-		self._on_name_changed_slot.subject = clip
+		self._on_name_changed.subject = clip
 		super(NameServerClipSlotComponent, self).set_clip_slot(clip_slot)
 	
 
@@ -217,11 +217,11 @@ class NameServerClipSlotComponent(ClipSlotComponent):
 		super(NameServerClipSlotComponent, self).update()
 		new_name = ' '
 		if self._allow_updates:
-			 if self.is_enabled() and not self._launch_button_value_slot.subject == None:
+			 if self.is_enabled() and not self._launch_button_value.subject == None:
 				if (self._clip_slot != None):
 					if self.has_clip():
 						new_name = self._clip_slot.clip.name
-				self._script.clip_name(self._launch_button_value_slot.subject, new_name)
+				self._script.clip_name(self._launch_button_value.subject, new_name)
 	
 
 
@@ -502,7 +502,7 @@ class LemurPad(MonOhm):
 		self._session = NameServerSessionComponent(num_tracks, num_scenes, self)
 		self._session.name = "Left_Session"
 		self._session.set_offsets(0, 0)	 
-		self._session.set_stop_track_clip_value(self._color_defs['STOP_CLIP'])
+		self._session.set_stop_clip_value(self._color_defs['STOP_CLIP'])
 		self._scene = [None for index in range(5)]
 		for row in range(num_scenes):
 			self._scene[row] = self._session.scene(row)
@@ -526,7 +526,7 @@ class LemurPad(MonOhm):
 		self._session2 = SessionComponent(num_tracks, num_scenes)
 		self._session2.name = 'Right_Session'
 		self._session2.set_offsets(4, 0)
-		self._session2.set_stop_track_clip_value(self._color_defs['STOP_CLIP'])
+		self._session2.set_stop_clip_value(self._color_defs['STOP_CLIP'])
 		self._scene2 = [None for index in range(5)]
 		for row in range(num_scenes):
 			self._scene2[row] = self._session2.scene(row)
@@ -550,7 +550,7 @@ class LemurPad(MonOhm):
 		self._session_zoom2._zoom_button = (self._dummy_button2)
 		self._session_main = SessionComponent(8, num_scenes)
 		self._session_main.name = 'Main_Session'
-		self._session_main.set_stop_track_clip_value(self._color_defs['STOP_CLIP'])
+		self._session_main.set_stop_clip_value(self._color_defs['STOP_CLIP'])
 		self._scene_main = [None for index in range(5)]
 		for row in range(num_scenes):
 			self._scene_main[row] = self._session_main.scene(row)

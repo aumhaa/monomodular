@@ -3,6 +3,7 @@
 from __future__ import with_statement
 import sys
 import os
+import copy
 import Live
 import contextlib
 from _Tools.re import *
@@ -19,6 +20,7 @@ from _Framework.Debug import debug_print
 from _Framework.Disconnectable import Disconnectable
 from _Framework.InputControlElement import InputSignal
 
+from _Mono_Framework.DeviceSelectorComponent import NewDeviceSelectorComponent as DeviceSelectorComponent
 from _Mono_Framework.MonoParamComponent import MonoParamComponent
 from _Mono_Framework.MonoDeviceComponent import NewMonoDeviceComponent as MonoDeviceComponent
 from _Mono_Framework.ModDevices import *
@@ -95,6 +97,10 @@ def get_control_surfaces():
 		if not hasattr(__builtins__, CS_LIST_KEY):
 			setattr(__builtins__, CS_LIST_KEY, [])
 		return getattr(__builtins__, CS_LIST_KEY)
+
+
+def return_empty():
+	return []
 
 
 class SpecialInputSignal(Signal):
@@ -189,7 +195,7 @@ class ElementTranslation(object):
 class StoredElement(object):
 
 
-	def __init__(self, active_handlers, *a, **attributes):
+	def __init__(self, active_handlers = return_empty, *a, **attributes):
 		self._active_handlers = active_handlers
 		self._value = 0
 		for name, attribute in attributes.iteritems():
@@ -214,7 +220,7 @@ class StoredElement(object):
 class Grid(object):
 
 
-	def __init__(self, active_handlers, name, width, height, *a, **k):
+	def __init__(self, name, width, height, active_handlers = return_empty, *a, **k):
 		self._active_handlers = active_handlers
 		self._name = name
 		self._width = width
@@ -322,7 +328,7 @@ class Grid(object):
 class Array(object):
 
 
-	def __init__(self, active_handlers, name, size, *a, **k):
+	def __init__(self, name, size, active_handlers = return_empty, *a, **k):
 		self._active_handlers = active_handlers
 		self._name = name
 		self._cell = [StoredElement(self._name + '_' + str(num), _num = num, *a, **k) for num in range(size)]
@@ -364,10 +370,20 @@ class Array(object):
 	
 
 
+class RadioArray(Array):
+
+
+	def value(self, num):
+		for element in self._cell:
+			element._value = int(element is self._cell[num])
+			self.update_element(element)
+	
+
+
 class RingedStoredElement(StoredElement):
 
 
-	def __init__(self, active_handlers, *a, **attributes):
+	def __init__(self, active_handlers = return_empty, *a, **attributes):
 		self._green = 0
 		self._mode = 0
 		self._custom = [0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -401,7 +417,7 @@ class RingedStoredElement(StoredElement):
 class RingedGrid(Grid):
 
 
-	def __init__(self, active_handlers, name, width, height, *a, **k):
+	def __init__(self, name, width, height, active_handlers = return_empty, *a, **k):
 		self._active_handlers = active_handlers
 		self._name = name
 		self._width = width
@@ -463,9 +479,10 @@ class RingedGrid(Grid):
 class ModHandler(CompoundComponent):
 
 
-	def __init__(self, script, *a, **k):
+	def __init__(self, script, device_selector = None, *a, **k):
 		super(ModHandler, self).__init__(*a, **k)
 		self._script = script
+		self._device_selector = device_selector if not device_selector is None else DeviceSelectorComponent(script)
 		self._color_type = 'RGB'
 		self.log_message = script.log_message
 		self.modrouter = script.monomodular
@@ -476,8 +493,17 @@ class ModHandler(CompoundComponent):
 		self._is_enabled = False
 		self._is_connected = False
 		self._is_locked = False
-		self._mod_nav_buttons = None
+		self._is_alted = False
+		self._is_shifted = False
+		self._is_shiftlocked = False
 		self._receive_methods = {}
+		self._addresses =  {'grid': {'obj':Grid('grid', 16, 16), 'method':self._receive_grid},
+							'key': {'obj':Array('key', 8), 'method':self._receive_key},
+							'shift': {'obj':StoredElement(_name = 'shift'), 'method':self._receive_shift},
+							'alt': {'obj':StoredElement(_name = 'alt'), 'method':self._receive_alt},
+							'channel': {'obj':RadioArray('channel', 8), 'method':self._receive_channel}}
+		self._grid = None
+		self._mod_nav_buttons = None
 		self.x_offset = 0
 		self.y_offset = 0
 		self._scroll_up_ticks_delay = -1
@@ -486,18 +512,45 @@ class ModHandler(CompoundComponent):
 		self._scroll_left_ticks_delay = -1
 		self.navbox_selected = 3
 		self.navbox_unselected = 5
+		self._initialize_receive_methods()
 		self.modrouter.register_handler(self)
 		self._register_timer_callback(self._on_timer)
 		self._on_device_changed.subject = self.song()
 		self.modrouter._task_group.add(sequence(delay(5), self.select_appointed_device))
 	
 
-	@subject_slot('appointed_device')
-	def _on_device_changed(self):
-		#self.log_message('modhandler on_device_changed')
-		if not self.is_locked():	# or self.active_mod() is None:   #not sure why this was here?  
-			self.modrouter._task_group.add(sequence(delay(2), self.select_appointed_device))
+	def disconnect(self, *a, **k):
+		self._active_mod = None
+		self._unregister_timer_callback(self._on_timer)
+		super(ModHandler, self).disconnect(*a, **k)
 	
+
+	def _initialize_receive_methods(self):
+		addresses = self._addresses
+		for address, Dict in addresses.iteritems():
+			if not address in self._receive_methods.keys():
+				self._receive_methods[address] = Dict['method']
+	
+
+	def _register_addresses(self, client):
+		addresses = self._addresses
+		for address, Dict in addresses.iteritems():
+			if not address in client._addresses.keys():
+				client._addresses[address] = copy.deepcopy(Dict['obj'])
+				client._addresses[address]._active_handlers = client.active_handlers
+	
+
+	def receive_address(self, address_name, *a, **k):
+		#self.log_message('receive_address ' + str(address_name) + str(a))
+		if address_name in self._receive_methods.keys():
+			self._receive_methods[address_name](*a, **k)
+	
+
+	def update(self, *a, **k):
+		if self._active_mod:
+			self._active_mod.restore()
+	
+
 
 	def select_mod(self, mod):
 		self._active_mod = mod
@@ -513,10 +566,44 @@ class ModHandler(CompoundComponent):
 		self.update()
 	
 
+	def active_mod(self, *a, **k):
+		return self._active_mod
+	
+
+
+	@subject_slot('appointed_device')
+	def _on_device_changed(self):
+		#self.log_message('modhandler on_device_changed')
+		if not self.is_locked():	# or self.active_mod() is None:   #not sure why this was here?  
+			self.modrouter._task_group.add(sequence(delay(2), self.select_appointed_device))
+	
+
 	def select_appointed_device(self, *a):
 		#self.log_message('select_appointed_device' + str(a))
 		self.select_mod(self.modrouter.is_mod(self.song().appointed_device))
 	
+
+
+	def set_parameter_controls(self, controls):
+		self._parameter_controls = None
+		if not controls is None:
+			self._parameter_controls = [control for control, _ in controls.iterbuttons()]
+		if not self._active_mod is None:
+			self._active_mod._param_component.update()
+	
+
+	def set_device_component(self, device_component):
+		self._device_component = device_component
+	
+
+	def update_device(self):
+		#self.log_message('update device')
+		#self.update_parameter_controls()
+		#if self.is_enabled() and not self._device_component is None:
+		#	self.update_device()
+		pass
+	
+
 
 	def set_mod_nav_buttons(self, buttons):
 		self._mod_nav_buttons = buttons
@@ -568,53 +655,164 @@ class ModHandler(CompoundComponent):
 			self.song().view.select_device(self.active_mod().linked_device())
 	
 
-	def disconnect(self, *a, **k):
-		self._active_mod = None
-		self._unregister_timer_callback(self._on_timer)
-		super(ModHandler, self).disconnect(*a, **k)
-	
 
-	def update(self, *a, **k):
-		if self._active_mod:
-			self._active_mod.restore()
-	
-
-	def receive_address(self, address_name, *a, **k):
-		#self.log_message('receive_address ' + str(address_name) + str(a))
-		if address_name in self._receive_methods.keys():
-			self._receive_methods[address_name](*a, **k)
-	
-
-	def _register_addresses(self, client):
-		pass  # this should be overridden by the controlsurface instance
+	def set_grid(self, grid):
+		self._grid = grid
+		if not self._grid is None:
+			for button, _ in grid.iterbuttons():
+				if not button == None:
+					button.use_default_message()
+					button.set_enabled(True)
+		self.update()
 	
 
 	def _receive_grid(self, address):
 		pass
 	
 
-	def set_device_component(self, device_component):
-		self._device_component = device_component
+	@subject_slot('value')
+	def _grid_value(self, value, x, y, *a, **k):
+		#self.log_message('_base_grid_value ' + str(x) + str(y) + str(value))
+		if self.active_mod():
+			if self._active_mod.legacy:
+				if self.is_shifted():
+					if value > 0 and x in range(6, 8) and y in range(2,4):
+						self.set_offset((x - 6) * 8,  (y - 2) * 8)
+						self.update()
+				else:
+					self._active_mod.send('grid', x + self.x_offset, y + self.y_offset, value)
+			else:
+				self._active_mod.send('grid', x, y, value)
 	
 
-	def update_device(self):
-		#self.log_message('update device')
-		#self.update_parameter_controls()
-		if not self._device_component is None:
+
+	def set_key_buttons(self, keys):
+		self._keys_value.subject = keys
+		if self.active_mod():
+			self.active_mod()._addresses['key'].restore()
+	
+
+	def _receive_key(self, x, value):
+		#self.log_message('_receive_key: %s %s' % (x, value))
+		if not self._keys_value.subject is None:
+			self._keys_value.subject.send_value(x, 0, self._colors[value], True)
+	
+
+	@subject_slot('value')
+	def _keys_value(self, value, x, y, *a, **k):
+		if self._active_mod:
+			self._active_mod.send('key', x, value)
+	
+
+
+	def set_channel_buttons(self, buttons):
+		self._channel_value.subject = buttons
+		if self.active_mod():
+			self.active_mod()._addresses['channel'].restore()
+	
+
+	def _receive_channel(self, x, value):
+		#self.log_message('_receive_key: %s %s' % (x, value))
+		if not self._channel_value.subject is None:
+			self._channel_value.subject.send_value(x, 0, self._colors[value], True)
+	
+
+	@subject_slot('value')
+	def _channel_value(self, value, x, y, *a, **k):
+		if value and self._active_mod:
+			self._active_mod.send('channel', x)
+	
+
+
+	def set_shift_button(self, button):
+		self._shift_value.subject = button
+		if button:
+			button.send_value(self.is_shifted())
+	
+
+	def is_shifted(self):
+		return self._is_shifted
+	
+
+	def _receive_shift(self, value):
+		if not self._shift_value.subject is None:
+			self._shift_value.subject.send_value(value)
+	
+
+	@subject_slot('value')
+	def _shift_value(self, value, *a, **k):
+		self._is_shifted = not value is 0
+		if self.active_mod():
+			self._active_mod.send('shift', value)
+		self.update()
+	
+
+
+	def set_alt_button(self, button):
+		self._alt_value.subject = button
+		if button:
+			button.send_value(self.is_alted())
+	
+	
+	def is_alted(self):
+		return self._is_alted
+	
+
+	def _receive_alt(self, value):
+		if not self._alt_value.subject is None:
+			self._alt_value.subject.send_value(value)
+	
+
+	@subject_slot('value')
+	def _alt_value(self, value, *a, **k):
+		self._is_alted = not value is 0
+		if self._active_mod:
+			self._active_mod.send('alt', value)
 			self.update_device()
+		self.update()
 	
 
-	def set_parameter_controls(self, controls):
-		self._parameter_controls = None
-		if not controls is None:
-			self._parameter_controls = [control for control, _ in controls.iterbuttons()]
-		if not self._active_mod is None:
-			self._active_mod._param_component.update()
+
+	def set_lock_button(self, button):
+		self._on_shiftlock_value.subject = button
 	
 
-	def active_mod(self, *a, **k):
-		return self._active_mod
+	def is_locked(self):
+		return self._is_locked
 	
+
+	def set_lock(self, value):
+		self._is_locked = value > 0
+		if not self._on_lock_value.subject is None:
+			self._on_lock_value.subject.send_value(self.is_locked())
+	
+
+	@subject_slot('value')
+	def _on_lock_value(self, value):
+		if value>0:
+			self.set_lock(not self.is_locked())
+		self.update()
+	
+
+
+	def set_shiftlock_button(self, button):
+		self._on_shiftlock_value.subject = button
+	
+
+	def is_shiftlocked(self):
+		return self._is_shiftlocked
+	
+
+	@subject_slot('value')
+	def _on_shiftlock_value(self, value):
+		#self.log_message('shiftlock value ' + str(value))
+		if value>0:
+			self._is_shiftlocked = not self.is_shiftlocked()
+			if not self._on_shiftlock_value.subject is None:
+				self._on_shiftlock_value.subject.send_value(self.is_shiftlocked())
+			self.update()
+	
+
 
 	def set_offset(self, x, y):
 		self.x_offset = max(0, min(x, 8))
@@ -698,16 +896,17 @@ class ModHandler(CompoundComponent):
 			self._scroll_right_ticks_delay = -1
 	
 
-	def set_lock_button(self, button):
-		self._on_lock_value.subject = button
+	def _update_nav_buttons(self):
+		self._on_nav_up_value.subject and self._on_nav_up_value.subject.send_value(int(self.y_offset > 0), True)
+		self._on_nav_down_value.subject and self._on_nav_down_value.subject.send_value(int(self.y_offset < 8), True)
+		self._on_nav_left_value.subject and self._on_nav_left_value.subject.send_value(int(self.x_offset > 0), True)
+		self._on_nav_right_value.subject and self._on_nav_right_value.subject.send_value(int(self.x_offset < 8), True)
 	
 
-	@subject_slot('value')
-	def _on_lock_value(self, value):
-		if value>0:
-			self.set_lock(not self.is_locked())
-		self.update()
+	def _is_scrolling(self):
+		return (0 in (self._scroll_up_ticks_delay, self._scroll_down_ticks_delay, self._scroll_right_ticks_delay, self._scroll_left_ticks_delay))
 	
+
 
 	def _on_timer(self):
 		if self.is_enabled():
@@ -745,28 +944,10 @@ class ModHandler(CompoundComponent):
 					self.update()
 	
 
-	def _is_scrolling(self):
-		return (0 in (self._scroll_up_ticks_delay, self._scroll_down_ticks_delay, self._scroll_right_ticks_delay, self._scroll_left_ticks_delay))
-	
 
-	def _update_nav_buttons(self):
-		self._on_nav_up_value.subject and self._on_nav_up_value.subject.send_value(int(self.y_offset > 0), True)
-		self._on_nav_down_value.subject and self._on_nav_down_value.subject.send_value(int(self.y_offset < 8), True)
-		self._on_nav_left_value.subject and self._on_nav_left_value.subject.send_value(int(self.x_offset > 0), True)
-		self._on_nav_right_value.subject and self._on_nav_right_value.subject.send_value(int(self.x_offset < 8), True)
-	
 
-	def is_locked(self):
-		return self._is_locked
-	
 
-	def set_lock(self, value):
-		self._is_locked = value > 0
-		if not self._on_lock_value.subject is None:
-			self._on_lock_value.subject.send_value(self.is_locked())
-	
 
-		
 class ModClient(NotifyingControlElement):
 
 
@@ -781,7 +962,8 @@ class ModClient(NotifyingControlElement):
 		self._parent = parent
 		self.log_message = parent.log_message
 		self._active_handlers = []
-		self._addresses = {'grid':Grid(self.active_handlers, 'grid', 16, 16)}
+		#self._addresses = {'grid':Grid(self.active_handlers, 'grid', 16, 16)}
+		self._addresses = {}
 		self._translations = {}
 		self._translation_groups = {}
 		self._color_maps = {}
@@ -1111,7 +1293,7 @@ class ModRouter(CompoundComponent):
 		self.log_message('is_mod ' + str(device))
 		if not device is None:
 			for mod in self._mods:
-				#self.log_message('mod in mods: ' + str(mod.device))
+				self.log_message('mod in mods: ' + str(mod.device))
 				if mod.device == device:
 					mod_device = mod
 					break
