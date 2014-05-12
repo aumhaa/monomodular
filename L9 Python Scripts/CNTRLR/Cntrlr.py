@@ -1146,22 +1146,17 @@ class CntrlrModHandler(ModHandler):
 		self._cntrlr_grid = None
 		self._cntrlr_encoder_grid = None
 		self._cntrlr_keys = None
-		self._keys = None
-		self._shift = None
-		self._receive_methods = {'grid': self._receive_grid, 
-								'cntrlr_grid': self._receive_cntrlr_grid,
-								'cntrlr_encoder_grid': self._receive_cntrlr_encoder_grid,
-								'cntrlr_encoder_grid_relative':self._receive_cntrlr_encoder_grid_relative,
-								'cntrlr_encoder_button_grid':self._receive_cntrlr_encoder_button_grid,
-								'cntrlr_encoder_grid_local':self._receive_cntrlr_encoder_grid_local,
-								'cntrlr_key':self._receive_cntrlr_key,
-								'key': self._receive_key,
-								'shift': self._receive_shift}
-		self._colors = range(128)
-		self._shifted = False
+		encoder_grid = RingedGrid('cntrlr_encoder_grid', 4, 3)
+		encoder_button_grid = Grid('cntrlr_encoder_button_grid', 4, 2)
+		self._addresses.update({'cntrlr_grid': {'obj':Grid('cntrlr_grid', 4, 4), 'method':self._receive_cntrlr_grid},
+								'cntrlr_encoder_grid': {'obj':encoder_grid, 'method':self._receive_cntrlr_encoder_grid},
+								'cntrlr_encoder_grid_relative': {'obj':encoder_grid, 'method':self._receive_cntrlr_encoder_grid_relative},
+								'cntrlr_encoder_button_grid': {'obj':encoder_button_grid, 'method':self._receive_cntrlr_encoder_button_grid},
+								'cntrlr_encoder_grid_local': {'obj':encoder_button_grid, 'method':self._receive_cntrlr_encoder_grid_local},
+								'cntrlr_key': {'obj':  Grid('cntrlr_key', 16, 2), 'method': self._receive_cntrlr_key}})
 	
 
-	def _register_addresses(self, client):
+	"""def _register_addresses(self, client):
 		if not 'cntrlr_grid' in client._addresses:
 			client._addresses['cntrlr_grid'] = Grid(client.active_handlers, 'cntrlr_grid', 4, 4)
 		if not 'cntrlr_encoder_grid' in client._addresses:
@@ -1173,7 +1168,7 @@ class CntrlrModHandler(ModHandler):
 		if not 'key' in client._addresses:
 			client._addresses['key'] = Array(client.active_handlers, 'key', 8)
 		if not 'shift' in client._addresses:
-			client._addresses['shift'] = StoredElement(client.active_handlers, _name = 'shift')
+			client._addresses['shift'] = StoredElement(client.active_handlers, _name = 'shift')"""
 	
 
 	def _receive_cntrlr_grid(self, x, y, value, *a, **k):
@@ -1230,18 +1225,6 @@ class CntrlrModHandler(ModHandler):
 					self._cntrlr_grid.send_value(x - self.x_offset, y - self.y_offset, self._colors[value], True)
 	
 
-	def _receive_key(self, num, value, *a):
-		#self.log_message('_receive_key: %(num)s %(value)s' % {'num':num, 'value':value})
-		if self.is_enabled() and self._active_mod:
-			if not self._keys is None:
-				self._keys.send_value(num, 0, self._colors[value], True)
-	
-
-	def _receive_shift(self, value, *a):
-		if self.is_enabled() and self._active_mod:
-			if not self._shift is None:
-				self._shift.send_value(value)
-	
 
 	def set_cntrlr_grid(self, grid):
 		self._cntrlr_grid = grid
@@ -1265,22 +1248,6 @@ class CntrlrModHandler(ModHandler):
 		self._cntrlr_keys_value.subject = self._cntrlr_keys
 	
 
-	def set_key_buttons(self, keys):
-		self._keys = keys
-		self._keys_value.subject = self._keys
-	
-
-	def set_shift_button(self, button):
-		self._shift = button
-		self._shift_value.subject = self._shift
-	
-
-	@subject_slot('value')
-	def _keys_value(self, value, x, y, *a, **k):
-		#self.log_message('_keys_value: %(x)s %(y)s %(value)s ' % {'x':x, 'y':y, 'value':value})
-		if self._active_mod:
-			self._active_mod.send('key', x, value)
-	
 
 	@subject_slot('value')
 	def _cntrlr_keys_value(self, value, x, y, *a, **k):
@@ -1313,12 +1280,6 @@ class CntrlrModHandler(ModHandler):
 			self._active_mod.send('cntrlr_encoder_button_grid', x, y, value)
 	
 
-	@subject_slot('value')
-	def _shift_value(self, value, *a, **k):
-		if self._active_mod:
-			self._active_mod.send('shift', value)
-			self.update()
-	
 
 	def _display_nav_box(self):
 		if self._cntrlr_grid_value.subject:
