@@ -1776,7 +1776,7 @@ class OhmModHandler(ModHandler):
 			if not self._grid_value.subject is None:
 				if self.active_mod().legacy:
 					adj_x = x - self.x_offset 
-					adj_y = y - self.y_offset - (int(self._is_shifted) * 2)
+					adj_y = y - self.y_offset - (int(self.is_shifted()) * 3)
 				else:
 					adj_x = x
 					adj_y = y
@@ -1818,15 +1818,19 @@ class OhmModHandler(ModHandler):
 		mod = self.active_mod()
 		if not mod is None:
 			if self._grid:
-				if self.is_shifted() or self.is_shiftlocked():
-					self._grid_value.subject = self._grid.submatrix[:, 3:7]
+				##self._grid_value.subject = self._grid
+				if self.is_shifted():
 					self.set_channel_buttons(self._grid.submatrix[:, 1:2])
+					self._grid_value.subject = self._grid.submatrix[:, 3:7]
 					self.set_key_buttons(self._grid.submatrix[:, 7:8])
-				else:
-					self._device_selector.set_matrix(None)
+				elif self.is_shiftlocked():
+					self._grid_value.subject = self._grid.submatrix[:, :7]
+					self.set_key_buttons(self._grid.submatrix[:, 7:8])
 					self.set_channel_buttons(None)
+				else:
 					self.set_key_buttons(None)
 					self._grid_value.subject = self._grid
+					self.set_channel_buttons(None)
 			mod.restore()
 			if mod.legacy:
 				if self.is_shifted():
@@ -1838,6 +1842,8 @@ class OhmModHandler(ModHandler):
 				self._keys_value.subject.reset()
 		if self.is_shifted():
 			self._device_selector.set_matrix(self._grid.submatrix[:, :1])
+		else:
+			self._device_selector.set_matrix(None)
 	
 
 

@@ -1221,7 +1221,7 @@ class CntrlrModHandler(ModHandler):
 	def _receive_grid(self, x, y, value, *a, **k):
 		if self.is_enabled() and self._active_mod and self._active_mod.legacy:
 			if not self._cntrlr_grid is None:
-				if (x - self.x_offset) in range(8) and (y - self.y_offset) in range(4):
+				if (x - self.x_offset) in range(4) and (y - self.y_offset) in range(4):
 					self._cntrlr_grid.send_value(x - self.x_offset, y - self.y_offset, self._colors[value], True)
 	
 
