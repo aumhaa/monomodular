@@ -180,7 +180,7 @@ class AumTroll(Cntrlr):
 		with self.component_guard():
 			self._setup_alt_device_control()
 			self._setup_alt_mixer()
-			self._setup_device_selector()
+			#self._setup_device_selector()   #  Not sure why this was HERE, but removed 051314 because it was overriding mod grid updates
 			#self._setup_alt_device_control()
 		#self.schedule_message(3, self._session._do_show_highlight)
 		self._send_midi(tuple(request_snapshot))
@@ -204,6 +204,7 @@ class AumTroll(Cntrlr):
 	def _enable_alt_shift(self):
 		self._alt_shift_enabled = True
 		self._on_shift_button_value(1)
+	
 
 	def _disable_alt_shift(self):
 		self._alt_shift_enabled = False

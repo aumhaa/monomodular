@@ -1139,36 +1139,19 @@ class CntrlrModHandler(ModHandler):
 
 
 	def __init__(self, *a, **k):
-		super(CntrlrModHandler, self).__init__(*a, **k)
-		self._color_type = 'Monochrome'
 		self._local = True
 		self._last_sent_leds = 1
 		self._cntrlr_grid = None
 		self._cntrlr_encoder_grid = None
 		self._cntrlr_keys = None
-		encoder_grid = RingedGrid('cntrlr_encoder_grid', 4, 3)
-		encoder_button_grid = Grid('cntrlr_encoder_button_grid', 4, 2)
-		self._addresses.update({'cntrlr_grid': {'obj':Grid('cntrlr_grid', 4, 4), 'method':self._receive_cntrlr_grid},
-								'cntrlr_encoder_grid': {'obj':encoder_grid, 'method':self._receive_cntrlr_encoder_grid},
-								'cntrlr_encoder_grid_relative': {'obj':encoder_grid, 'method':self._receive_cntrlr_encoder_grid_relative},
-								'cntrlr_encoder_button_grid': {'obj':encoder_button_grid, 'method':self._receive_cntrlr_encoder_button_grid},
-								'cntrlr_encoder_grid_local': {'obj':encoder_button_grid, 'method':self._receive_cntrlr_encoder_grid_local},
-								'cntrlr_key': {'obj':  Grid('cntrlr_key', 16, 2), 'method': self._receive_cntrlr_key}})
-	
-
-	"""def _register_addresses(self, client):
-		if not 'cntrlr_grid' in client._addresses:
-			client._addresses['cntrlr_grid'] = Grid(client.active_handlers, 'cntrlr_grid', 4, 4)
-		if not 'cntrlr_encoder_grid' in client._addresses:
-			client._addresses['cntrlr_encoder_grid'] = RingedGrid(client.active_handlers, 'cntrlr_encoder_grid', 4, 3)
-		if not 'cntrlr_encoder_button_grid' in client._addresses:
-			client._addresses['cntrlr_encoder_button_grid'] = Grid(client.active_handlers, 'cntrlr_encoder_button_grid', 4, 2)
-		if not 'cntrlr_key' in client._addresses:
-			client._addresses['cntrlr_key'] = Grid(client.active_handlers, 'cntrlr_key', 16, 2)
-		if not 'key' in client._addresses:
-			client._addresses['key'] = Array(client.active_handlers, 'key', 8)
-		if not 'shift' in client._addresses:
-			client._addresses['shift'] = StoredElement(client.active_handlers, _name = 'shift')"""
+		addresses = {'cntrlr_grid': {'obj':Grid('cntrlr_grid', 4, 4), 'method':self._receive_cntrlr_grid},
+								'cntrlr_encoder_grid': {'obj':RingedGrid('cntrlr_encoder_grid', 4, 3), 'method':self._receive_cntrlr_encoder_grid},
+								'cntrlr_encoder_button_grid': {'obj':Grid('cntrlr_encoder_button_grid', 4, 2), 'method':self._receive_cntrlr_encoder_button_grid},
+								'cntrlr_encoder_grid_relative': {'obj':StoredElement(_name = 'cntrlr_encoder_grid_relative'), 'method':self._receive_cntrlr_encoder_grid_relative},
+								'cntrlr_encoder_grid_local': {'obj':StoredElement(_name = 'cntrlr_encoder_grid_local'), 'method':self._receive_cntrlr_encoder_grid_local},
+								'cntrlr_key': {'obj':  Grid('cntrlr_key', 16, 2), 'method': self._receive_cntrlr_key}}
+		super(CntrlrModHandler, self).__init__(addresses = addresses, *a, **k)
+		self._color_type = 'Monochrome'
 	
 
 	def _receive_cntrlr_grid(self, x, y, value, *a, **k):

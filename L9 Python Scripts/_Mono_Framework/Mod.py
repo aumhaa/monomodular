@@ -479,7 +479,7 @@ class RingedGrid(Grid):
 class ModHandler(CompoundComponent):
 
 
-	def __init__(self, script, device_selector = None, *a, **k):
+	def __init__(self, script, addresses = None, device_selector = None, *a, **k):
 		super(ModHandler, self).__init__(*a, **k)
 		self._script = script
 		self._device_selector = device_selector if not device_selector is None else DeviceSelectorComponent(script)
@@ -502,6 +502,7 @@ class ModHandler(CompoundComponent):
 							'shift': {'obj':StoredElement(_name = 'shift'), 'method':self._receive_shift},
 							'alt': {'obj':StoredElement(_name = 'alt'), 'method':self._receive_alt},
 							'channel': {'obj':RadioArray('channel', 8), 'method':self._receive_channel}}
+		self._addresses.update(addresses or {})
 		self._grid = None
 		self._mod_nav_buttons = None
 		self.x_offset = 0
