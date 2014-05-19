@@ -28,6 +28,14 @@ from _Framework.TrackEQComponent import TrackEQComponent # Class representing a 
 from _Framework.TrackFilterComponent import TrackFilterComponent # Class representing a track's filter, attaches to the last filter in the track
 from _Framework.TransportComponent import TransportComponent # Class encapsulating all functions in Live's transport section
 
+from _Framework.ModesComponent import AddLayerMode, LayerMode, MultiEntryMode, ModesComponent, SetAttributeMode, ModeButtonBehaviour, CancellableBehaviour, AlternativeBehaviour, ReenterBehaviour, DynamicBehaviourMixin, ExcludingBehaviourMixin, ImmediateBehaviour, LatchingBehaviour, ModeButtonBehaviour
+from _Framework.Layer import Layer
+from _Framework.SubjectSlot import SubjectEvent, subject_slot, subject_slot_group
+from _Framework.Task import *
+
+from _Framework.M4LInterfaceComponent import M4LInterfaceComponent
+from _Framework.ComboElement import ComboElement, DoublePressElement, MultiElement, DoublePressContext
+
 """Imports from _Mono_Framework"""
 from _Mono_Framework.MonoBridgeElement import MonoBridgeElement
 from _Mono_Framework.MonoButtonElement import MonoButtonElement
@@ -39,7 +47,7 @@ from _Mono_Framework.MonomodComponent import MonomodComponent
 from _Mono_Framework.LiveUtils import *
 
 """Custom files, overrides, and files from other scripts"""
-from MonOhm_b995_9.MonOhm import MonOhm, FunctionModeComponent
+from MonOhm.MonOhm import MonOhm, FunctionModeComponent
 from _Generic.Devices import *
 from Map import *
 
@@ -63,6 +71,33 @@ LIVID = 64
 SHIFT_L = (69)
 
 SHIFT_R = (70)
+
+class CancellableBehaviourWithRelease(CancellableBehaviour):
+
+
+	def release_delayed(self, component, mode):
+		component.pop_mode(mode)
+	
+
+	def update_button(self, component, mode, selected_mode):
+		button = component.get_mode_button(mode)
+		groups = component.get_mode_groups(mode)
+		selected_groups = component.get_mode_groups(selected_mode)
+		value = (mode == selected_mode or bool(groups & selected_groups))*32 or 1
+		button.send_value(value, True)
+	
+
+class ShiftCancellableBehaviourWithRelease(CancellableBehaviour):
+
+
+	def release_delayed(self, component, mode):
+		component.pop_mode(mode)
+	
+
+	def update_button(self, component, mode, selected_mode):
+		pass
+	
+
 
 
 class BlockModShiftModeComponent(ModeSelectorComponent):
@@ -185,9 +220,9 @@ class BlockMod(MonOhm):
 
 	def __init__(self, *a, **k):
 		self._shift_button = None
-		self._shift_pressed = 0
-		self._shift_pressed_timer = 0
-		self._shift_thresh = SHIFT_THRESH
+		#self._shift_pressed = 0
+		#self._shift_pressed_timer = 0
+		#self._shift_thresh = SHIFT_THRESH
 		super(BlockMod, self).__init__(*a, **k)
 		self._host_name = 'BlockMod'
 		self._color_type = 'Monochrome'
@@ -197,7 +232,7 @@ class BlockMod(MonOhm):
 		self._ohm_type = 'static'
 		self._pad_translations = PAD_TRANSLATION
 		self._mem = [4, 8, 12, 16]
-		self._host._navbox_selected = 8
+		#self._host._navbox_selected = 8
 	
 
 	"""script initialization methods"""
@@ -220,7 +255,8 @@ class BlockMod(MonOhm):
 			self._dial[index] = MonoEncoderElement(MIDI_CC_TYPE, CHANNEL, KNOB_CC[index], Live.MidiMap.MapMode.absolute, 'Dial_' + str(index), index + 8, self)
 		for index in range(4):
 			self._menu[index] = MonoButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, FUNCTION_NOTES[index], 'Menu_' + str(index), self)	
-		self._livid = MonoButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, LIVID, 'Livid_Button', self)
+		#self._livid = MonoButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, LIVID, 'Livid_Button', self)
+		self._livid = DoublePressElement(MonoButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, LIVID, 'Livid_Button', self))
 		self._shift_l = MonoButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, SHIFT_L, 'Shift_Button_Left', self)
 		self._shift_r = MonoButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, SHIFT_R, 'Shift_Button_Right', self)
 		self._matrix = ButtonMatrixElement()
@@ -262,7 +298,8 @@ class BlockMod(MonOhm):
 	def _setup_modes(self):
 		self._monomod_mode = MonomodModeComponent(self, self.monomod_mode_update)
 		self._monomod_mode.name = 'Monomod_Mode'
-		self.set_shift_button(self._livid)
+		#self.set_shift_button(self._livid)
+		self._on_shift_doublepress_value.subject = self._livid.double_press
 		self._shift_mode = BlockModShiftModeComponent(self, self.shift_update) 
 		self._shift_mode.name = 'Shift_Mode'
 		self._shift_mode.set_mode_toggle(self._shift_l, self._shift_r)
@@ -287,7 +324,7 @@ class BlockMod(MonOhm):
 	
 
 	def _shift_value(self, value):
-		self._shift_pressed = int(value != 0)
+		"""self._shift_pressed = int(value != 0)
 		if self._shift_pressed > 0:
 			if (self._shift_pressed_timer + self._shift_thresh) > self._timer:
 				if(self._host._active_client != None):
@@ -296,22 +333,22 @@ class BlockMod(MonOhm):
 					else:
 						self._monomod_mode.set_mode(0)
 			else:
-				self._shift_pressed_timer = self._timer % 256
-			if(self._cntrlr != None):
-				self._cntrlr._monohm_shift(2)
-		else:
-			if(self._cntrlr != None):
-				self._cntrlr._monohm_shift(0)
+				self._shift_pressed_timer = self._timer % 256"""
+	
+
+	@subject_slot('value')
+	def _on_shift_doublepress_value(self, value):
+		self._monomod_mode.set_mode(abs(self._monomod_mode._mode_index -1))
 	
 
 	"""shift/zoom methods"""
 	def deassign_matrix(self):
 		self._session_zoom.set_button_matrix(None)
 		self._session_zoom2.set_button_matrix(None)
-		self._session.set_stop_track_clip_buttons(None)
-		self._session2.set_stop_track_clip_buttons(None)
+		#self._session.set_stop_track_clip_buttons(None)
+		#self._session2.set_stop_track_clip_buttons(None)
 		self._session_zoom_main.set_button_matrix(None)
-		self._session_main.set_stop_track_clip_buttons(None)
+		#self._session_main.set_stop_track_clip_buttons(None)
 		for column in range(4):
 			self._mixer2.channel_strip(column).set_select_button(None)
 			self._mixer2.return_strip(column).set_mute_button(None)
@@ -410,8 +447,10 @@ class BlockMod(MonOhm):
 		for index in range(5):
 			self._grid[7][index].set_off_value(SCENE_LAUNCH[self._rgb])
 			self._scene[index].set_launch_button(self._grid[7][index])
-		self._session.set_stop_track_clip_buttons(tuple(track_stop_buttons))
-		self._session2.set_stop_track_clip_buttons(tuple(track_stop_buttons2))
+		#self._session.set_stop_track_clip_buttons(tuple(track_stop_buttons))
+		#self._session.set_stop_track_clip_buttons(self._matrix.submatrix[:4][7:])
+		#self._session2.set_stop_track_clip_buttons(tuple(track_stop_buttons2))
+		#self._session2.set_stop_track_clip_buttons(self._matrix.submatrix[4:8][7:])
 		self._session_zoom.set_button_matrix(self._matrix)
 		self._grid[0][5].set_on_value(RECORD[self._rgb])
 		self._transport.set_record_button(self._grid[0][5])
@@ -426,7 +465,8 @@ class BlockMod(MonOhm):
 		self._send_reset.set_buttons(tuple(self._grid[index + 4][5] for index in range(4)))
 		for index in range(4):
 			self._grid[index + 4][7].set_off_value(DEVICE_SELECT[self._rgb])
-		self._device_selector.assign_buttons(tuple(self._grid[index + 4][7] for index in range(4)), 4)
+		self._device_selector.set_matrix(self._monomod.submatrix[4:8][7:])
+		self._device_selector.set_offset(4)
 	
 
 	def zoom_right(self):
@@ -438,12 +478,14 @@ class BlockMod(MonOhm):
 		for index in range(5):
 			self._grid[7][index].set_off_value(SCENE_LAUNCH[self._rgb])
 			self._scene2[index].set_launch_button(self._grid[7][index])
-		self._session.set_stop_track_clip_buttons(tuple(track_stop_buttons))
+		#self._session.set_stop_track_clip_buttons(tuple(track_stop_buttons))
+		#self._session.set_stop_track_clip_buttons(self._matrix.submatrix[:4][7:])
 		if(self._r_function_mode._mode_index < 3):
 			for index in range(4):
 				self._grid[index + 4][6].set_off_value(TRACK_STOP[self._rgb])
 				track_stop_buttons2.append(self._grid[index + 4][6])
-			self._session2.set_stop_track_clip_buttons(tuple(track_stop_buttons2))
+			#self._session2.set_stop_track_clip_buttons(self._matrix.submatrix[4:8][7:])
+			#self._session2.set_stop_track_clip_buttons(tuple(track_stop_buttons2))
 		self._session_zoom2.set_button_matrix(self._matrix)
 		self._grid[0][5].set_on_value(RECORD[self._rgb])
 		self._transport.set_record_button(self._grid[0][5])
@@ -458,7 +500,8 @@ class BlockMod(MonOhm):
 		self._send_reset.set_buttons(tuple(self._grid[index + 4][5] for index in range(4)))
 		for index in range(4):
 			self._grid[index][7].set_off_value(DEVICE_SELECT[self._rgb])
-		self._device_selector.assign_buttons(tuple(self._grid[index][7] for index in range(4)), 0)
+		self._device_selector.set_matrix(self._monomod.submatrix[:4][7:])
+		self._device_selector.set_offset(0)
 	
 
 	def zoom_main(self):
@@ -469,7 +512,8 @@ class BlockMod(MonOhm):
 		for index in range(5):
 			self._grid[7][index].set_on_value(SCENE_LAUNCH[self._rgb])
 			self._scene_main[index].set_launch_button(self._grid[7][index])
-		self._session_main.set_stop_track_clip_buttons(tuple(track_stop_buttons))
+		#self._session_main.set_stop_track_clip_buttons(tuple(track_stop_buttons))
+		#self._session_main.set_stop_track_clip_buttons(self._matrix[0:8][7:])
 		self._session_zoom_main.set_button_matrix(self._matrix)
 		self._grid[0][5].set_on_value(RECORD[self._rgb])
 		self._transport.set_record_button(self._grid[0][5])
@@ -484,7 +528,8 @@ class BlockMod(MonOhm):
 		self._send_reset.set_buttons(tuple(self._grid[index + 4][5] for index in range(4)))
 		for index in range(4):
 			self._grid[index + 4][7].set_off_value(DEVICE_SELECT[self._rgb])
-		self._device_selector.assign_buttons(tuple(self._grid[index + 4][7] for index in range(4)), 4)
+		self._device_selector.set_matrix(self._monomod.submatrix[4:8][7:])
+		self._device_selector.set_offset(4)
 	
 
 
@@ -493,32 +538,33 @@ class BlockMod(MonOhm):
 		mode = self._l_function_mode._mode_index
 		#if(self._l_function_mode.is_enabled() is False):
 		#	self._l_function_mode.set_mode_buttons(None)
-		if(self._l_function_mode.is_enabled() is True):
-			if(len(self._l_function_mode._modes_buttons) is 0):
-				for index in range(4):
-					self._mixer.channel_strip(index).set_select_button(None)
-				buttons = []
-				for index in range(4):
-					buttons.append(self._grid[index][7]) 
-				self._l_function_mode.set_mode_buttons(tuple(buttons))
-			if(self._shift_mode._mode_index is 2):
-				for index in range(4):
-					if(mode != index):
-						self._grid[index][7].turn_off()
-					else:
-						self._grid[index][7].turn_on()
-		if(mode is 0):
-			self.assign_device_dials()
-			self.show_message('Mixer Split:Dials Device Mode')
-		elif(mode is 1):
-			self.assign_send_dials()
-			self.show_message('Mixer Split:Dials Send Mode')
-		elif(mode is 2):
-			self.assign_split_volume_dials()
-			self.show_message('Mixer Split:Dials Volume Mode')
-		elif(mode is 3):
-			self.assign_user_dials()
-			self.show_message('Mixer Split:Dials User Map Mode')
+		if not self.modhandler.is_enabled():
+			if(self._l_function_mode.is_enabled() is True):
+				if(len(self._l_function_mode._modes_buttons) is 0):
+					for index in range(4):
+						self._mixer.channel_strip(index).set_select_button(None)
+					buttons = []
+					for index in range(4):
+						buttons.append(self._grid[index][7]) 
+					self._l_function_mode.set_mode_buttons(tuple(buttons))
+				if(self._shift_mode._mode_index is 2):
+					for index in range(4):
+						if(mode != index):
+							self._grid[index][7].turn_off()
+						else:
+							self._grid[index][7].turn_on()
+			if(mode is 0):
+				self.assign_device_dials()
+				self.show_message('Mixer Split:Dials Device Mode')
+			elif(mode is 1):
+				self.assign_send_dials()
+				self.show_message('Mixer Split:Dials Send Mode')
+			elif(mode is 2):
+				self.assign_split_volume_dials()
+				self.show_message('Mixer Split:Dials Volume Mode')
+			elif(mode is 3):
+				self.assign_user_dials()
+				self.show_message('Mixer Split:Dials User Map Mode')
 	
 
 	def r_function_update(self):
@@ -527,22 +573,23 @@ class BlockMod(MonOhm):
 		#	self._r_function_mode.set_mode_buttons(None)
 			#self._session2.set_show_highlight(False)
 			#self._session._highlighting_callback(self._session._track_offset, self._session._scene_offset, 4, 5, 1)
-		if(self._r_function_mode.is_enabled() is True):
-			if(len(self._r_function_mode._modes_buttons) is 0):
-				for index in range(4):
-					self._mixer2.channel_strip(index).set_select_button(None)
-				buttons = []
-				for index in range(4):
-					buttons.append(self._grid[index + 4][7]) 
-				self._r_function_mode.set_mode_buttons(tuple(buttons))
-			if(self._shift_mode._mode_index is 3):
-				for index in range(4):
-					if(mode != index):
-						self._grid[index + 4][7].turn_off()
-					else:
-						self._grid[index + 4][7].turn_on()
-		self._session2.set_offsets(int(self._mem[mode]), self._session2._scene_offset)
-		self.show_message('Mixer Split: Track Offset' + str(RIGHT_MODE_OFFSETS[mode]))
+		if not self.modhandler.is_enabled():
+			if(self._r_function_mode.is_enabled() is True):
+				if(len(self._r_function_mode._modes_buttons) is 0):
+					for index in range(4):
+						self._mixer2.channel_strip(index).set_select_button(None)
+					buttons = []
+					for index in range(4):
+						buttons.append(self._grid[index + 4][7]) 
+					self._r_function_mode.set_mode_buttons(tuple(buttons))
+				if(self._shift_mode._mode_index is 3):
+					for index in range(4):
+						if(mode != index):
+							self._grid[index + 4][7].turn_off()
+						else:
+							self._grid[index + 4][7].turn_on()
+			self._session2.set_offsets(int(self._mem[mode]), self._session2._scene_offset)
+			self.show_message('Mixer Split: Track Offset' + str(RIGHT_MODE_OFFSETS[mode]))
 	
 
 	def m_function_update(self):
@@ -552,32 +599,33 @@ class BlockMod(MonOhm):
 			#self._session.set_show_highlight(False)
 			#self._session2.set_show_highlight(False)
 			#self._session_main._highlighting_callback(self._session_main._track_offset, self._session_main._scene_offset, 8, 5, 1)
-		if(self._m_function_mode.is_enabled() is True):
-			if(len(self._m_function_mode._modes_buttons) is 0):
-				for index in range(8):
-					self._mixer.channel_strip(index).set_select_button(None)
-				buttons = []
-				for index in range(4):
-					buttons.append(self._grid[index][7]) 
-				self._m_function_mode.set_mode_buttons(tuple(buttons))
-			if(self._shift_mode._mode_index is 4):
-				for index in range(4):
-					if(mode != index):
-						self._grid[index][7].turn_off()
-					else:
-						self._grid[index][7].turn_on()
-		if(mode is 0):
-			self.assign_device_dials()
-			self.show_message('Mixer Linked:Dials Device Mode')
-		elif(mode is 1):
-			self.assign_send_dials()
-			self.show_message('Mixer Linked:Dials Send Mode')
-		elif(mode is 2):
-			self.assign_volume_dials()
-			self.show_message('Mixer Linked:Dials Volume Mode')
-		elif(mode is 3):
-			self.assign_user_dials()
-			self.show_message('Mixer Linked:Dials User Map Mode')
+		if not self.modhandler.is_enabled():
+			if(self._m_function_mode.is_enabled() is True):
+				if(len(self._m_function_mode._modes_buttons) is 0):
+					for index in range(8):
+						self._mixer.channel_strip(index).set_select_button(None)
+					buttons = []
+					for index in range(4):
+						buttons.append(self._grid[index][7]) 
+					self._m_function_mode.set_mode_buttons(tuple(buttons))
+				if(self._shift_mode._mode_index is 4):
+					for index in range(4):
+						if(mode != index):
+							self._grid[index][7].turn_off()
+						else:
+							self._grid[index][7].turn_on()
+			if(mode is 0):
+				self.assign_device_dials()
+				self.show_message('Mixer Linked:Dials Device Mode')
+			elif(mode is 1):
+				self.assign_send_dials()
+				self.show_message('Mixer Linked:Dials Send Mode')
+			elif(mode is 2):
+				self.assign_volume_dials()
+				self.show_message('Mixer Linked:Dials Volume Mode')
+			elif(mode is 3):
+				self.assign_user_dials()
+				self.show_message('Mixer Linked:Dials User Map Mode')
 	
 
 	def shift_update(self):
@@ -659,6 +707,7 @@ class BlockMod(MonOhm):
 					self.set_highlighting_session_component(self._session_main)
 					self._session_main._do_show_highlight()
 				self._device_selector.set_enabled(True)
+			#self.modhandler._shift_value(int(self._shift_mode._mode_index>1))
 		self.allow_updates(True)
 		#self.set_suppress_rebuild_requests(False)
 		self._clutch_device_selection = False
@@ -668,7 +717,7 @@ class BlockMod(MonOhm):
 			self._monobridge._send('touch', 'on')
 	
 
-	def monomod_mode_update(self):
+	"""def monomod_mode_update(self):
 		if (self._monomod_mode._mode_index == 0) or (self._host._active_client == None):
 			self._host.set_enabled(False)
 			self._host._set_button_matrix(None)
@@ -686,16 +735,43 @@ class BlockMod(MonOhm):
 			self.deassign_matrix()
 			self.deassign_menu()
 			self._monomod.reset()
-			self._host._set_button_matrix(self._monomod)
-			self._host._set_nav_buttons(self._menu[0:4])
-			self._host._set_lock_button(self._shift_l)
-			self._host._set_alt_button(self._shift_r)
-			self._host._set_shift_button(self._livid)
+			self.modhandler._set_button_matrix(self._monomod)
+			self.modhandler._set_nav_buttons(self._menu[0:4])
+			self._modhandler._set_lock_button(self._shift_l)
+			self._modhandler._set_alt_button(self._shift_r)
+			self._modhandler._set_shift_button(self._livid)
 			self._shift_mode.set_mode_toggle(None, None)
-			self._host.set_enabled(True)
+			self._modhandler.set_enabled(True)
 			self._shift_mode.update()
-			#self.show_message('Monomod grid enabled')
+			#self.show_message('Monomod grid enabled')"""
 	
+
+	def monomod_mode_update(self):
+		if(self._monomod_mode._mode_index == 0):
+			self.modhandler.set_enabled(False)
+			self.modhandler.set_grid(None)
+			self.modhandler.set_nav_buttons(None)
+			self.modhandler.set_shiftlock_button(None)
+			self.modhandler.set_alt_button(None)
+			self._livid.turn_off()
+			self._shift_mode.set_mode_toggle(self._shift_l, self._shift_r)
+			self._shift_mode.update()
+			#self._session._reassign_scenes()
+
+		elif(self._monomod_mode._mode_index == 1):
+			self._livid.turn_on()
+			self.deassign_matrix()
+			self.deassign_menu()
+			#self._monomod.reset()
+			self.modhandler.set_grid(self._monomod)
+			self.modhandler.set_nav_buttons(self._menu[0:4])
+			self.modhandler.set_shiftlock_button(self._shift_l)
+			self.modhandler.set_alt_button(self._shift_r)
+			self.modhandler.set_shift_button(self._livid)
+			self.modhandler.set_enabled(True)
+			self._shift_mode.set_mode_toggle(None, None)
+			#self._shift_mode.update()
+			self.show_message('Monomod grid enabled')
 
 	"""left control management methods"""
 	def deassign_dials(self):

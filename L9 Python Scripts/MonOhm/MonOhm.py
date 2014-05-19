@@ -1028,7 +1028,7 @@ class MonOhm(ControlSurface):
 					self.assign_shift_controls()
 					self._session_main.set_show_highlight(True)
 				self._device_selector.set_enabled(True)
-			self.modhandler._shift_value(int(self._shift_mode._mode_index>1))
+			#self.modhandler._shift_value(int(self._shift_mode._mode_index>1))
 		self.allow_updates(True)
 		self._clutch_device_selection = False
 		self.request_rebuild_midi_map()
@@ -1045,6 +1045,7 @@ class MonOhm(ControlSurface):
 			self.modhandler.set_nav_buttons(None)
 			self.modhandler.set_shiftlock_button(None)
 			self.modhandler.set_alt_button(None)
+			self.modhandler.set_shift_button(None)
 			self._livid.turn_off()
 			self._shift_mode.update()
 			#self._session._reassign_scenes()
@@ -1841,7 +1842,7 @@ class OhmModHandler(ModHandler):
 			if not self._keys_value.subject is None:
 				self._keys_value.subject.reset()
 		if self.is_shifted():
-			self._device_selector.set_matrix(self._grid.submatrix[:, :1])
+			self._grid and self._device_selector.set_matrix(self._grid.submatrix[:, :1])
 		else:
 			self._device_selector.set_matrix(None)
 	

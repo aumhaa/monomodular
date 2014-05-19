@@ -658,7 +658,9 @@ class ModHandler(CompoundComponent):
 
 
 	def set_grid(self, grid):
+		#self.log_message('set grid:' + str(grid))
 		self._grid = grid
+		self._grid_value.subject = grid
 		if not self._grid is None:
 			for button, _ in grid.iterbuttons():
 				if not button == None:
