@@ -536,8 +536,8 @@ class BlockMod(MonOhm):
 	"""function mode callbacks"""
 	def l_function_update(self):
 		mode = self._l_function_mode._mode_index
-		#if(self._l_function_mode.is_enabled() is False):
-		#	self._l_function_mode.set_mode_buttons(None)
+		if(self._l_function_mode.is_enabled() is False):
+			self._l_function_mode.set_mode_buttons(None)
 		if not self.modhandler.is_enabled():
 			if(self._l_function_mode.is_enabled() is True):
 				if(len(self._l_function_mode._modes_buttons) is 0):
@@ -569,8 +569,8 @@ class BlockMod(MonOhm):
 
 	def r_function_update(self):
 		mode = self._r_function_mode._mode_index
-		#if(self._r_function_mode.is_enabled() is False):
-		#	self._r_function_mode.set_mode_buttons(None)
+		if(self._r_function_mode.is_enabled() is False):
+			self._r_function_mode.set_mode_buttons(None)
 			#self._session2.set_show_highlight(False)
 			#self._session._highlighting_callback(self._session._track_offset, self._session._scene_offset, 4, 5, 1)
 		if not self.modhandler.is_enabled():
@@ -594,8 +594,8 @@ class BlockMod(MonOhm):
 
 	def m_function_update(self):
 		mode = self._m_function_mode._mode_index
-		#if(self._m_function_mode.is_enabled() is False):
-		#	self._m_function_mode.set_mode_buttons(None)
+		if(self._m_function_mode.is_enabled() is False):
+			self._m_function_mode.set_mode_buttons(None)
 			#self._session.set_show_highlight(False)
 			#self._session2.set_show_highlight(False)
 			#self._session_main._highlighting_callback(self._session_main._track_offset, self._session_main._scene_offset, 8, 5, 1)
@@ -708,6 +708,9 @@ class BlockMod(MonOhm):
 					self._session_main._do_show_highlight()
 				self._device_selector.set_enabled(True)
 			#self.modhandler._shift_value(int(self._shift_mode._mode_index>1))
+		else:
+			for mode in self._function_modes:
+				mode.set_enabled(False)
 		self.allow_updates(True)
 		#self.set_suppress_rebuild_requests(False)
 		self._clutch_device_selection = False
@@ -715,35 +718,6 @@ class BlockMod(MonOhm):
 			self._monobridge._send('touch', 'off')
 		else:
 			self._monobridge._send('touch', 'on')
-	
-
-	"""def monomod_mode_update(self):
-		if (self._monomod_mode._mode_index == 0) or (self._host._active_client == None):
-			self._host.set_enabled(False)
-			self._host._set_button_matrix(None)
-			self._host._set_nav_buttons(None)
-			self._host._set_lock_button(None)
-			self._host._set_alt_button(None)
-			self._host._set_shift_button(None)
-			self._livid.turn_off()
-			self._shift_mode.set_mode_toggle(self._shift_l, self._shift_r)
-			self._shift_mode.update()
-			#self._session._reassign_scenes()
-			
-		elif(self._monomod_mode._mode_index == 1):
-			self._livid.turn_on()
-			self.deassign_matrix()
-			self.deassign_menu()
-			self._monomod.reset()
-			self.modhandler._set_button_matrix(self._monomod)
-			self.modhandler._set_nav_buttons(self._menu[0:4])
-			self._modhandler._set_lock_button(self._shift_l)
-			self._modhandler._set_alt_button(self._shift_r)
-			self._modhandler._set_shift_button(self._livid)
-			self._shift_mode.set_mode_toggle(None, None)
-			self._modhandler.set_enabled(True)
-			self._shift_mode.update()
-			#self.show_message('Monomod grid enabled')"""
 	
 
 	def monomod_mode_update(self):
@@ -772,6 +746,7 @@ class BlockMod(MonOhm):
 			self._shift_mode.set_mode_toggle(None, None)
 			#self._shift_mode.update()
 			self.show_message('Monomod grid enabled')
+	
 
 	"""left control management methods"""
 	def deassign_dials(self):

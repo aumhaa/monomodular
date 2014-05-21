@@ -910,7 +910,6 @@ class ModHandler(CompoundComponent):
 		return (0 in (self._scroll_up_ticks_delay, self._scroll_down_ticks_delay, self._scroll_right_ticks_delay, self._scroll_left_ticks_delay))
 	
 
-
 	def _on_timer(self):
 		if self.is_enabled():
 			scroll_delays = [self._scroll_up_ticks_delay,

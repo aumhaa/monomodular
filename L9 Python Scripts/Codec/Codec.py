@@ -1112,11 +1112,11 @@ class Codec(ControlSurface):
 		#self._alt_mode.pop_mode('alt')
 		with self.component_guard():
 			self.modhandler.set_enabled(False)
-			if not self.modhandler._keys is None:
+			if not self.modhandler._keys_value.subject is None:
 				self.modhandler.keys_layer.leave_mode()
-			if not self.modhandler._code_keys is None:
+			if not self.modhandler._code_keys_value.subject is None:
 				self.modhandler.code_keys_layer.leave_mode()
-			if not self.modhandler._code_buttons is None:
+			if not self.modhandler._code_buttons_value.subject is None:
 				self.modhandler.code_buttons_layer.leave_mode()
 			#self._assign_alternate_mappings(0)
 			for index in range(8):
@@ -1510,7 +1510,7 @@ class CodecModHandler(ModHandler):
 
 
 	def __init__(self, *a, **k):
-		super(CodecModHandler, self).__init__(*a, **k)
+		#super(CodecModHandler, self).__init__(*a, **k)
 		self._color_type = 'Monochrome'
 		self._local = True
 		self._last_sent_leds = 1
@@ -1518,54 +1518,34 @@ class CodecModHandler(ModHandler):
 		self._code_encoder_grid = None
 		self._code_keys = None
 		self._code_buttons = None
-		self._keys = None
-		self._shift = None
-		self._receive_methods = {'grid': self._receive_grid, 
-								'code_grid': self._receive_code_grid,
-								'code_encoder_grid': self._receive_code_encoder_grid,
-								'code_encoder_grid_relative':self._receive_code_encoder_grid_relative,
-								'code_encoder_grid_local':self._receive_code_encoder_grid_local,
-								'code_key':self._receive_code_key,
-								'code_button': self._receive_code_button,
-								'key': self._receive_key,
-								'shift': self._receive_shift}
+		addresses = {'code_grid': {'obj':Grid('code_grid', 8, 4), 'method':self._receive_code_grid},
+					'code_encoder_grid': {'obj':RingedGrid('code_encoder_grid', 8, 4), 'method':self._receive_code_encoder_grid},
+					'code_encoder_grid_relative': {'obj':StoredElement(_name = 'code_encoder_grid_relative'), 'method':self._receive_code_encoder_grid_relative},
+					'code_encoder_grid_local': {'obj':StoredElement(_name = 'code_encoder_grid_local'), 'method':self._receive_code_encoder_grid_local},
+					'code_key': {'obj':  Array('code_key', 8), 'method': self._receive_code_key},
+					'code_button': {'obj':  Array('code_button', 4), 'method': self._receive_code_button}}
+		super(CodecModHandler, self).__init__(addresses = addresses, *a, **k)
 		self._colors = range(128)
-		self._shifted = False
-	
-
-	def _register_addresses(self, client):
-		if not 'code_grid' in client._addresses:
-			client._addresses['code_grid'] = Grid(client.active_handlers, 'code_grid', 8, 4)
-		if not 'code_encoder_grid' in client._addresses:
-			client._addresses['code_encoder_grid'] = RingedGrid(client.active_handlers, 'code_encoder_grid', 8, 4)
-		if not 'code_key' in client._addresses:
-			client._addresses['code_key'] = Array(client.active_handlers, 'code_key', 8)
-		if not 'code_button' in client._addresses:
-			client._addresses['code_button'] = Array(client.active_handlers, 'code_button', 4)
-		if not 'key' in client._addresses:
-			client._addresses['key'] = Array(client.active_handlers, 'key', 8)
-		if not 'shift' in client._addresses:
-			client._addresses['shift'] = StoredElement(client.active_handlers, _name = 'shift')
 	
 
 	def _receive_code_grid(self, x, y, value, *a, **k):
 		#self.log_message('_receive_code_grid: %(x)s %(y)s %(value)s ' % {'x':x, 'y':y, 'value':value})
-		if self.is_enabled() and self._active_mod and not self._active_mod.legacy and not self._code_grid is None and x < 8 and y < 4:
-			self._code_grid.send_value(x, y, self._colors[value], True)
+		if self.is_enabled() and self._active_mod and not self._active_mod.legacy and not self._code_grid_value.subject is None and x < 8 and y < 4:
+			self._code_grid_value.subject.send_value(x, y, self._colors[value], True)
 	
 
 	def _receive_code_encoder_grid(self, x, y, *a, **k):
 		#self.log_message('_receive_code_encoder_grid: %(x)s %(y)s %(k)s' % {'x':x, 'y':y, 'k':k})
-		if self.is_enabled() and self._active_mod and not self._active_mod.legacy and not self._code_encoder_grid is None and x < 8 and y < 4:
+		if self.is_enabled() and self._active_mod and not self._active_mod.legacy and not self._code_encoder_grid_value.subject is None and x < 8 and y < 4:
 			keys = k.keys()
 			if 'value' in keys:
-				self._code_encoder_grid.send_value(x, y, k['value'], True)
+				self._code_encoder_grid_value.subject.send_value(x, y, k['value'], True)
 			if 'mode' in keys:
-				self._code_encoder_grid.get_button(x, y).set_mode(k['mode'])
+				self._code_encoder_grid_value.subject.get_button(x, y).set_mode(k['mode'])
 			if 'green' in keys:
-				self._code_encoder_grid.get_button(x, y).set_green(k['green'])
+				self._code_encoder_grid_value.subject.get_button(x, y).set_green(k['green'])
 			if 'custom' in keys:
-				self._code_encoder_grid.get_button(x, y).set_custom(k['custom'])
+				self._code_encoder_grid_value.subject.get_button(x, y).set_custom(k['custom'])
 	
 
 	def _receive_code_encoder_grid_relative(self, value, *a):
@@ -1585,34 +1565,21 @@ class CodecModHandler(ModHandler):
 	def _receive_code_button(self, num, value, *a):
 		#self._script.log_message('receive code_button' + str(num) + str(value))
 		if self.is_enabled() and self._active_mod:
-			if not self._code_buttons is None:
-				self._code_buttons.send_value(num, 0, self._colors[value], True)
+			if not self._code_buttons_value.subject is None:
+				self._code_buttons_value.subject.send_value(num, 0, self._colors[value], True)
 	
 
 	def _receive_code_key(self, num, value, *a):
 		if self.is_enabled() and self._active_mod and not self._active_mod.legacy:
-			if not self._code_keys is None:
-				self._code_keys.send_value(num, 0, self._colors[value], True)
+			if not self._code_keys_value.subject is None:
+				self._code_keys_value.subject.send_value(num, 0, self._colors[value], True)
 	
 
 	def _receive_grid(self, x, y, value, *a, **k):
 		if self.is_enabled() and self._active_mod and self._active_mod.legacy:
-			if not self._code_grid is None:
+			if not self._code_grid_value.subject is None:
 				if (x - self.x_offset) in range(8) and (y - self.y_offset) in range(4):
-					self._code_grid.send_value(x - self.x_offset, y - self.y_offset, self._colors[value], True)
-	
-
-	def _receive_key(self, num, value, *a):
-		#self.log_message('_receive_key: %(num)s %(value)s' % {'num':num, 'value':value})
-		if self.is_enabled() and self._active_mod:
-			if not self._keys is None:
-				self._keys.send_value(num, 0, self._colors[value], True)
-	
-
-	def _receive_shift(self, value, *a):
-		if self.is_enabled() and self._active_mod:
-			if not self._shift is None:
-				self._shift.send_value(value)
+					self._code_grid_value.subject.send_value(x - self.x_offset, y - self.y_offset, self._colors[value], True)
 	
 
 	def set_code_grid(self, grid):
@@ -1638,26 +1605,6 @@ class CodecModHandler(ModHandler):
 		self._code_buttons_value.subject = self._code_buttons
 	
 
-	def set_key_buttons(self, keys):
-		self._keys = keys
-		self._keys_value.subject = self._keys
-	
-
-	def set_lock_button(self, button):
-		pass
-	
-
-	def set_shift_button(self, button):
-		self._shift = button
-		self._shift_value.subject = self._shift
-	
-
-	@subject_slot('value')
-	def _keys_value(self, value, x, y, *a, **k):
-		#self.log_message('_keys_value: %(x)s %(y)s %(value)s ' % {'x':x, 'y':y, 'value':value})
-		if self._active_mod:
-			self._active_mod.send('key', x, value)
-	
 
 	@subject_slot('value')
 	def _code_keys_value(self, value, x, y, *a, **k):
@@ -1688,13 +1635,6 @@ class CodecModHandler(ModHandler):
 		#self.log_message('_code_encoder_grid_value: %(x)s %(y)s %(value)s ' % {'x':x, 'y':y, 'value':value})
 		if self._active_mod:
 			self._active_mod.send('code_encoder_grid', x, y, value)
-	
-
-	@subject_slot('value')
-	def _shift_value(self, value, *a, **k):
-		if self._active_mod:
-			self._active_mod.send('shift', value)
-			self.update()
 	
 
 	def _display_nav_box(self):
