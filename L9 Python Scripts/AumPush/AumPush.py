@@ -1168,25 +1168,6 @@ class PushModHandler(ModHandler):
 		self.log_message('modhandler select mod: ' + str(mod))
 	
 
-	"""def _register_addresses(self, client):
-		if not 'push_grid' in client._addresses:
-			client._addresses['push_grid'] = PushGrid(client.active_handlers, 'push_grid', 8, 8)
-		if not 'key' in client._addresses:
-			client._addresses['key'] = Array(client.active_handlers, 'key', 8)
-		if not 'shift' in client._addresses:
-			client._addresses['shift'] = StoredElement(client.active_handlers, _name = 'shift')
-		if not 'alt' in client._addresses:
-			client._addresses['alt'] = StoredElement(client.active_handlers, _name = 'alt')
-		if not 'push_name_display' in client._addresses:
-			client._addresses['push_name_display'] = Array(client.active_handlers, 'push_name_display', 8, _value = ' ')
-		if not 'push_value_display' in client._addresses:
-			client._addresses['push_value_display'] = Array(client.active_handlers, 'push_value_display', 8, _value = ' ')
-		if not 'push_alt_name_display' in client._addresses:
-			client._addresses['push_alt_name_display'] = Array(client.active_handlers, 'push_alt_name_display', 8, _value = ' ')
-		if not 'push_alt_value_display' in client._addresses:
-			client._addresses['push_alt_value_display'] = Array(client.active_handlers, 'push_alt_value_display', 8, _value = ' ')"""
-	
-
 	def _receive_push_grid(self, x, y, value, is_id = False, *a, **k):
 		#self.log_message('_receive_push_grid: %s %s %s %s' % (x, y, value, is_id))
 		if self._active_mod and not self._active_mod.legacy:
