@@ -1145,11 +1145,11 @@ class CntrlrModHandler(ModHandler):
 		self._cntrlr_encoder_grid = None
 		self._cntrlr_keys = None
 		addresses = {'cntrlr_grid': {'obj':Grid('cntrlr_grid', 4, 4), 'method':self._receive_cntrlr_grid},
-								'cntrlr_encoder_grid': {'obj':RingedGrid('cntrlr_encoder_grid', 4, 3), 'method':self._receive_cntrlr_encoder_grid},
-								'cntrlr_encoder_button_grid': {'obj':Grid('cntrlr_encoder_button_grid', 4, 2), 'method':self._receive_cntrlr_encoder_button_grid},
-								'cntrlr_encoder_grid_relative': {'obj':StoredElement(_name = 'cntrlr_encoder_grid_relative'), 'method':self._receive_cntrlr_encoder_grid_relative},
-								'cntrlr_encoder_grid_local': {'obj':StoredElement(_name = 'cntrlr_encoder_grid_local'), 'method':self._receive_cntrlr_encoder_grid_local},
-								'cntrlr_key': {'obj':  Grid('cntrlr_key', 16, 2), 'method': self._receive_cntrlr_key}}
+					'cntrlr_encoder_grid': {'obj':RingedGrid('cntrlr_encoder_grid', 4, 3), 'method':self._receive_cntrlr_encoder_grid},
+					'cntrlr_encoder_button_grid': {'obj':Grid('cntrlr_encoder_button_grid', 4, 2), 'method':self._receive_cntrlr_encoder_button_grid},
+					'cntrlr_encoder_grid_relative': {'obj':StoredElement(_name = 'cntrlr_encoder_grid_relative'), 'method':self._receive_cntrlr_encoder_grid_relative},
+					'cntrlr_encoder_grid_local': {'obj':StoredElement(_name = 'cntrlr_encoder_grid_local'), 'method':self._receive_cntrlr_encoder_grid_local},
+					'cntrlr_key': {'obj':  Grid('cntrlr_key', 16, 2), 'method': self._receive_cntrlr_key}}
 		super(CntrlrModHandler, self).__init__(addresses = addresses, *a, **k)
 		self._color_type = 'Monochrome'
 	

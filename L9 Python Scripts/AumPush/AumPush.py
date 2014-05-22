@@ -1110,7 +1110,7 @@ class ModShiftBehaviour(ModeButtonBehaviour):
 class PushGrid(Grid):
 
 
-	def __init__(self, active_handlers, name, width, height):
+	def __init__(self, name, width, height, active_handlers = return_empty, *a, **k):
 		self._active_handlers = active_handlers
 		self._name = name
 		self._cell = [[StoredElement(active_handlers, _name = self._name + '_' + str(x) + '_' + str(y), _x = x, _y = y, _id = -1, _channel = -1 ) for y in range(height)] for x in range(width)]
@@ -1143,22 +1143,15 @@ class PushModHandler(ModHandler):
 
 
 	def __init__(self, *a, **k):
-		super(PushModHandler, self).__init__(*a, **k)
 		self._color_type = 'Push'
 		self._push_grid = None
 		self._push_grid_CC = None
-		self._keys = None
-		self._alt = None
-		self._shift = None
-		self._receive_methods = {'grid': self._receive_grid, 
-								'push_grid': self._receive_push_grid,
-								'key': self._receive_key,
-								'shift': self._receive_shift, 
-								'alt': self._receive_alt,
-								'push_name_display': self._receive_push_name_display,
-								'push_value_display': self._receive_push_value_display,
-								'push_alt_name_display': self._receive_push_alt_name_display,
-								'push_alt_value_display': self._receive_push_alt_value_display}
+		addresses = {'push_grid': {'obj': PushGrid('push_grid', 8, 8), 'method':self._receive_push_grid},
+					'push_name_display': {'obj': Array('push_name_display', 8, _value = ' '), 'method': self._receive_push_name_display},
+					'push_value_display': {'obj': Array('push_value_display', 8, _value = ' '), 'method': self._receive_push_value_display},
+					'push_alt_name_display': {'obj': Array('push_alt_name_display', 8, _value = ' '), 'method': self._receive_push_alt_name_display},
+					'push_alt_value_display': {'obj': Array('push_alt_value_display', 8, _value = ' '), 'method': self._receive_push_alt_value_display}}
+		super(PushModHandler, self).__init__(addresses = addresses, *a, **k)
 		self._push_colors = range(128)
 		self._push_colors[1:8] = [3, 85, 33, 95, 5, 21, 67]
 		self._push_colors[127] = 67
@@ -1175,7 +1168,7 @@ class PushModHandler(ModHandler):
 		self.log_message('modhandler select mod: ' + str(mod))
 	
 
-	def _register_addresses(self, client):
+	"""def _register_addresses(self, client):
 		if not 'push_grid' in client._addresses:
 			client._addresses['push_grid'] = PushGrid(client.active_handlers, 'push_grid', 8, 8)
 		if not 'key' in client._addresses:
@@ -1191,15 +1184,15 @@ class PushModHandler(ModHandler):
 		if not 'push_alt_name_display' in client._addresses:
 			client._addresses['push_alt_name_display'] = Array(client.active_handlers, 'push_alt_name_display', 8, _value = ' ')
 		if not 'push_alt_value_display' in client._addresses:
-			client._addresses['push_alt_value_display'] = Array(client.active_handlers, 'push_alt_value_display', 8, _value = ' ')
+			client._addresses['push_alt_value_display'] = Array(client.active_handlers, 'push_alt_value_display', 8, _value = ' ')"""
 	
 
 	def _receive_push_grid(self, x, y, value, is_id = False, *a, **k):
 		#self.log_message('_receive_push_grid: %s %s %s %s' % (x, y, value, is_id))
 		if self._active_mod and not self._active_mod.legacy:
-			if not self._push_grid == None:
+			if not self._push_grid_value.subject == None:
 				if is_id:
-					button = self._push_grid.get_button(x, y)
+					button = self._push_grid_value.subject.get_button(x, y)
 					if not button is None:
 						if value._id is -1 and value._channel is -1:
 							button.use_default_message()
@@ -1216,7 +1209,7 @@ class PushModHandler(ModHandler):
 							button.set_enabled(False)
 				else:
 					if x < 8 and y < 8:
-						self._push_grid.send_value(x, y, self._push_colors[self._colors[value]], True)
+						self._push_grid_value.subject.send_value(x, y, self._push_colors[self._colors[value]], True)
 					#else:
 					#	self.log_message('out of range: ' + str(x) + ' ' + str(y) + '.')
 	
@@ -1224,26 +1217,16 @@ class PushModHandler(ModHandler):
 	def _receive_grid(self, x, y, value, *a, **k):
 		#self._receive_push_grid(x, y, value, *a, **k)
 		if self._active_mod and self._active_mod.legacy:
-			if not self._push_grid is None:
+			if not self._push_grid_value.subject is None:
 				if (x - self.x_offset) in range(8) and (y - self.y_offset) in range(8):
 					#self.log_message('receive grid %(x)s %(y)s %(v)s' % {'x':x, 'y':y, 'v':value})
-					self._push_grid.send_value(x - self.x_offset, y - self.y_offset, self._push_colors[self._colors[value]], True)
+					self._push_grid_value.subject.send_value(x - self.x_offset, y - self.y_offset, self._push_colors[self._colors[value]], True)
 	
 
 	def _receive_key(self, x, value):
 		#self.log_message('_receive_key: %s %s' % (x, value))
-		if not self._keys is None:
-			self._keys.send_value(x, 0, self._push_colors[self._colors[value]], True)
-	
-
-	def _receive_shift(self, value):
-		if not self._shift is None:
-			self._shift.send_value(value)
-	
-
-	def _receive_alt(self, value):
-		if not self._alt is None:
-			self._alt.send_value(value)
+		if not self._keys_value.subject is None:
+			self._keys_value.subject.send_value(x, 0, self._push_colors[self._colors[value]], True)
 	
 
 	def _receive_push_name_display(self, x, value):
@@ -1269,7 +1252,7 @@ class PushModHandler(ModHandler):
 	def set_push_grid(self, grid):
 		self._push_grid = grid
 		self._push_grid_value.subject = self._push_grid
-		if not self._push_grid is None:
+		if not self._push_grid_value.subject is None:
 			for button, _ in grid.iterbuttons():
 				if not button == None:
 					button.use_default_message()
@@ -1284,25 +1267,8 @@ class PushModHandler(ModHandler):
 		self._push_grid_CC_value.subject = self._push_grid_CC
 	
 
-	def set_key_buttons(self, keys):
-		self._keys = keys
-		self._keys_value.subject = self._keys
-		if self.active_mod():
-			self.active_mod()._addresses['push_grid'].restore()
-	
-
 	def set_lock_button(self, button):
 		pass
-	
-
-	def set_shift_button(self, button):
-		self._shift = button
-		self._shift_value.subject = self._shift
-	
-
-	def set_alt_button(self, button):
-		self._alt = button
-		self._alt_value.subject = self._alt
 	
 
 	def set_name_display_line(self, display):
@@ -1332,12 +1298,6 @@ class PushModHandler(ModHandler):
 	
 
 	@subject_slot('value')
-	def _keys_value(self, value, x, y, *a, **k):
-		if self._active_mod:
-			self._active_mod.send('key', x, value)
-	
-
-	@subject_slot('value')
 	def _push_grid_value(self, value, x, y, *a, **k):
 		#self.log_message('_base_grid_value ' + str(x) + str(y) + str(value))
 		if self._active_mod:
@@ -1357,20 +1317,6 @@ class PushModHandler(ModHandler):
 		#self.log_message('_base_grid_CC_value ' + str(x) + str(y) + str(value))
 		if self._active_mod:
 			self._active_mod.send('push_grid_CC', x, y, value)
-	
-
-	@subject_slot('value')
-	def _shift_value(self, value, *a, **k):
-		if self._active_mod:
-			self._active_mod.send('shift', value)
-			self.update()
-	
-
-	@subject_slot('value')
-	def _alt_value(self, value, *a, **k):
-		if self._active_mod:
-			self._active_mod.send('alt', value)
-			self.update_device()
 	
 
 	def _display_nav_box(self):
