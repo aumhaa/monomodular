@@ -6,7 +6,7 @@ inlets = 1;
 var script = this;
 
 
-var DEBUG = true;
+var DEBUG = false;
 var SHOW_STORAGE = false;
 var FORCELOAD = false;
 

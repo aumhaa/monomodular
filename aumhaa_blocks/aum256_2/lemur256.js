@@ -7,6 +7,9 @@ setinletassist(1, "osc input");
 setoutletassist(0, "ipad osc output");
 setoutletassist(1, "osc address");
 
+var DEBUG = false;
+var FORCELOAD = false;
+
 undefined = (function(){var u; return u;})();	///required to return an actual 'undefined', in case its variable name gets reassigned
 var elements=[];	///array that holds all elements(MAX API Objects) in the script
 var surface;   		///finder for the control_surface; represents the specific control_surface script
@@ -69,22 +72,39 @@ var threshold = 50;
 var extra;
 var last_grid = [];
 
-const LEMUR256=new RegExp(/(Lemur256)/);
+var LEMUR256=new RegExp(/(Lemur256)/);
 
-const old_multi=[0, 1, 2, 3, 4, 5, 6, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6];
-const multi=[0, 127, 5, 3, 1, 6, 9, 127, 0, 1, 3, 127, 0, 2, 4, 127, 0, 3, 5, 127, 0, 4, 6, 127, 0, 5, 8, 127, 0, 6, 9];
-const mono=[0, 127, 5, 3, 1, 6, 9, 127, 0, 1, 3, 127, 0, 2, 4, 127, 0, 3, 5, 127, 0, 4, 6, 127, 0, 5, 8, 127, 0, 6, 9];
+var old_multi=[0, 1, 2, 3, 4, 5, 6, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6];
+var multi=[0, 127, 5, 3, 1, 6, 9, 127, 0, 1, 3, 127, 0, 2, 4, 127, 0, 3, 5, 127, 0, 4, 6, 127, 0, 5, 8, 127, 0, 6, 9];
+var mono=[0, 127, 5, 3, 1, 6, 9, 127, 0, 1, 3, 127, 0, 2, 4, 127, 0, 3, 5, 127, 0, 4, 6, 127, 0, 5, 8, 127, 0, 6, 9];
 
-const all_colors=["green", "green", "yellow", "orange", "red", "purple", "blue", "gray"];
-const mono_colors=["gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray"];
+var all_colors=["green", "green", "yellow", "orange", "red", "purple", "blue", "gray"];
+var mono_colors=["gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray"];
 var colors=all_colors;
 
-const menu_names=['play', 'green', 'stop', 'gray', 'record', 'red', 'loop', 'yellow', 'stop clips', 'purple', 'overdub', 'orange', '-', 'green', '+', 'green', 'lock', 'purple', '- track', 'blue', 'track +', 'blue', 'on/off', 'gray'];
+var menu_names=['play', 'green', 'stop', 'gray', 'record', 'red', 'loop', 'yellow', 'stop clips', 'purple', 'overdub', 'orange', '-', 'green', '+', 'green', 'lock', 'purple', '- track', 'blue', 'track +', 'blue', 'on/off', 'gray'];
 
 function callback(){}
 
+function debug()
+{
+	if(DEBUG)
+	{
+		var args = arrayfromargs(arguments);
+		for(var i in args)
+		{
+			if(args[i] instanceof Array)
+			{
+				args[i] = args[i].join(' ');
+			}
+		}
+		post('debug->', args, '\n');
+	}
+}
+
 function init(cid)
 {
+	debug('lemur256 init');
 	if(alive==0)
 	{
 		for(var i=0;i<256;i++)
@@ -163,7 +183,7 @@ function pipe(args)
 				//post('clip_name', args, '\n');
 				break;
 			default:
-				post('pipe default: ', args[0], args[1], args[2], args[3], '\n');
+				debug('pipe default: ', args[0], args[1], args[2], args[3], '\n');
 				break;
 		}
 	}
@@ -174,14 +194,6 @@ function dissolve()
 	if(alive>0)
 	{
 		alive=0;
-		if((device)&&(device.property)){
-			device.property = 0;
-			device.id = 0;
-		}
-		if((monobridge)&&(monobridge.property)){
-			monobridge.property = 0;
-			monobridge.id = 0;
-		}
 		post('Lemur256 script dissolved\n');	
 	}
 	//outlet(3, "dissolve");
@@ -301,4 +313,16 @@ function host(address)
 		set_brightness(bright);
 	}
 }
+
+//used to reinitialize the script immediately on saving; 
+//can be turned on by changing FORCELOAD to 1;
+//should only be turned on while editing
+
+function forceload()
+{
+	if(FORCELOAD){init();}
+}
+
+forceload();
+
 
