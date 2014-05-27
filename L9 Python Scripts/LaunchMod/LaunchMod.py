@@ -28,10 +28,9 @@ class LaunchMod(Launchpad):
 	def __init__(self, *a, **k):
 		ControlSurface.__init__(self, *a, **k)
 		with self.component_guard():
-			self._monomod_version = 'b995'
+			self._monomod_version = 'b996'
 			self._host_name = 'LaunchMod'
 			self._color_type = 'Launchpad'
-			self.hosts = []
 			self._timer = 0
 			self._suppress_send_midi = True
 			self._suppress_session_highlight = True
@@ -91,12 +90,6 @@ class LaunchMod(Launchpad):
 		self._monobridge.name = 'MonoBridge'
 	
 
-	def _setup_monomod(self):
-		self._host = MonomodComponent(self)
-		self._host.name = 'Monomod_Host'
-		self.hosts = [self._host]
-	
-
 	def _setup_mod(self):
 		self.monomodular = get_monomodular(self)
 		self.monomodular.name = 'monomodular_switcher'
@@ -127,24 +120,7 @@ class LaunchModHandler(ModHandler):
 	def __init__(self, *a, **k):
 		super(LaunchModHandler, self).__init__(*a, **k)
 		self._color_type = 'RGB'
-		self._keys = None
-		self._shift = None
-		self._alt = None
-		self._receive_methods = {'grid': self._receive_grid,
-								'key': self._receive_key,
-								'shift': self._receive_shift,
-								'alt': self._receive_alt}
 		self._colors = range(128)
-		self._shifted = False
-	
-
-	def _register_addresses(self, client):
-		if not 'key' in client._addresses:
-			client._addresses['key'] = Array(client.active_handlers, 'key', 8)
-		if not 'shift' in client._addresses:
-			client._addresses['shift'] = StoredElement(client.active_handlers, _name = 'shift')
-		if not 'alt' in client._addresses:
-			client._addresses['alt'] = StoredElement(client.active_handlers, _name = 'alt')
 	
 
 	def _receive_grid(self, x, y, value, *a, **k):
@@ -154,47 +130,13 @@ class LaunchModHandler(ModHandler):
 					self._grid.send_value(x - self.x_offset, y - self.y_offset, self._colors[value], True)
 	
 
-	def _receive_key(self, num, value, *a):
-		#self.log_message('_receive_key: %(num)s %(value)s' % {'num':num, 'value':value})
-		if self.is_enabled() and self._active_mod:
-			if not self._keys is None:
-				self._keys.send_value(num, 0, self._colors[value], True)
-	
-
-	def _receive_shift(self, value, *a):
-		if self.is_enabled() and self._active_mod:
-			if not self._shift is None:
-				self._shift.send_value(value)
-	
-
-	def _receive_alt(self, value, *a):
-		if self.is_enabled() and self._active_mod:
-			if not self._alt is None:
-				self._alt.send_value(value)
-	
-
 	def set_grid(self, grid):
 		self._grid = grid
 		self._grid_value.subject = self._grid
 	
 
-	def set_key_buttons(self, keys):
-		self._keys = keys
-		self._keys_value.subject = self._keys
-	
-
 	def set_lock_button(self, button):
 		pass
-	
-
-	def set_shift_button(self, button):
-		self._shift = button
-		self._shift_value.subject = self._shift
-	
-
-	def set_alt_button(self, button):
-		self._alt_button = button
-		self._alt_value.subject = self._alt_button
 	
 
 	@subject_slot('value')
@@ -210,27 +152,6 @@ class LaunchModHandler(ModHandler):
 					self._active_mod.send('grid', x + self.x_offset, y + self.y_offset, value)
 			else:
 				self._active_mod.send('grid', x, y, value)
-	
-
-	@subject_slot('value')
-	def _keys_value(self, value, x, y, *a, **k):
-		#self.log_message('_keys_value: %(x)s %(y)s %(value)s ' % {'x':x, 'y':y, 'value':value})
-		if self._active_mod:
-			self._active_mod.send('key', x, value)
-	
-
-	@subject_slot('value')
-	def _shift_value(self, value, *a, **k):
-		if self._active_mod:
-			self._active_mod.send('shift', value)
-			self.update()
-	
-
-	@subject_slot('value')
-	def _alt_value(self, value, *a, **k):
-		if self._active_mod:
-			self._active_mod.send('alt', value)
-			self.update()
 	
 
 	def _display_nav_box(self):
