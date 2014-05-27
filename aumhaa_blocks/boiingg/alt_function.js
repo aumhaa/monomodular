@@ -9,7 +9,8 @@ setoutletassist(0, 'preset data grid output');
 setoutletassist(1, 'gate value output');
 setoutletassist(2, 'main data grid output');
 
-var DEBUG = true
+var DEBUG = false;
+
 var args1 = jsarguments[1];
 var unique = jsarguments[2];
 var alive = 0;
@@ -17,14 +18,31 @@ var storage;// = this.patcher.getnamed('boiingg');
 var preset_selector;// = this.patcher.getnamed('preset_selector');
 var s_offset = [0, 0];
 var preset = 0;
-var alt = 0;
+var alted = 0;
 var empty = [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2];
 var rotate_grid = false;
 
-var FORCELOAD = 1 ; //this doesn't work anymore, don't waste your time. -a
+var FORCELOAD = false;
+
+function debug()
+{
+	if(DEBUG)
+	{
+		var args = arrayfromargs(arguments);
+		for(var i in args)
+		{
+			if(args[i] instanceof Array)
+			{
+				args[i] = args[i].join(' ');
+			}
+		}
+		post('debug->', args, '\n');
+	}
+}
 
 function init()
 {
+	debug('INIT BOINNGG ALTFUNC');
 	alive = 1;
 	storage = this.patcher.getnamed(args1);
 	preset_selector = this.patcher.getnamed('preset_selector');
@@ -32,11 +50,18 @@ function init()
 
 function alt(value)
 {
-    if(value == 1)
-    {    
-        outlet(0, 0);
-        outlet(1, 'clear');
-    }
+	alted = value>0;
+    if(value == 0)
+	{
+		outlet(0, 'clear');
+		outlet(1, 1);
+	}
+	else
+	{
+		outlet(1, 0);
+		outlet(0, 'clear');
+		storage.message('getslotlist');
+	}
 }
 
 function surface_offset(x, y)
@@ -45,11 +70,11 @@ function surface_offset(x, y)
 	s_offset = [x, y];
 }
 
-function list(x, y, z)
+function grid(x, y, z)
 {
 	if(alive > 0)
 	{
-		if(alt > 0)
+		if(alted)
 		{
 			if(z>0)
 			{
@@ -91,7 +116,7 @@ function slotlist()
 	args = arrayfromargs(arguments);
 	//post('slotlist', args, '\n');
 	var loaded = empty.slice();
-	if(alt>0)
+	if(alted)
 	{
 		for(var i=0;i<args.length;i++)
 		{
@@ -109,14 +134,14 @@ function slotlist()
 	}
 } 
 
-function msg_int(key)
+function msg_int(val)
 {
 	if(alive > 0)
 	{
 		if(inlet == 1)
 		{
-			alt=key;
-			if(key<1)
+			alted=val>0;
+			if(alted)
 			{
 				outlet(0, 'clear');
 				outlet(1, 1);
@@ -133,13 +158,7 @@ function msg_int(key)
 
 function anything()
 {
-	if(DEBUG){post("anything", arrayfromargs(messagename, arguments), '\n');}
-}
-
-function grid(x, y, z)
-{
-	if(DEBUG){post('grid', x, y, z, '\n');}
-	list(x, y, z);
+	debug("anything:", arrayfromargs(messagename, arguments));
 }
 
 function key(x, val)

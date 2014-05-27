@@ -255,6 +255,10 @@ class Grid(object):
 			self.value(column, row, value)
 	
 
+	def clear(self, value, *a):
+		self.all(0)
+	
+
 	def all(self, value, *a):
 		for column in range(len(self._cell)):
 			for row in range(len(self._cell[column])):
@@ -501,7 +505,7 @@ class ModHandler(CompoundComponent):
 							'key': {'obj':Array('key', 8), 'method':self._receive_key},
 							'shift': {'obj':StoredElement(_name = 'shift'), 'method':self._receive_shift},
 							'alt': {'obj':StoredElement(_name = 'alt'), 'method':self._receive_alt},
-							'channel': {'obj':RadioArray('channel', 8), 'method':self._receive_channel}}
+							'channel': {'obj':RadioArray('channel', 16), 'method':self._receive_channel}}
 		self._addresses.update(addresses or {})
 		self._grid = None
 		self._mod_nav_buttons = None
@@ -715,13 +719,14 @@ class ModHandler(CompoundComponent):
 	
 
 	def _receive_channel(self, x, value):
-		#self.log_message('_receive_key: %s %s' % (x, value))
+		#self.log_message('_receive_channel: %s %s' % (x, value))
 		if not self._channel_value.subject is None:
 			self._channel_value.subject.send_value(x, 0, self._colors[value], True)
 	
 
 	@subject_slot('value')
 	def _channel_value(self, value, x, y, *a, **k):
+		self.log_message('_channel_value: %s %s' % (x, value))
 		if value and self._active_mod:
 			self._active_mod.send('channel', x)
 	
