@@ -279,7 +279,6 @@ class MonOhm(ControlSurface):
 		self._color_type = 'OhmRGB'
 		self._update_linked_device_selection = None
 		self._link_mixer = LINK_MIXER
-		self.hosts = []
 		self._bright = True
 		self._rgb = 0
 		self._timer = 0
@@ -293,7 +292,6 @@ class MonOhm(ControlSurface):
 		self._ohm_type = 'static'
 		self._pad_translations = PAD_TRANSLATION
 		self._update_linked_device_selection = None
-		self._use_pedal = USE_PEDAL
 		self._disable_master = DISABLE_MASTER_VOLUME
 		self._mem = [4, 8, 12]
 		self._mixers = []
@@ -378,18 +376,6 @@ class MonOhm(ControlSurface):
 			for column in range(8):
 				button_row.append(self._grid[column][row])
 			self._monomod.add_row(tuple(button_row))
-		#self._dummy_button = ButtonElement(is_momentary, MIDI_NOTE_TYPE, 15, 125)
-		#self._dummy_button.name = 'Dummy1'
-		#self._dummy_button2 = ButtonElement(is_momentary, MIDI_NOTE_TYPE, 15, 126)
-		#self._dummy_button2.name = 'Dummy2'
-		#self._dummy_button3 = ButtonElement(is_momentary, MIDI_NOTE_TYPE, 15, 127)
-		#self._dummy_button2.name = 'Dummy3'
-		self._pedal = [None for index in range(8)]
-		if self._use_pedal is True:
-			for index in range(8):
-					self._pedal[index] = EncoderElement(MIDI_CC_TYPE, 0, 25+index, Live.MidiMap.MapMode.absolute)
-					self._pedal[index].name = 'Pedal_'+str(index)
-					self._pedal[index]._report = False
 	
 
 	def _setup_transport_control(self):
@@ -1028,7 +1014,7 @@ class MonOhm(ControlSurface):
 					self.assign_shift_controls()
 					self._session_main.set_show_highlight(True)
 				self._device_selector.set_enabled(True)
-			#self.modhandler._shift_value(int(self._shift_mode._mode_index>1))
+			self.modhandler._shift_value(int(self._shift_mode._mode_index>1))
 		self.allow_updates(True)
 		self._clutch_device_selection = False
 		self.request_rebuild_midi_map()
@@ -1802,6 +1788,42 @@ class OhmModHandler(ModHandler):
 					self._active_mod.send('grid', x + self.x_offset, y + self.y_offset, value)
 			else:
 				self._active_mod.send('grid', x, y, value)
+	
+
+	@subject_slot('value')
+	def _alt_value(self, value, *a, **k):
+		if not self.is_shifted():
+			super(OhmModHandler, self)._alt_value(value)
+	
+
+	@subject_slot('value')
+	def _on_shiftlock_value(self, value):
+		if not self.is_shifted():
+			super(OhmModHandler, self)._on_shiftlock_value(value)
+	
+
+	@subject_slot('value')
+	def _on_nav_up_value(self, value):
+		if not self.is_shifted():
+			super(OhmModHandler, self)._on_nav_up_value(value)
+	
+
+	@subject_slot('value')
+	def _on_nav_down_value(self, value):
+		if not self.is_shifted():
+			super(OhmModHandler, self)._on_nav_down_value(value)
+	
+
+	@subject_slot('value')
+	def _on_nav_left_value(self, value):
+		if not self.is_shifted():
+			super(OhmModHandler, self)._on_nav_left_value(value)
+	
+
+	@subject_slot('value')
+	def _on_nav_right_value(self, value):
+		if not self.is_shifted():
+			super(OhmModHandler, self)._on_nav_right_value(value)
 	
 
 	def _display_nav_box(self):

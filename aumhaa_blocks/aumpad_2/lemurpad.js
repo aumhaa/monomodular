@@ -7,7 +7,8 @@ setinletassist(1, "osc input");
 setoutletassist(0, "ipad osc output");
 setoutletassist(1, "osc address");
 
-const DEBUG = 0;
+var DEBUG = false;
+var FORCELOAD = false;
 
 undefined = (function(){var u; return u;})();	///required to return an actual 'undefined', in case its variable name gets reassigned
 var elements=[];	///array that holds all elements(MAX API Objects) in the script
@@ -83,6 +84,22 @@ var colors=all_colors;
 const menu_names=['play', 'green', 'stop', 'gray', 'record', 'red', 'loop', 'yellow', 'stop clips', 'purple', 'overdub', 'orange', '-', 'green', '+', 'green', 'lock', 'purple', '- track', 'blue', 'track +', 'blue', 'on/off', 'gray'];
 
 function callback(){}
+
+function debug()
+{
+	if(DEBUG)
+	{
+		var args = arrayfromargs(arguments);
+		for(var i in args)
+		{
+			if(args[i] instanceof Array)
+			{
+				args[i] = args[i].join(' ');
+			}
+		}
+		post('debug->', args, '\n');
+	}
+}
 
 function init(cid)
 {
@@ -190,14 +207,6 @@ function dissolve()
 	if(alive>0)
 	{
 		alive=0;
-		if((device)&&(device.property)){
-			device.property = 0;
-			device.id = 0;
-		}
-		if((monobridge)&&(monobridge.property)){
-			monobridge.property = 0;
-			monobridge.id = 0;
-		}
 		post('Lemur script dissolved\n');	
 	}
 	//outlet(3, "dissolve");
@@ -339,4 +348,15 @@ function host(address)
 		set_brightness(bright);
 	}
 }
+
+//used to reinitialize the script immediately on saving; 
+//can be turned on by changing FORCELOAD to 1;
+//should only be turned on while editing
+
+function forceload()
+{
+	if(FORCELOAD){init();}
+}
+
+forceload();
 

@@ -7,6 +7,7 @@ import copy
 import Live
 import contextlib
 from _Tools.re import *
+from _Framework.ButtonMatrixElement import ButtonMatrixElement
 from _Framework.ControlSurface import ControlSurface
 from _Framework.ControlSurfaceComponent import ControlSurfaceComponent
 from _Framework.ControlElement import ControlElement
@@ -720,7 +721,7 @@ class ModHandler(CompoundComponent):
 
 	def _receive_channel(self, x, value):
 		#self.log_message('_receive_channel: %s %s' % (x, value))
-		if not self._channel_value.subject is None:
+		if not self._channel_value.subject is None and x < self._channel_value.subject.width():
 			self._channel_value.subject.send_value(x, 0, self._colors[value], True)
 	
 
