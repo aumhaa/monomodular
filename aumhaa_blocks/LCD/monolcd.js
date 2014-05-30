@@ -11,7 +11,7 @@ setinletassist(4, 'clock');
 setinletassist(5, 'jit.displays');
 setoutletassist(0, 'dump output');
 
-DEBUG = 0;
+DEBUG = 1;
 
 var patch_type = jsarguments[1];
 var unique = jsarguments[2];
@@ -89,7 +89,7 @@ var AUMPC40 = {colors:[0, 1, .3, 1], regexp: new RegExp(/(AumPC40)/), n: 'AumPC4
 				names:['Track_Control_0', 'Track_Control_1', 'Track_Control_2', 'Track_Control_3', 'Device_Control_0', 'Device_Control_1', 'Device_Control_2', 'Device_Control_3',
 						'Track_Control_4', 'Track_Control_5', 'Track_Control_6', 'Track_Control_7', 'Device_Control_4', 'Device_Control_5', 'Device_Control_6', 'Device_Control_7', 
 						'None', 'None', 'None', 'None', 'None', 'None', 'None', 'None',
-						'Slider_0', 'Slider_1', 'Slider_2', 'Slider_3', 'Slider_4', 'Slider_5', 'Slider_6', 'Slider_7']};
+						'0_Volume_Control', '1_Volume_Control', '2_Volume_Control', '3_Volume_Control', '4_Volume_Control', '5_Volume_Control', '6_Volume_Control', '7_Volume_Control']};
 var AUMPC20 = {colors:[.3, .8, .3, 1], regexp: new RegExp(/(AumPC20)/), n: 'AumPC20', 
 				names:['None', 'None', 'None', 'None', 'None', 'None', 'None', 'None',
 						'None', 'None', 'None', 'None', 'None', 'None', 'None', 'None', 

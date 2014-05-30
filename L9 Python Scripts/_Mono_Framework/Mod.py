@@ -783,7 +783,9 @@ class ModHandler(CompoundComponent):
 
 
 	def set_lock_button(self, button):
-		self._on_shiftlock_value.subject = button
+		self._on_lock_value.subject = button
+		if button:
+			button.send_value(self.is_locked()*8)
 	
 
 	def is_locked(self):
@@ -793,7 +795,7 @@ class ModHandler(CompoundComponent):
 	def set_lock(self, value):
 		self._is_locked = value > 0
 		if not self._on_lock_value.subject is None:
-			self._on_lock_value.subject.send_value(self.is_locked())
+			self._on_lock_value.subject.send_value(self.is_locked()*8)
 	
 
 	@subject_slot('value')
