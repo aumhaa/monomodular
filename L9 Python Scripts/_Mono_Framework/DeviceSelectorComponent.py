@@ -184,9 +184,11 @@ class NewDeviceSelectorComponent(ControlSurfaceComponent):
 		buttons = []
 		if not matrix is None:
 			for button, address in matrix.iterbuttons():
-				button.use_default_message()
-				button.set_enabled(True)
-				buttons.append(button)
+				self._script.log_message('button is: ' + str(button))
+				if not button is None:
+					button.use_default_message()
+					button.set_enabled(True)
+					buttons.append(button)
 		self.set_buttons(buttons)
 	
 

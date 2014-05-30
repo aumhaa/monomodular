@@ -727,7 +727,7 @@ class ModHandler(CompoundComponent):
 
 	@subject_slot('value')
 	def _channel_value(self, value, x, y, *a, **k):
-		self.log_message('_channel_value: %s %s' % (x, value))
+		#self.log_message('_channel_value: %s %s' % (x, value))
 		if value and self._active_mod:
 			self._active_mod.send('channel', x)
 	

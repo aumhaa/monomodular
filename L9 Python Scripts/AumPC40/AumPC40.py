@@ -33,7 +33,7 @@ from APC40.TransportComponent import TransportComponent
 from APC40.SessionComponent import SessionComponent
 
 from _APC.APC import APC
-from _APC.ControlElementUtils import make_pedal_button, make_encoder, make_ring_encoder, make_slider
+from _APC.ControlElementUtils import make_pedal_button, make_slider, make_knob, make_encoder
 from _APC.DeviceBankButtonElement import DeviceBankButtonElement
 from _APC.DeviceComponent import DeviceComponent
 from _APC.MixerComponent import MixerComponent
@@ -47,7 +47,7 @@ from _Mono_Framework.MonoEncoderElement import MonoEncoderElement
 from _Mono_Framework.MonomodComponent import MonomodComponent
 from _Mono_Framework.Mod import *
 
-from MonoRingedEncoderElement import RingedEncoderElement, MonoRingedEncoderElement
+from MonoRingedEncoderElement import MonoRingedEncoderElement
 
 
 MapMode = Live.MidiMap.MapMode
@@ -56,12 +56,32 @@ SESSION_HEIGHT = 5
 MIXER_SIZE = 8
 
 
-def make_button(channel, identifier, name = None, cs = None, *a, **k):
+def make_button(channel, identifier, name = '', cs = None, *a, **k):
 	return AumPCMonoButtonElement(True, MIDI_NOTE_TYPE, channel, identifier, name = name, cs = cs, *a, **k)
 
+"""
+def make_slider(channel, identifier, name = '', num = 0, script = None, *a, **k):
+	return MonoEncoderElement(MIDI_CC_TYPE, channel, identifier, MapMode.absolute, name, num, script, *a, **k)
 
 
-class AumPCMonoButtonElement(MonoButtonElement):
+def make_knob(channel, identifier, name = '', num = 0, script = None, *a, **k):
+	return MonoEncoderElement(MIDI_CC_TYPE, channel, identifier, MapMode.absolute, name, num, script, *a, **k)
+
+"""
+def make_ring_encoder(encoder_identifer, button_identifier, name = '', num = 0, script = None, *a, **k):
+	button_name = '%s_Ring_Mode_Button' % name
+	button = ButtonElement(False, MIDI_CC_TYPE, 0, button_identifier, name=button_name)
+	encoder = MonoRingedEncoderElement(MIDI_CC_TYPE, 0, encoder_identifer, MapMode.absolute, name=name, num=num, script=script, *a, **k)
+	encoder.set_ring_mode_button(button)
+	encoder.set_feedback_delay(-1)
+	return encoder
+
+"""
+def make_encoder(channel, identifier, name = '', num = 0, script = None,  *a, **k):
+	return MonoEncoderElement(MIDI_CC_TYPE, channel, identifier, MapMode.relative_two_compliment, name, num, script, *a, **k)
+
+"""
+class AumPCMonoButtonElement(MonoButtonElement): 
 
 
 	def __init__(self, *a, **k):
@@ -69,11 +89,11 @@ class AumPCMonoButtonElement(MonoButtonElement):
 		self.set_color_map(tuple([1, 1, 1, 1, 1, 1, 1]))
 	
 
-	def send_value(self, value, force_send = False):
-		if self._script and self._script.flash_status:
-			super(AumPCMonoButtonElement, self).send_value(value, force_send)
+	def send_value(self, value, force = False):
+		if not self._script is None and self._script.flash_status:
+			super(AumPCMonoButtonElement, self).send_value(value, force)
 		else:
-			InputControlElement.send_value(self, value, force_send)
+			InputControlElement.send_value(self, value, force)
 	
 
 
@@ -110,7 +130,7 @@ class AumPC40(APC40):
 		self._host_name = 'AumPC'
 		self._color_type = 'APC'
 		self._timer = 0
-		self.flash_status = 0
+		self.flash_status = False
 		with self.component_guard():
 			self._setup_monobridge()
 			self._setup_mod()
@@ -136,27 +156,27 @@ class AumPC40(APC40):
 		self._selected_scene_launch_button = make_pedal_button(64, name='Selected_Scene_Launch_Button')
 		self._volume_controls = []
 		self._arm_buttons = []
-		self._solo_buttons = []
-		self._mute_buttons = []
+		self._original_solo_buttons = []
+		self._original_mute_buttons = []
 		self._select_buttons = []
 		for index in xrange(MIXER_SIZE):
 			self._volume_controls.append(make_slider(index, 7, name='%d_Volume_Control' % index))
 			self._arm_buttons.append(make_on_off_button(index, 48, name='%d_Arm_Button' % index, cs = self))
-			self._solo_buttons.append(make_on_off_button(index, 49, name='%d_Solo_Button' % index, cs = self))
-			self._mute_buttons.append(make_on_off_button(index, 50, name='%d_Mute_Button' % index, cs = self))
+			self._original_solo_buttons.append(make_on_off_button(index, 49, name='%d_Solo_Button' % index, cs = self))
+			self._original_mute_buttons.append(make_on_off_button(index, 50, name='%d_Mute_Button' % index, cs = self))
 			self._select_buttons.append(make_on_off_button(index, 51, name='%d_Select_Button' % index, cs = self))
 
-		self._crossfader_control = make_slider(0, 15, name='Crossfader')
-		self._master_volume_control = make_slider(0, 14, name='Master_Volume_Control')
+		self._crossfader_control = make_slider(0, 15, name='Crossfader', script = self)
+		self._master_volume_control = make_slider(0, 14, name='Master_Volume_Control', script = self)
 		self._master_select_button = make_on_off_button(0, 80, name='Master_Select_Button', cs = self)
-		self._prehear_control = make_encoder(0, 47, name='Prehear_Volume_Control')
+		self._prehear_control = make_encoder(0, 47, name='Prehear_Volume_Control', script = self)
 		self._device_bank_buttons = []
 		self._device_param_controls_raw = []
 		bank_button_labels = ('Clip_Track_Button', 'Device_On_Off_Button', 'Previous_Device_Button', 'Next_Device_Button', 'Detail_View_Button', 'Rec_Quantization_Button', 'Midi_Overdub_Button', 'Metronome_Button')
 		for index in range(8):
 			self._device_bank_buttons.append(make_on_off_button(0, 58 + index, name=bank_button_labels[index]))
 			encoder_name = 'Device_Control_%d' % index
-			ringed_encoder = make_ring_encoder(16 + index, 24 + index, name=encoder_name)
+			ringed_encoder = make_ring_encoder(16 + index, 24 + index, name=encoder_name, num = index + 8, script = self)
 			self._device_param_controls_raw.append(ringed_encoder)
 
 		self._play_button = make_button(0, 91, name='Play_Button')
@@ -169,7 +189,7 @@ class AumPC40(APC40):
 		self._global_param_controls = []
 		for index in range(8):
 			encoder_name = 'Track_Control_%d' % index
-			ringed_encoder = make_ring_encoder(48 + index, 56 + index, name=encoder_name)
+			ringed_encoder = make_ring_encoder(48 + index, 56 + index, name=encoder_name, num = index, script = self)
 			self._global_param_controls.append(ringed_encoder)
 
 		self._global_bank_buttons = [ make_on_off_button(0, 87 + index, name=name) for index, name in enumerate(('Pan_Button', 'Send_A_Button', 'Send_B_Button', 'Send_C_Button')) ]
@@ -184,11 +204,10 @@ class AumPC40(APC40):
 
 		self._monomod = ButtonMatrixElement(name = 'Monomod')
 		for row in self._matrix_rows_raw:
-			self.log_message('button row: ' + str(row))
 			self._monomod.add_row(row)
 		self._monomod.add_row(self._track_stop_buttons)
 		self._monomod.add_row(self._select_buttons)
-		self._monomod.add_row(self._solo_buttons)
+		self._monomod.add_row(self._original_mute_buttons)
 
 		def wrap_matrix(control_list, wrapper = nop):
 			return ButtonMatrixElement(rows=[map(wrapper, control_list)])
@@ -197,12 +216,14 @@ class AumPC40(APC40):
 		self._track_stop_buttons = wrap_matrix(self._track_stop_buttons)
 		self._volume_controls = wrap_matrix(self._volume_controls)
 		self._arm_buttons = wrap_matrix(self._arm_buttons)
-		self._solo_buttons = wrap_matrix(self._solo_buttons)
-		self._mute_buttons = wrap_matrix(self._mute_buttons)
+		self._original_solo_buttons = wrap_matrix(self._original_solo_buttons)
+		self._original_mute_buttons = wrap_matrix(self._original_mute_buttons)
 		self._select_buttons = wrap_matrix(self._select_buttons)
 		self._device_param_controls = wrap_matrix(self._device_param_controls_raw)
 		self._device_bank_buttons = wrap_matrix(self._device_bank_buttons, partial(DeviceBankButtonElement, modifiers=[self._shift_button]))
 
+		self._solo_buttons = self._original_solo_buttons
+		self._mute_buttons = self._original_mute_buttons
 
 	
 
@@ -216,8 +237,19 @@ class AumPC40(APC40):
 		self.monomodular.name = 'monomodular_switcher'
 		self.modhandler = APCModHandler(self)
 		self.modhandler.name = 'ModHandler' 
+		self.modhandler.layer = Layer(priority = 5,
+										grid = self._monomod, 
+										nav_up_button = self._up_button, 
+										nav_down_button = self._down_button, 
+										nav_left_button = self._left_button, 
+										nav_right_button = self._right_button,
+										lock_button = self._nudge_up_button,
+										alt_button = self._nudge_down_button)
+										#shift_button = self._shift_button,)
+		self.modhandler.set_enabled(False)
 		self._monomod_mode = MonomodModeComponent(self._monomod_mode_update, self)
 		self._monomod_mode.name = "Monomod_Mode_Component"
+		self._monomod_mode.layer = Layer(priority = 5, mode_toggle = self._master_select_button)
 		self._on_shift_value.subject = self._shift_button
 	
 
@@ -244,58 +276,27 @@ class AumPC40(APC40):
 
 	@subject_slot('value')
 	def _on_shift_value(self, value):
-		#self.log_message('got shift: ' + str(value))
-		if value:
-			self._mixer.master_strip().set_select_button(None)
-			self._monomod_mode.set_mode_toggle(self._master_select_button)
-		else:
-			self._mixer.master_strip().set_select_button(self._master_select_button)
-			self._monomod_mode.set_mode_toggle(None)
+		self._monomod_mode.set_enabled(value>0)
+		if self.modhandler.is_enabled():
+			self.modhandler._shift_value(value)
 	
 
 	def _monomod_mode_update(self):
 		#self.log_message('mode update: ' + str(self._monomod_mode._mode_index))
 		if(self._monomod_mode._mode_index == 0):
-			self.flash_status = 0
+			self.flash_status = False
 			self.modhandler.set_enabled(False)
-			self.modhandler.set_grid(None)
-			self.modhandler.set_nav_buttons(None)
-			self.modhandler.set_lock_button(None)
-			self.modhandler.set_alt_button(None)
-			self.modhandler.set_shift_button(None)
 			self._monomod.reset()
-			self._session.set_track_bank_buttons(self._right_button, self._left_button)
-			self._session.set_scene_bank_buttons(self._down_button, self._up_button)
-			for track in range(8):
-				self._mixer.channel_strip(track).set_select_button(self._select_buttons[track])
-				self._mixer.channel_strip(track).set_solo_button(self._solo_buttons[track])
-			self._transport.set_nudge_buttons(self._nudge_up_button, self._nudge_down_button)
-			self._session.set_enabled(True)
-			self._session_zoom._is_zoomed_out = False
-			self._session_zoom.set_enabled(True)
-			self.request_rebuild_midi_map()
-			self._master_select_button.turn_off()
+			self._solo_buttons = self._original_solo_buttons
+			self._mute_buttons = self._original_mute_buttons
+			self._on_selected_track_changed()
 			
 		elif(self._monomod_mode._mode_index == 1):
-			self._transport.set_nudge_buttons(None, None)
-			for track in range(8):
-				self._mixer.channel_strip(track).set_select_button(None)
-				self._mixer.channel_strip(track).set_solo_button(None)
-			self._session.set_enabled(False)
-			self._session_zoom.set_enabled(False)
-			self._session.set_track_bank_buttons(None, None)
-			self._session.set_scene_bank_buttons(None, None)
-			self.flash_status = 1
+			self._solo_buttons = self._original_mute_buttons
+			self._mute_buttons = self._original_solo_buttons
+			self.flash_status = True
 			self._monomod.reset()
-			self.modhandler.set_grid(self._monomod)
-			self.modhandler.set_nav_buttons([self._up_button, self._down_button, self._left_button, self._right_button])
-			self.modhandler.set_shift_button(self._shift_button)
-			self.modhandler.set_lock_button(self._nudge_up_button)
-			self.modhandler.set_alt_button(self._nudge_down_button)
 			self.modhandler.set_enabled(True)
-			self.request_rebuild_midi_map()
-			self._master_select_button.turn_on()
-			#self.log_message('mod mode')
 	
 
 	"""m4l bridge"""
@@ -388,7 +389,7 @@ class APCModHandler(ModHandler):
 	
 
 	def _receive_grid(self, x, y, value, *a, **k):
-		#self._receive_grid(x, y, value, *a, **k)
+		#self.log_message('receive_grid: ' + str(x) + ' ' + str(y) + ' ' + str(value))
 		if self._active_mod:
 			if not self._grid_value.subject is None:
 				if self.active_mod().legacy:
@@ -433,34 +434,35 @@ class APCModHandler(ModHandler):
 	
 
 	def update(self, *a, **k):
-		mod = self.active_mod()
-		if not mod is None:
-			if self._grid:
-				##self._grid_value.subject = self._grid
-				if self.is_shifted():
-					self.set_channel_buttons(self._grid.submatrix[:, 1:2])
-					self._grid_value.subject = self._grid.submatrix[:, 3:7]
-					self.set_key_buttons(self._grid.submatrix[:, 7:8])
-				elif self.is_shiftlocked():
-					self._grid_value.subject = self._grid.submatrix[:, :7]
-					self.set_key_buttons(self._grid.submatrix[:, 7:8])
-					self.set_channel_buttons(None)
-				else:
-					self.set_key_buttons(None)
-					self._grid_value.subject = self._grid
-					self.set_channel_buttons(None)
-			mod.restore()
-			if mod.legacy:
-				if self.is_shifted():
-					self._display_nav_box()
-		else:
-			if not self._grid_value.subject is None:
-				self._grid_value.subject.reset()
-			if not self._keys_value.subject is None:
-				self._keys_value.subject.reset()
-		#if self.is_shifted():
-		#	self._grid and self._device_selector.set_matrix(self._grid.submatrix[:, :1])
-		#else:
-		#	self._device_selector.set_matrix(None)
+		if self.is_enabled():
+			mod = self.active_mod()
+			if not mod is None:
+				if self._grid:
+					if self.is_shifted():
+						self.set_channel_buttons(self._grid.submatrix[:, 1:2])
+						self._grid_value.subject = self._grid.submatrix[:, 2:7]
+						self.set_key_buttons(self._grid.submatrix[:, 7:8])
+					elif self.is_shiftlocked():
+						self._grid_value.subject = self._grid.submatrix[:, :7]
+						self.set_key_buttons(self._grid.submatrix[:, 7:8])
+						self.set_channel_buttons(None)
+					else:
+						self.set_key_buttons(None)
+						self._grid_value.subject = self._grid
+						self.set_channel_buttons(None)
+				self._script.schedule_message(1, mod.restore)
+				if mod.legacy:
+					if self.is_shifted():
+						self._display_nav_box()
+			else:
+				if not self._grid_value.subject is None:
+					self._grid_value.subject.reset()
+				if not self._keys_value.subject is None:
+					self._keys_value.subject.reset()
+			if self.is_shifted():
+				buttons = [button for button, _ in self._grid.iterbuttons()]
+				self._device_selector.set_buttons(buttons[:8])
+			else:
+				self._device_selector.set_matrix(None)
 	
 
