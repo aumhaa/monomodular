@@ -216,7 +216,7 @@ def return_empty():
 
 
 
-class BaseSessionRecordingComponent(SessionRecordingComponent):
+class BaseSessionRecordingComponent(FixedLengthSessionRecordingComponent):
 
 
 	def __init__(self, *a, **k):
@@ -2084,7 +2084,7 @@ class Base(ControlSurface):
 			self._transport.set_overdub_button(None)
 			self._recorder.set_new_button(None)
 			self._recorder.set_record_button(None)
-			#self._recorder.set_length_button(None)
+			self._recorder.set_length_button(None)
 			self._recorder.set_length_buttons(None)
 			self._offset_component.deassign_all()
 			self._vertical_offset_component.deassign_all()
@@ -2238,7 +2238,7 @@ class Base(ControlSurface):
 					self._transport.set_overdub_button(self._button[4])
 					self._recorder.set_new_button(self._button[5])
 					self._recorder.set_record_button(self._button[6])
-					#self._recorder.set_length_button(self._button[7])
+					self._recorder.set_length_button(self._button[7])
 			else:
 				is_midi = self._assign_midi_shift_layer()
 				if not is_midi:
