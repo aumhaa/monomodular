@@ -29,12 +29,96 @@ NOTENAMES = [(_NOTENAMES[index%12] + ' ' + str(int(index/12))) for index in rang
 SCALENAMES = None
 SCALEABBREVS = None
 
-from Map import *
+#from Map import *
 
 CHANNELS = ['Ch. 2', 'Ch. 3', 'Ch. 4', 'Ch. 5', 'Ch. 6', 'Ch. 7', 'Ch. 8', 'Ch. 9', 'Ch. 10', 'Ch. 11', 'Ch. 12', 'Ch. 13', 'Ch. 14', 'Ch. 15', 'Ch. 16']
 MODES = ['chromatic', 'drumpad', 'scale', 'user']
 
 DEFAULT_MIDI_ASSIGNMENTS = {'mode':'chromatic', 'offset':36, 'vertoffset':12, 'scale':'Chromatic', 'drumoffset':0, 'split':False}
+
+"""The scale modes and drumpads use the following note maps"""
+
+NOTES = [24, 25, 26, 27, 28, 29, 30, 31, 16, 17, 18, 19, 20, 21, 22, 23, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7]
+#DRUMNOTES = [48, 49, 50, 51, 64, 65, 66, 67, 44, 45, 46, 47, 60, 61, 62, 63, 40, 41, 42, 43, 56, 57, 58, 59, 36, 37, 38, 39, 52, 53, 54, 55]
+DRUMNOTES = [12, 13, 14, 15, 28, 29, 30, 31, 8, 9, 10, 11, 24, 25, 26, 27, 4, 5, 6, 7, 20, 21, 22, 23, 0, 1, 2, 3, 16, 17, 18, 19]
+SCALENOTES = [36, 38, 40, 41, 43, 45, 47, 48, 24, 26, 28, 29, 31, 33, 35, 36, 12, 14, 16, 17, 19, 21, 23, 24, 0, 2, 4, 5, 7, 9, 11, 12]
+WHITEKEYS = [0, 2, 4, 5, 7, 9, 11, 12]
+
+"""These are the scales we have available.  You can freely add your own scales to this """
+SCALES = 	{'Mod':[0,1,2,3,4,5,6,7,8,9,10,11],
+			'Session':[0,1,2,3,4,5,6,7,8,9,10,11],
+			'Auto':[0,1,2,3,4,5,6,7,8,9,10,11],
+			'Chromatic':[0,1,2,3,4,5,6,7,8,9,10,11],
+			'DrumPad':[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],
+			'Major':[0,2,4,5,7,9,11],
+			'Minor':[0,2,3,5,7,8,10],
+			'Dorian':[0,2,3,5,7,9,10],
+			'Mixolydian':[0,2,4,5,7,9,10],
+			'Lydian':[0,2,4,6,7,9,11],
+			'Phrygian':[0,1,3,5,7,8,10],
+			'Locrian':[0,1,3,4,7,8,10],
+			'Diminished':[0,1,3,4,6,7,9,10],
+			'Whole-half':[0,2,3,5,6,8,9,11],
+			'Whole_Tone':[0,2,4,6,8,10],
+			'Minor_Blues':[0,3,5,6,7,10],
+			'Minor_Pentatonic':[0,3,5,7,10],
+			'Major_Pentatonic':[0,2,4,7,9],
+			'Harmonic_Minor':[0,2,3,5,7,8,11],
+			'Melodic_Minor':[0,2,3,5,7,9,11],
+			'Dominant_Sus':[0,2,5,7,9,10],
+			'Super_Locrian':[0,1,3,4,6,8,10],
+			'Neopolitan_Minor':[0,1,3,5,7,8,11],
+			'Neopolitan_Major':[0,1,3,5,7,9,11],
+			'Enigmatic_Minor':[0,1,3,6,7,10,11],
+			'Enigmatic':[0,1,4,6,8,10,11],
+			'Composite':[0,1,4,6,7,8,11],
+			'Bebop_Locrian':[0,2,3,5,6,8,10,11],
+			'Bebop_Dominant':[0,2,4,5,7,9,10,11],
+			'Bebop_Major':[0,2,4,5,7,8,9,11],
+			'Bhairav':[0,1,4,5,7,8,11],
+			'Hungarian_Minor':[0,2,3,6,7,8,11],
+			'Minor_Gypsy':[0,1,4,5,7,8,10],
+			'Persian':[0,1,4,5,6,8,11],
+			'Hirojoshi':[0,2,3,7,8],
+			'In-Sen':[0,1,5,7,10],
+			'Iwato':[0,1,5,6,10],
+			'Kumoi':[0,2,3,7,9],
+			'Pelog':[0,1,3,4,7,8],
+			'Spanish':[0,1,3,4,5,6,8,10]
+			}
+
+SCALEABBREVS = {'Session':'-S','Auto':'-A','Chromatic':'12','DrumPad':'-D','Major':'M-','Minor':'m-','Dorian':'II','Mixolydian':'V',
+			'Lydian':'IV','Phrygian':'IH','Locrian':'VH','Diminished':'d-','Whole-half':'Wh','Whole Tone':'WT','Minor Blues':'mB',
+			'Minor Pentatonic':'mP','Major Pentatonic':'MP','Harmonic Minor':'mH','Melodic Minor':'mM','Dominant Sus':'D+','Super Locrian':'SL',
+			'Neopolitan Minor':'mN','Neopolitan Major':'MN','Enigmatic Minor':'mE','Enigmatic':'ME','Composite':'Cp','Bebop Locrian':'lB',
+			'Bebop Dominant':'DB','Bebop Major':'MB','Bhairav':'Bv','Hungarian Minor':'mH','Minor Gypsy':'mG','Persian':'Pr',
+			'Hirojoshi':'Hr','In-Sen':'IS','Iwato':'Iw','Kumoi':'Km','Pelog':'Pg','Spanish':'Sp'}
+
+
+"""Any scale names in this array will automatically use SplitMode when chosen, regardless of the SplitSwitch for the individual MIDI Channel"""
+SPLIT_SCALES = []
+
+"""It is possible to create a custom list of scales to be used by the script.  For instance, the list below would include major, minor, auto, drumpad, and chromatic scales, in that order."""
+#SCALENAMES = ['Major', 'Minor', 'Auto', 'DrumPad', 'Chromatic']
+
+"""This is the default scale used by Auto when something other than a drumrack is detected for the selected track"""
+DEFAULT_AUTO_SCALE = 'Major'
+
+"""This is the default Vertical Offset for any scale other than DrumPad """
+DEFAULT_VERTOFFSET = 4
+
+"""This is the default NoteOffset, aka RootNote, used for scales other than DrumPad"""
+DEFAULT_OFFSET = 48
+
+"""This is the default NoteOffset, aka RootNote, used for the DrumPad scale;  it is a multiple of 4, so an offset of 4 is actually a RootNote of 16"""
+DEFAULT_DRUMOFFSET = 9
+
+"""This is the default Scale used for all MIDI Channels"""
+DEFAULT_SCALE = 'Auto'
+
+"""This is the default SplitMode used for all MIDI Channels"""
+DEFAULT_SPLIT = False
+
 
 if SCALENAMES is None:
 	SCALENAMES = [scale for scale in sorted(SCALES.iterkeys())]
@@ -42,6 +126,7 @@ if SCALENAMES is None:
 if SCALEABBREVS is None:
 	SCALEABBREVS = []
 
+OFFSET_SHIFT_IS_MOMENTARY = True
 
 class SplitModeSelector(ModeSelectorComponent):
 
@@ -316,11 +401,12 @@ class ScrollingOffsetComponent(ControlSurfaceComponent):
 		self.on_enabled_changed()
 	
 
-class BaseSessionComponent(SessionComponent):
+
+class ScaleSessionComponent(SessionComponent):
 
 
 	def __init__(self, num_tracks, num_scenes, script):
-		super(BaseSessionComponent, self).__init__(num_tracks, num_scenes)
+		super(ScaleSessionComponent, self).__init__(num_tracks, num_scenes)
 		self._shifted = False
 		self._script = script
 	
@@ -453,6 +539,7 @@ class MonoScaleComponent(CompoundComponent):
 	def __init__(self, script, *a, **k):
 		super(MonoScaleComponent, self).__init__(*a, **k)
 		self._script = script
+		self._matrix = None
 		self._setup_selected_session_control()
 		self._touchstrip = None
 
@@ -484,21 +571,21 @@ class MonoScaleComponent(CompoundComponent):
 	display_layer = forward_property('_display')('layer')
 
 	def _setup_selected_session_control(self):
-		self._selected_session = BaseSessionComponent(1, 32, self)
+		self._selected_session = ScaleSessionComponent(1, 32, self)
 		self._selected_session.name = "SelectedSession"
 		self._selected_session.set_offsets(0, 0)	 
-		self._selected_session.set_stop_track_clip_value(STOP_CLIP)
+		#self._selected_session.set_stop_clip_value(STOP_CLIP)
 		self._selected_scene = [None for index in range(32)]
 		for row in range(32):
 			self._selected_scene[row] = self._selected_session.scene(row)
 			self._selected_scene[row].name = 'SelectedScene_' + str(row)
 			clip_slot = self._selected_scene[row].clip_slot(0)
 			clip_slot.name = 'Selected_Clip_Slot_' + str(row)
-			clip_slot.set_triggered_to_play_value(CLIP_TRG_PLAY)
-			clip_slot.set_triggered_to_record_value(CLIP_TRG_REC)
-			clip_slot.set_stopped_value(CLIP_STOP)
-			clip_slot.set_started_value(CLIP_STARTED)
-			clip_slot.set_recording_value(CLIP_RECORDING)
+			#clip_slot.set_triggered_to_play_value(CLIP_TRG_PLAY)
+			#clip_slot.set_triggered_to_record_value(CLIP_TRG_REC)
+			#clip_slot.set_stopped_value(CLIP_STOP)
+			#clip_slot.set_started_value(CLIP_STARTED)
+			#clip_slot.set_recording_value(CLIP_RECORDING)
 	
 
 	def set_touchstrip(self, control):
@@ -537,7 +624,7 @@ class MonoScaleComponent(CompoundComponent):
 					button.use_default_message()
 			self._matrix_value.subject = matrix
 		if self._matrix_value.subject:
-			self._script.schedule_message(1, self._assign_midi_layer)
+			self._script.schedule_message(1, self.update)
 	
 
 	@subject_slot('value')
@@ -585,42 +672,8 @@ class MonoScaleComponent(CompoundComponent):
 			self._script._session._do_show_highlight()
 	
 
-	def _is_mod(self, device):
-		mod_device = None
-		if isinstance(device, Live.Device.Device):
-			if device.can_have_chains and not device.can_have_drum_pads and len(device.view.selected_chain.devices)>0:
-				device = device.view.selected_chain.devices[0]
-		if not device is None:
-			if self._script._monomodular and self._script.monomodular._mods:
-				for mod in self._script.monomodular._mods:
-					if mod.device == device:
-						mod_device = mod
-						break
-		return mod_device
-	
-
-	def _assign_mod(self):
-		mod = self._is_mod(self._device._device)
-		if not mod is None:
-			#self._send_midi(MIDIBUTTONMODE)
-			self._script.modhandler._assign_base_grid(self._base_grid)
-			self._script.modhandler._assign_base_grid_CC(self._base_grid_CC)
-			if self.shift_pressed():
-				self.modhandler._assign_keys(self._keys)
-			else:
-				self.modhandler._assign_keys(self._keys_display)
-				if self._layer == 2:
-					self.modhandler._fader_color_override = True
-		self.modhandler.select_mod(mod)
-		return not mod is None
-	
-
 	def _detect_instrument_type(self, track):
 		scale = DEFAULT_AUTO_SCALE
-		#for device in self._get_devices(track):
-		#if self._assign_mod():
-		#	scale = 'Mod'
-		#else:
 		for device in track.devices:
 			if isinstance(device, Live.Device.Device):
 				self._script.log_message('device: ' + str(device.class_name))
@@ -830,16 +883,14 @@ class MonoScaleComponent(CompoundComponent):
 		return is_midi
 	
 
-	def _assign_midi_layer(self):
-		cur_track = self._mixer._selected_strip._track
-		if self._detect_instrument_type(cur_track) is 'Mod':
-			return True
-		else:
+	def update(self):
+		if self.is_enabled() and self._button_matrix:
+			self.
+			cur_track = self._mixer._selected_strip._track
 			is_midi = False
 			scale, offset, vertoffset = ' ', ' ', ' '
-		
+
 			if cur_track.has_midi_input:
-				#self._send_midi(USERBUTTONMODE)
 				if AUTO_ARM_SELECTED:
 					if not cur_track.arm:
 						self.schedule_message(1, self._arm_current_track, cur_track)
@@ -857,12 +908,8 @@ class MonoScaleComponent(CompoundComponent):
 					if scale == 'Auto':
 						scale = self._detect_instrument_type(cur_track)
 						#self.log_message('auto found: ' + str(scale))
-					if scale == 'Session':
-						is_midi = False
-					elif scale == 'Mod':
-						is_midi = True
 					elif scale in SPLIT_SCALES or split:
-						self._send_midi(SPLITBUTTONMODE)
+						#self._send_midi(SPLITBUTTONMODE)
 						scale_len = len(SCALES[scale])
 						if scale is 'DrumPad':
 							for row in range(4):
@@ -879,8 +926,6 @@ class MonoScaleComponent(CompoundComponent):
 									self._pad[column + (row*8)].set_enabled(False)
 									self._pad[column + (row*8)].set_channel(cur_chan)
 									self._pad[column + (row*8)]._descriptor = str(NOTENAMES[self._pad[column + (row*8)]._msg_identifier])
-									self._pad_CC[column + (row*8)].set_enabled(False)
-									self._pad_CC[column + (row*8)].set_channel(cur_chan)
 									if not sequencer:
 										self._selected_scene[column+(row*4)].clip_slot(0).set_launch_button(self._pad[column + 4 + (row*8)])
 						else:
@@ -981,9 +1026,69 @@ class MonoScaleComponent(CompoundComponent):
 				else:
 					is_midi = False
 
-			return is_midi	
+				#return is_midi	
+	
+	def assign_keypad(self, grid, scale):
+		if grid and scale in SCALES:
+			scale_len = len(SCALES[scale])
+			height = grid.height()
+
+			offset, vertoffset = offsets['offset'], offsets['vertoffset']
+
+			for button, (x, y) in grid.iterbuttons():
+
+				note_pos = x + (abs(height-y)*vertoffset)
+				note = offset + SCALES[scale][note_pos%scale_len] + (12*int(note_pos/scale_len))
+				button.set_identifier(note%127)
+				button.scale_color = KEYCOLORS[(note%12 in WHITEKEYS) + (((note_pos%scale_len)==0)*2)]
+				button.send_value(button.scale_color, True)
+
+				#button.display_press = True
+				#button.press_flash(0, True)
+				#button._descriptor = str(NOTENAMES[self._pad[column + (row*8)]._msg_identifier])
+				#button_CC.set_identifier(note%127)
+
+				self._offset_component._shifted_value = 11
 	
 
+	def assign_drumpad(self, grid):
+		if grid:
+			height = grid.height()
+			width = grid.width()
+			offset, vertoffset = offsets['offset'], offsets['vertoffset']
+			if (width, height) is (4, 4):
+				self.set_feedback_channels(range(cur_chan, cur_chan+1))
+
+				self.set_pad_translations(make_pad_translations(cur_chan))
+				self._step_sequencer.set_playhead(self._playhead_element)
+				#self._step_sequencer._drum_group.set_select_button(self._button[self._layer])
+				#self._step_sequencer.set_button_matrix(self._base_grid.submatrix[4:8, :4])
+				self._step_sequencer.set_drum_matrix(grid)
+				for button, (x, y) in grid:
+
+					button.set_identifier(vals[x+4]+16)
+					button.set_channel(cur_chan)
+
+					#pad.display_press = False
+
+			else:
+				for button, (x, y) in grid.iterbuttons():
+					button.set_identifier((DRUMNOTES[column + (row*8)] + (self._offsets[cur_chan]['drumoffset']*4))%127)
+					button.scale_color = DRUMCOLORS[column<4]
+					button.send_value(DRUMCOLORS[column<4], True)
+
+					#button.display_press = True
+					#button.press_flash(0, True)
+					#button._descriptor = str(NOTENAMES[self._pad[column + (row*8)]._msg_identifier])
+					#button_CC.set_identifier((DRUMNOTES[column + (row*8)] + (self._offsets[cur_chan]['drumoffset']*4))%127)
+
+					self._offset_component._shifted_value = 3
+	
+
+
+
+
+	@subject_slot('value')
 	def on_selected_track_changed(self):
 		track = self._script._mixer.selected_strip()._track
 		track_list = []
@@ -993,8 +1098,7 @@ class MonoScaleComponent(CompoundComponent):
 			self._selected_session._track_offset = track_list.index(track)
 		self._selected_session._reassign_tracks()
 		self._selected_session._reassign_scenes()
-		if self.is_enabled() and self._matrix_value.subject:
-			self._assign_midi_layer()
+		self.update()
 	
 
 

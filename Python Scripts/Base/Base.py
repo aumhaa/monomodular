@@ -1778,9 +1778,10 @@ class Base(ControlSurface):
 	
 
 	def _check_mode_shift(self, held_key = None):
-		if held_key is self._mode_selector._held:
-			self._shift_update(self._mode_selector._mode_index, True)
-			#self.schedule_message(1, self._shift_update, [self._mode_selector._mode_index, True])
+		if not self.modhandler.is_enabled():
+			if held_key is self._mode_selector._held:
+				self._shift_update(self._mode_selector._mode_index, True)
+				#self.schedule_message(1, self._shift_update, [self._mode_selector._mode_index, True])
 	
 
 	def _select_update(self, held_strip = None):
@@ -2076,11 +2077,14 @@ class Base(ControlSurface):
 			self._note_sequencer.set_playhead(None)
 
 			self._drumgroup.set_drum_matrix(None)
+
 			self.modhandler.set_key_buttons(None)
 			self.modhandler.set_base_grid(None)
 			self.modhandler.set_base_grid_CC(None)
 			self.modhandler.set_shift_button(None)
 			self.modhandler.set_device_component(None)
+			self.modhandler.set_enabled(False)
+
 			self._transport.set_overdub_button(None)
 			self._recorder.set_new_button(None)
 			self._recorder.set_record_button(None)
@@ -2894,6 +2898,7 @@ class Base(ControlSurface):
 		mod = self._is_mod(self._device._device)
 		if not mod is None:
 			self._send_midi(MIDIBUTTONMODE)
+			self.modhandler.set_enabled(True)
 			self.modhandler.set_base_grid(self._base_grid)
 			self.modhandler.set_base_grid_CC(self._base_grid_CC)
 			self.modhandler.set_shift_button(self._button[self._layer])
