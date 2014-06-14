@@ -67,6 +67,10 @@ FOLLOW = True		#this sets whether or not the last selected device on a track is 
 
 CHOPPER_ENABLE = False		#when set True, this enables the Python ClipChopperComponent in modSlot 4 when a mod isn't present there
 
+FADER_BANKING = False
+
+DIAL_BANKING = False
+
 #  These are the values for the track offset used for RIGHT_MIXER_MODEs 1-3:
 
 RIGHT_MODE_OFFSETS = [4, 8, 12]

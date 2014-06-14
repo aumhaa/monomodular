@@ -103,7 +103,6 @@ class CodecEncoderElement(EncoderElement):
 
 	def _calculate_custom(self, ring_leds):
 		self._raw_custom = str(ring_leds)
-		ring_leds = ring_leds[1:]
 		custom = [[0, 0] for index in range(len(ring_leds))]
 		for index in range(len(ring_leds)):
 			led_ring = ring_leds[index:] + ring_leds[:index] + '0000000000000'
@@ -130,10 +129,11 @@ class CodecEncoderElement(EncoderElement):
 			byte2 = mode[int(self._parameter_last_num_value*length)][1]
 			bytes = [byte1, byte2]
 		else:
-			bytes = self._ring_custom[self._ring_value % len(self._ring_custom) * len(RING_MODE[0])]
+			bytes = self._ring_custom[self._ring_value % len(self._ring_custom)]
 		bytes.append(self._ring_green * 32)
 		return bytes
 	
+
 
 	def set_value(self, value):
 		if(self._parameter_to_map_to != None):

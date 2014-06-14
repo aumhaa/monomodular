@@ -19,8 +19,8 @@ autowatch = 1;
 outlets = 4;
 inlets = 5;
 
-FORCELOAD = false;
-DEBUG_NEW = false;
+FORCELOAD = true;
+DEBUG_NEW = true;
 DEBUG = false;
 DEBUG_LCD = false;
 DEBUG_PTR = false;
@@ -322,8 +322,8 @@ function initialize(val)
 
 		outlet(0, 'receive_device', 'set_mod_device_type', 'Hex');
 		outlet(0, 'receive_device', 'set_number_params', 16);
-		outlet(0, 'push_name_display', 'value', 0, 'Worky?');
-		outlet(0, 'push_alt_name_display', 'value', 1, 'Worky!');
+		//outlet(0, 'push_name_display', 'value', 0, 'Worky?');
+		//outlet(0, 'push_alt_name_display', 'value', 1, 'Worky!');
 
 		rotgate.message('int', 1);
 		messnamed(unique+'ColNOTE', ColNOTE);
@@ -342,9 +342,9 @@ function initialize(val)
 			outlet(0, 'key', i, (i==grid_mode)*8);
 			outlet(0, 'grid', i, 6, ENC_COLORS[i]);
 		}while(i--);*/
-		/*var i=3;do{
-			outlet(0, 'to_c_wheel', i, 2, 'mode', 0);
-		}while(i--);*/
+		var i=3;do{
+			outlet(0, 'cntrlr_encoder_grid', 'mode', i, 2, 0);
+		}while(i--);
 	}
 	else
 	{
@@ -1166,6 +1166,7 @@ function _c_key(x, y, val)
 		step.message('zoom', 1, 1);
 		refresh_c_keys();
 		refresh_grid();
+		outlet(0, 'cntrlr_encoder_grid', 'custom', selected.num%4, Math.floor(selected.num/4)%2, selected.pattern);
 		//outlet(0, 'to_c_wheel', selected.num%4, Math.floor(selected.num/4)%2, 'custom', 'x'+(selected.pattern.join('')));
 	}	 
 	else
@@ -1574,7 +1575,7 @@ function _grid(x, y, val)
 								step.message('extra1', 1, selected.pattern);
 								step.message('zoom', 1, 1);
 								refresh_c_keys();
-								outlet(0, 'to_c_wheel', part[y-2].num%4, Math.floor(part[y-2].num/4)%2, 'custom', 'x'+(part[y-2].pattern.join('')));
+								outlet(0, 'cntrlr_encoder_grid', 'custom', part[y-2].num%4, Math.floor(part[y-2].num/4)%2, part[y-2].pattern);
 							}
 						}
 						outlet(0, 'grid', 'value', x, y, part[y-2].edit_buffer[x]*(ACCENTS[Math.floor(part[y-2].edit_velocity[x]/8)]));
@@ -2305,7 +2306,7 @@ function _recall()
 		if(key_mode>4)
 		{
 			var i=7;do{
-				outlet(0, 'to_c_wheel', i%4, Math.floor(i/4), 'custom', 'x'+(part[i+(8*(selected.num>7))].pattern.join('')));
+				outlet(0, 'cntrlr_encoder_grid', 'custom', i%4, Math.floor(i/4),  part[i+(8*(selected.num>7))].pattern);
 			}while(i--);
 		}
 		//select_pattern(selected.num);
@@ -2524,8 +2525,8 @@ function select_pattern(num)
 	if(Math.floor(selected.num/8)!=Math.floor(num/8))
 	{
 		var i=7;do{
-			outlet(0, 'to_c_wheel', i%4, Math.floor(i/4), 'custom', 'x'+(part[i+(8*(range))].pattern.join('')));
-			outlet(0, 'to_c_wheel', i%4, Math.floor(i/4), 'green', part[i+(8*(range))].notevalues<8);
+			outlet(0, 'cntrlr_encoder_grid', 'custom', i%4, Math.floor(i/4),  part[i+(8*(range))].pattern);
+			outlet(0, 'cntrlr_encoder_grid', 'green', i%4, Math.floor(i/4), part[i+(8*(range))].notevalues<8);
 		}while(i--);
 	}
 	selected = part[num];
@@ -2696,7 +2697,7 @@ function add_note(part)
 		step.message('extra1', 1, selected.pattern);
 		step.message('zoom', 1, 1);
 		refresh_c_keys();
-		outlet(0, 'to_c_wheel', selected.num%4, Math.floor(selected.num/4)%2, 'custom', 'x'+(selected.pattern.join('')));
+		outlet(0, 'cntrlr_encoder_grid', 'custom', selected.num%4, Math.floor(selected.num/4)%2,  selected.pattern);
 	}
 }
 
@@ -2761,15 +2762,11 @@ function rotate_pattern(part, len, dir)
 //change the display on the CNTRLR encoder rings to reflect the current play position when in freewheel mode
 function rotate_wheel(num, pos)
 {
-	//if(DEBUG){post('rotate_wheel', num, pos, '\n');}
+	//debug('rotate_wheel', num, pos, '\n');
 	if((key_mode==5)&&(num==selected.num+1))
 	{
 		//post('current_step', num, pos, '\n');
-		//outlet(0, 'mask', 'c_key', selected.note[current_step], -1);
-		//grid_out('default', 'key', selected.note[current_step], -1);
 		outlet(0, 'receive_translation', 'keys2_'+(selected.note[current_step]), 'mask', -1);
-		//outlet(0, 'mask', 'c_key', selected.note[pos], 5);
-		//grid_out('mask', 'key', selected.note[pos], 5);
 		outlet(0, 'receive_translation', 'keys2_'+(selected.note[pos]), 'mask', 5);
 	}
 	if(pad_mode==5)
@@ -2777,12 +2774,12 @@ function rotate_wheel(num, pos)
 		if((selected.num<8)&&(num<9))
 		{
 			var _num = num-1;
-			outlet(0, 'to_c_wheel', _num%4, Math.floor(_num/4), 'value', pos);
+			outlet(0, 'cntrlr_encoder_grid', 'value', _num%4, Math.floor(_num/4), pos);
 		}
 		else if((selected.num>7)&&(num>8))
 		{
 			var _num = num-9;
-			outlet(0, 'to_c_wheel', _num%4, Math.floor(_num/4), 'value', pos);
+			outlet(0, 'cntrlr_encoder_grid', 'value', _num%4, Math.floor(_num/4), pos);
 		}
 	}
 	switch(grid_mode)
@@ -2832,7 +2829,7 @@ function sync_wheels(master, slave)
 	{
 		slave.lock = master.lock;
 		slave.obj.set.quantize(slave.lock);
-		outlet(0, 'to_c_wheel', slave.num%4, Math.floor(slave.num/4)%2, 'green', slave.lock);
+		outlet(0, 'cntrlr_encoder_grid', 'green', slave.num%4, Math.floor(slave.num/4)%2,  slave.lock);
 	}
 	/*switch(master.lock)
 	{
@@ -2858,7 +2855,7 @@ function change_lock_status(part, dir)
 	{
 		update_gui();
 	}
-	outlet(0, 'to_c_wheel', part.num%4, Math.floor(part.num/4)%2, 'green', part.notevalues<8);
+	outlet(0, 'cntrlr_encoder_grid', 'green', part.num%4, Math.floor(part.num/4)%2,  part.notevalues<8);
 	update_speed(part);
 }
 
@@ -3286,9 +3283,8 @@ function update_bank()
 			//outlet(0, 'receive_device', 'set_mod_device_bank', selected.channel>0);
 			//outlet(0, 'set_device_bank', selected.channel>0);
 			outlet(0, 'receive_device', 'set_mod_device_bank', selected.channel>0 ? 1 : drumgroup_is_present ? 0 : 1);
-			//outlet(0, 'set_c_local_ring_control', 1);
-			//outlet(0, 'set_local_ring_control', 1);
-			outlet(0, 'code_encoder_matrix', 'local', 0);
+			outlet(0, 'cntrlr_encoder_grid', 'local', 1);
+			outlet(0, 'code_encoder_grid', 'local', 1);
 			
 			/*var i=7;do{
 				params[Encoders[i]].hidden = 0;
@@ -3298,27 +3294,26 @@ function update_bank()
 			break;
 		case 5:
 			outlet(0, 'receive_device', 'set_mod_device_bank', 2+(selected.num>7));
-			//outlet(0, 'set_c_local_ring_control', 0);
-			outlet(0, 'code_encoder_matrix', 'local', 0);
-			//outlet(0, 'set_local_ring_control', 0);
-			/*var r = (selected.num>7)*8;
+			outlet(0, 'cntrlr_encoder_grid', 'local', 0);
+			outlet(0, 'code_encoder_grid', 'local', 0);
+			var r = (selected.num>7)*8;
 			var i=7;do{
-				params[Encoders[i]].hidden = 1;
+				/*params[Encoders[i]].hidden = 1;
 				params[Speeds[i]].hidden = selected.num>7;
-				params[Speeds[i+8]].hidden = selected.num<8;
+				params[Speeds[i+8]].hidden = selected.num<8;*/
 				var x = i%4;
 				var y = Math.floor(i/4);
-				outlet(0, 'to_c_wheel', x, y, 'mode', 4);
-				outlet(0, 'to_c_wheel', x, y, 'custom', 'x'+(part[i+r].pattern.join('')));
-				outlet(0, 'to_c_wheel', x, y, 'green', part[i+r].lock);
+				outlet(0, 'cntrlr_encoder_grid', 'mode', x, y, 4);
+				outlet(0, 'cntrlr_encoder_grid', 'custom', x, y, part[i+r].pattern);
+				outlet(0, 'cntrlr_encoder_grid', 'green', x, y,  part[i+r].lock);
 			}while(i--);
 			var i=3;do{
-				outlet(0, 'to_c_wheel', i, 2, 'mode', 0);
-				outlet(0, 'to_c_wheel', i, 2, 'green', 0);
+				outlet(0, 'cntrlr_encoder_grid', 'mode', i, 2,  5);
+				outlet(0, 'cntrlr_encoder_grid', 'green', i, 2, 0);
 			}while(i--);
-			break;*/
+			break;
 	}
-	//rotgate.message('int', ((pad_mode==5)||(key_mode==5)||(grid_mode==1)));	
+	rotgate.message('int', ((pad_mode==5)||(key_mode==5)||(grid_mode==1)));	
 }
 
 //open the floating editor, called from MonomodComponent
