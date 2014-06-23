@@ -998,6 +998,7 @@ class Codec(ControlSurface):
 		if self._shift_pressed:
 			self._alt_mode.pop_mode('alt')
 			self._alt_mode.set_mode_button('alt', None)
+		self.modhandler._shift_value(value)
 		self._update_shift_button()
 	
 

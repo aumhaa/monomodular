@@ -245,7 +245,7 @@ function initialize(val)
 {
 	if(val>0)
 	{
-		if(DEBUG){post('hex init\n');}
+		debug('hex init\n');
 		setup_translations();
 		for(var i in Vars)
 		{
@@ -281,7 +281,7 @@ function initialize(val)
 			part[i].obj.get = [];
 			for(var j in Objs)
 			{
-				//if(DEBUG){post(Objs[j].Name, '\n');}
+				//debug(Objs[j].Name, '\n');
 				part[i].obj[Objs[j].Name] = this.patcher.getnamed('poly').subpatcher(poly_num).getnamed(Objs[j].Name);
 				part[i].obj.set[Objs[j].Name] = make_obj_setter(part[i], Objs[j]);
 				part[i].obj.get[Objs[j].Name] = make_obj_getter(part[i], Objs[j]);
@@ -361,7 +361,7 @@ function make_obj_setter(part, obj)
 		{	
 			if(val!=undefined)
 			{
-				if(DEBUG){post('setter hidden', obj.Name, val, '\n');}
+				debug('setter hidden', obj.Name, val, '\n');
 				var num = part.num;
 				part[obj.Name] = val;
 				part.obj[obj.Name].message(obj.Type, val);
@@ -376,7 +376,7 @@ function make_obj_setter(part, obj)
 			{
 				if(val!=undefined)
 				{
-					if(DEBUG){post('setter bang\n');}
+					debug('setter bang\n');
 					part[obj.Name].message('bang');
 				}
 			}
@@ -385,7 +385,7 @@ function make_obj_setter(part, obj)
 		{
 			var setter = function(val)
 			{	
-				if(DEBUG){post('setter object\n');}
+				debug('setter object\n');
 				if(val!=undefined)
 				{
 					part[obj.Name] = val;
@@ -400,14 +400,14 @@ function make_obj_setter(part, obj)
 		{	
 			if(val!=undefined)
 			{
-				if(DEBUG){post('setter pattr\n');}
+				debug('setter pattr\n');
 				var num = part.num;
 				if(!pset){
 					var pset = presets[num];
 					part[obj.Name] = val;
 					part.obj[obj.Name].message(obj.Type, val);
 				}
-				if(DEBUG){post('storing', obj.Name, 'in', obj.pattr, 'at', pset, 'with', val, '\n');}
+				debug('storing', obj.Name, 'in', obj.pattr, 'at', pset, 'with', val, '\n');
 				storage.setstoredvalue('poly.'+(num+1)+'::'+obj.pattr, pset, val);
 			}
 		}
@@ -469,7 +469,7 @@ function make_tvel_edit_input(num)
 //dummy callback to compensate for api bug in Max6
 function callback()
 {
-	if(DEBUG){post('callback', arguments, '\n');}
+	debug('callback', arguments, '\n');
 }
 
 //called by init to initialize state of polys
@@ -504,7 +504,7 @@ function init_poly()
 //called by init to initialize state of gui objects
 function _clear_surface()
 {
-	if(DEBUG){post('clear_surface\n');}
+	debug('clear_surface\n');
 	stepmodegui.message('int', 0);
 }
 
@@ -567,6 +567,28 @@ function setup_translations()
 	outlet(0, 'enable_translation_group', 'base_buttons', 0);
 	outlet(0, 'enable_translation_group', 'base_extras',  0);
 
+	//Code stuff:
+	for(var i = 0;i < 16;i++)
+	{
+		outlet(0, 'add_translation', 'pads_'+i, 'code_grid', 'code_pads', i%8, Math.floor(i/8));
+		outlet(0, 'add_translation', 'keys_'+i, 'code_grid', 'code_keys', i%8, Math.floor(i/8));
+		outlet(0, 'add_translation', 'keys2_'+i, 'code_grid', 'code_keys2', i%8, Math.floor(i/8)+2);
+	}
+	outlet(0, 'add_translation', 'pads_batch', 'code_grid', 'code_pads', 0);
+	outlet(0, 'add_translation', 'keys_batch', 'code_grid', 'code_keys', 0);
+	outlet(0, 'add_translation', 'keys2_batch', 'code_grid', 'code_keys2', 2); 
+	outlet(0, 'enable_translation_group', 'code_keys', 0);
+
+	for(var i=0;i<8;i++)
+	{
+		outlet(0, 'add_translation', 'buttons_'+i, 'code_grid', 'code_buttons', i, 2);
+		outlet(0, 'add_translation', 'extras_'+i, 'code_grid', 'code_extras', i, 3);
+	}
+	outlet(0, 'add_translation', 'buttons_batch', 'code_grid', 'code_buttons', 2);
+	outlet(0, 'add_translation', 'extras_batch', 'code_grid', 'code_extras', 3);
+	outlet(0, 'enable_translation_group', 'code_buttons', 0);
+	outlet(0, 'enable_translation_group', 'code_extras',  0);
+
 	//Push stuff:
 	for(var i = 0;i < 16;i++)
 	{
@@ -606,7 +628,7 @@ function setup_translations()
 
 function refresh_pads()
 {
-	if(DEBUG){post('refresh_pads\n');}
+	debug('refresh_pads\n');
 	switch(pad_mode)
 	{
 		case 0:
@@ -777,7 +799,7 @@ function refresh_c_keys()
 
 function refresh_grid()
 {
-	//if(DEBUG){post('refresh_grid\n');}
+	//debug('refresh_grid\n');
 	switch(grid_mode)
 	{
 		default:
@@ -857,7 +879,7 @@ function refresh_extras()
 function grid_out()
 {
 	var args = arrayfromargs(arguments);
-	//if(DEBUG){post('grid_out:', args, '\n');}
+	//debug('grid_out:', args, '\n');
 	if(grid_mode==0)
 	{
 		switch(args[0])
@@ -914,15 +936,15 @@ function base_grid_out(){}
 //catch old calls that should be changed
 function grid_in(x, y, val)
 {
-	if(DEBUG){post('grid in: shouldnt happen::', x, y, val);}
+	debug('grid in: shouldnt happen::', x, y, val);
 }
 function key_in(num, val)
 {
-	if(DEBUG){post('key in: shouldnt happen::', num, val);}	
+	debug('key in: shouldnt happen::', num, val);
 }
 function button_in(x, y, val)
 {
-	if(DEBUG){post('button in: shouldnt happen::', x, y, val);}
+	debug('button in: shouldnt happen::', x, y, val);
 }
 
 //main input sorter for calls from mod.js
@@ -957,7 +979,7 @@ function anything()
 							keymodeenables.push(i);
 						}
 					}
-					if(DEBUG){post('keymodeenables', keymodeenables, '\n');}
+					debug('keymodeenables', keymodeenables, '\n');
 					break;
 				case 15:
 					vals = args.slice(1, 8);
@@ -970,7 +992,7 @@ function anything()
 							padmodeenables.push(i);
 						}
 					}
-					if(DEBUG){post('padmodeenables', padmodeenables, '\n');}
+					debug('padmodeenables', padmodeenables, '\n');
 					break;
 			}
 			break;
@@ -992,7 +1014,7 @@ function anything()
 			}
 			break;			
 		default:
-			if(DEBUG){post('anything', messagename, args, '\n');}
+			debug('anything', messagename, args, '\n');
 			break;
 	}
 }
@@ -1000,7 +1022,7 @@ function anything()
 var _cntrlr_encoder_button_grid = _c_button;
 function _c_button(x, y, val)
 {
-	if(DEBUG){post('button_in', x, y, val, '\n');}
+	debug('button_in', x, y, val, '\n');
 	switch(y)
 	{
 		case 0:
@@ -1149,7 +1171,7 @@ function _c_button(x, y, val)
 var _cntrlr_key = _c_key;
 function _c_key(x, y, val)
 {
-	if(DEBUG){post('c key in', x, y, val, '\n');}
+	debug('c key in', x, y, val, '\n');
 	num = (x + (y*16));
 	if((y==1)&&(val>0))
 	{
@@ -1292,6 +1314,7 @@ function _c_key(x, y, val)
 var _cntrlr_grid = _c_grid;
 function _c_grid(x, y, val)
 {
+	debug('_c_grid', x, y, val);
 	switch(pad_mode)
 	{
 		default:
@@ -1339,7 +1362,7 @@ function _c_grid(x, y, val)
 			}
 			break;
 		case 3:
-			if(DEBUG){post('pad_pressed', pad_pressed, '\n');}
+			debug('pad_pressed', pad_pressed, '\n');
 			if((val>0)&&(pad_pressed<0))
 			{
 				pad_pressed = x + (y*4);
@@ -1458,7 +1481,7 @@ function _c_grid(x, y, val)
 
 function _grid(x, y, val)
 {
-	if(DEBUG){post('_grid', x, y, val, '\n');}
+	debug('_grid', x, y, val, '\n');
 	switch(grid_mode)
 	{
 		default:
@@ -1759,12 +1782,12 @@ function _grid(x, y, val)
 
 function _base_grid(x, y, val)
 {
-	if(DEBUG){post('_base_grid', x, y, val, '\n');}
+	debug('_base_grid', x, y, val, '\n');
 	if(shifted)
 	{
 		if(y<2)
 		{
-			_c_key(x + 8*(y), val);
+			_c_key(x + 8*(y), 0, val);
 		}
 		else if(y<3)
 		{
@@ -1772,7 +1795,6 @@ function _base_grid(x, y, val)
 		}
 		else if((y==3)&&(val>0))
 		{
-			//post('---------keymode!:', x, '\n');
 			keymodegui.message('int', x);
 		}
 	}
@@ -1782,19 +1804,24 @@ function _base_grid(x, y, val)
 	}
 	else if (y<4)
 	{
-		_c_key(x + 8*(y), val);
+		_c_key(x + 8*(y-2), 1, val);
 	}
+}
+
+function _code_grid(x, y, val)
+{
+	_base_grid(x, y, val);
 }
 
 function _push_grid(x, y, val)
 {
-	if(DEBUG){post('push_grid', x, y, val, '\n');}
+	debug('push_grid', x, y, val, '\n');
 	_grid(x, y, val);
 }
 
 function _shift(val)
 {
-	if(DEBUG){post('shift:', val, '\n');}
+	debug('shift:', val, '\n');
 	if(val!=shifted)
 	{
 		shifted = val;
@@ -1803,11 +1830,16 @@ function _shift(val)
 			outlet(0, 'enable_translation_group', 'base_keys', Math.floor(shifted));
 			outlet(0, 'enable_translation_group', 'base_pads', Math.floor(!shifted));
 			outlet(0, 'enable_translation_group', 'base_keys2', Math.floor(!shifted));
+			outlet(0, 'enable_translation_group', 'code_keys', Math.floor(shifted));
+			outlet(0, 'enable_translation_group', 'code_pads', Math.floor(!shifted));
+			outlet(0, 'enable_translation_group', 'code_keys2', Math.floor(!shifted));
 		//}/
 		//for(var i=0;i<8;i++)
 		//{
 			outlet(0, 'enable_translation_group', 'base_buttons',  Math.floor(shifted));
 			outlet(0, 'enable_translation_group', 'base_extras',  Math.floor(shifted));
+			outlet(0, 'enable_translation_group', 'code_buttons',  Math.floor(shifted));
+			outlet(0, 'enable_translation_group', 'code_extras',  Math.floor(shifted));
 		//}
 		refresh_grid();
 		refresh_keys();
@@ -1816,7 +1848,7 @@ function _shift(val)
 
 function _key(num, val)
 {
-	if(DEBUG){post('_key', num, val, '\n');}
+	debug('_key', num, val, '\n');
 	switch(altVal)
 	{
 		default:
@@ -1845,7 +1877,7 @@ function surface_offset(val)
 //this is mainly for the select-hold
 function _msg_int(val)
 {
-	if(DEBUG){post('msg_int', val, '\n');}
+	debug('msg_int', val, '\n');
 	if((inlet==2)&&(pad_pressed==val))
 	{
 		change_key_mode(pad_invoked_key_mode);
@@ -1875,7 +1907,7 @@ function _alt(val)
 
 function _alt_in(val)
 {
-	if(DEBUG){post('alt_in', val, '\n');}
+	debug('alt_in', val, '\n');
 	altVal = Math.floor(val>0);
 	switch(altVal)
 	{
@@ -1907,7 +1939,7 @@ function _alt_in(val)
 //called by gui object, sets visible portion of live.step
 function _mode(val)
 {
-	if(DEBUG){post('mode', val, '\n');}
+	debug('mode', val, '\n');
 	step_mode = val;
 	step.message('mode', Modes[step_mode]);
 }
@@ -1941,7 +1973,7 @@ function _step_in()
 //distributes input from gui button and menu elements
 function _guibuttons(num, val)
 {
-	if(DEBUG){post('gui_buttons', num, val, '\n');}
+	debug('gui_buttons', num, val, '\n');
 	switch(num)
 	{
 		case 0:
@@ -2042,7 +2074,7 @@ function _guibuttons(num, val)
 			selected.obj.set.direction(val);
 			break;
 		case 14:
-			if(DEBUG){post('lock', val, '\n');}
+			debug('lock', val, '\n');
 			locked = val;
 			break;
 		case 15:
@@ -2061,7 +2093,7 @@ function _guibuttons(num, val)
 //distributes input from gui grid element
 function _padgui_in(val)
 {
-	if(DEBUG){post('padguiin', val, '\n');}
+	debug('padguiin', val, '\n');
 	_c_grid(val%4, Math.floor(val/4), 1);
 	_c_grid(val%4, Math.floor(val/4), 0);
 }
@@ -2069,7 +2101,7 @@ function _padgui_in(val)
 //distributes input from gui key element
 function _keygui_in(val)
 {
-	if(DEBUG){post('keyguiin', val, '\n');}
+	debug('keyguiin', val, '\n');
 	_c_key(val%16, Math.floor(val/16), 1);
 	_c_key(val%16, Math.floor(val/16), 0);
 	
@@ -2163,7 +2195,7 @@ function _settingsgui(num, val)
 					keymodeenables.push(i);
 				}
 			}
-			if(DEBUG){post('keymodeenables', keymodeenables, '\n');}
+			debug('keymodeenables', keymodeenables, '\n');
 			break;
 		case 15:
 			vals = args.slice(1, 8);
@@ -2176,16 +2208,16 @@ function _settingsgui(num, val)
 					padmodeenables.push(i);
 				}
 			}
-			if(DEBUG){post('padmodeenables', padmodeenables, '\n');}
+			debug('padmodeenables', padmodeenables, '\n');
 			break;
 		case 16:
 			vals = args.slice(1, 17);
-			if(DEBUG){post('behavior enables:', vals, '\n');}
+			debug('behavior enables:', vals, '\n');
 			for(var i=0;i<16;i++)
 			{
 				if(vals[i+1]!=part[i].behavior_enable)
 				{
-					if(DEBUG){post('part', i, 'behavior enable, was', part[i].behavior_enable, ', setting:', vals[i+1], '\n');}
+					debug('part', i, 'behavior enable, was', part[i].behavior_enable, ', setting:', vals[i+1], '\n');
 					part[i].behavior_enable = vals[i+1];
 					part[i].obj.set.behavior(vals[i+1]);
 				}
@@ -2249,11 +2281,11 @@ function _receive_automation(num, val)
 function _grid_play(x, y, voice, val, poly)
 {
 	//var args = arrayfromargs(arguments);
-	if(DEBUG){post('_grid_play', x, y, voice, val, poly, '\n');}
+	debug('_grid_play', x, y, voice, val, poly, '\n');
 	switch(grid_mode)
 	{
 		case 2:
-			if(DEBUG){post('sel:', selected.num, poly, '\n');}
+			debug('sel:', selected.num, poly, '\n');
 			if(altVal>0)
 			{
 				if((voice==0)&&((poly-1)==selected.num))
@@ -2446,7 +2478,7 @@ function update_poly()
 //change the function of the keys
 function change_key_mode(val)
 {
-	if(DEBUG){post('key_mode', val, '\n');}
+	debug('key_mode', val, '\n');
 	key_pressed = -1;
 	key_mode = val;
 	switch(key_mode)
@@ -2482,7 +2514,8 @@ function change_pad_mode(val)
 //change the function of the grid
 function change_grid_mode(val)
 {
-	outlet(0, 'set_legacy', val ? 1 : 0);
+	//outlet(0, 'set_legacy', val ? 1 : 0);
+	outlet(0, 'set_legacy', 0);
 	if((grid_mode==3)&&(val!=3))
 	{
 		var i=15;do{
@@ -2544,16 +2577,16 @@ function select_pattern(num)
 
 function copy_pattern(src, dest)
 {
-	if(DEBUG){post('copy pattern', src.num, dest.num, '\n');}
+	debug('copy pattern', src.num, dest.num, '\n');
 	dest.obj.set.pattern(src.pattern);
 }
 
 function copy_preset(part, dest)
 {
-	if(DEBUG){post('preset: copy', 'poly.'+(part.num+1), presets[part.num], dest, '\n');}
+	debug('preset: copy', 'poly.'+(part.num+1), presets[part.num], dest, '\n');
 	for(var index in Objs)
 	{
-		if(DEBUG){post('copy', 'poly.'+(part.num+1)+'::'+Objs[index].pattr, presets[part.num], dest, '\n');}
+		debug('copy', 'poly.'+(part.num+1)+'::'+Objs[index].pattr, presets[part.num], dest, '\n');
 		var type = Objs[index].pattr;
 		var types = {'object':0, 'hidden':0};
 		if(!(type in types))
@@ -2566,7 +2599,7 @@ function copy_preset(part, dest)
 
 function copy_global_preset(src, dest)
 {
-	if(DEBUG){post('copy global preset', 'copy', src, dest, '\n');}
+	debug('copy global preset', 'copy', src, dest, '\n');
 	storage.copy(src, dest);
 }
 
@@ -2588,7 +2621,7 @@ function play_sequence(part, note, press)
 		//if the num wasn't already being held
 		if(trig == -1)
 		{
-			if(DEBUG){post('decoded:', (note>>6)%16, note>>10, '\n');}
+			debug('decoded:', (note>>6)%16, note>>10, '\n');
 			part.triggered.push(note);
 			part.obj.polyplay.message('midinote', note, 1);
 		}
@@ -2634,7 +2667,7 @@ function change_transpose(val)
 {
 	if(selected.channel==0)
 	{
-		if(DEBUG){post('global_offset', val, '\n');}
+		debug('global_offset', val, '\n');
 		global_offset = (Math.max(Math.min(val, 96), 0));
 		transposegui.message('set', global_offset);
 		for(var i = 0;i< 16;i++)
@@ -2650,7 +2683,7 @@ function change_transpose(val)
 //called from key_in, change the loopOut point and update it to live.step and poly
 function change_Out(val)
 {
-	if(DEBUG){post('change Out', val, '\n');}
+	debug('change Out', val, '\n');
 	selected.obj.set.steps(val-parseInt(selected.nudge));
 	update_step();
 	refresh_c_keys();
@@ -2659,7 +2692,7 @@ function change_Out(val)
 //called from key_in, change the loopIn point and update it to the live.step and poly
 function change_In(val)
 {
-	if(DEBUG){post('change In', val, '\n');}
+	debug('change In', val, '\n');
 	var change = parseInt(selected.nudge) - val;
 	selected.nudge = val;
 	if(timing_immediate)
@@ -2684,7 +2717,7 @@ function change_In(val)
 //add a note from the pads to the appropriate poly, and trigger a message back from it
 function add_note(part)
 {
-	if(DEBUG){post('add_note', part.num, '\n');}
+	debug('add_note', part.num, '\n');
 	part.obj.addnote.message('bang');
 	part.pattern[curSteps[part.num]]=1;
 	part.obj.set.pattern(part.pattern);
@@ -2703,7 +2736,7 @@ function add_note(part)
 
 function play_note(part)
 {
-	if(DEBUG){post('play_note', part.num, '\n');}
+	debug('play_note', part.num, '\n');
 	part.obj.addnote.message('bang');
 }
 
@@ -2712,7 +2745,7 @@ function _addnote(num, val)
 {
 	num += -1;
 	val += -1;
-	if(DEBUG){post('addnote', num, val, '\n');}
+	debug('addnote', num, val, '\n');
 	part[num].pattern[val] = 1;
 	part[num].obj.set.pattern(part[num].pattern);
 	refresh_c_keys();
@@ -2824,7 +2857,7 @@ function rotate_wheel(num, pos)
 //synchronize two parts when holding down select while selecting another part
 function sync_wheels(master, slave)
 {
-	if(DEBUG){post('sync_wheels', master.num, slave.num, '\n');}
+	debug('sync_wheels', master.num, slave.num, '\n');
 	if(slave.lock != master.lock)
 	{
 		slave.lock = master.lock;
@@ -3022,7 +3055,7 @@ function randomize_pattern(global)
 {
 	if(global>0)
 	{
-		if(DEBUG){post('global pattern random');}
+		debug('global pattern random');
 		var h=15;do{
 			var i=15;do{
 				var seq = [];
@@ -3050,7 +3083,7 @@ function randomize_notes(global)
 {
 	if(global>0)
 	{
-		if(DEBUG){post('global pattern random');}
+		debug('global pattern random');
 		var h=15;do{
 			var i=15;do{
 				var seq = [];
@@ -3408,7 +3441,7 @@ function detect_drumrack()
 			finder.goto('devices', i);
 			if(finder.get('class_name')=='DrumGroupDevice')
 			{
-				if(DEBUG){post("\nDrumRack found");}
+				debug("\nDrumRack found");
 				devices[0] = parseInt(finder.id);
 				post('DrumRack found', devices[0], '\n');
 			}
@@ -3430,16 +3463,16 @@ function detect_drumrack()
 function set_devices()
 {
 	var ids = arrayfromargs(arguments);
-	if(DEBUG){post('set_devices', ids, '\n');}
+	debug('set_devices', ids, '\n');
 	devices = ids;
 }
 
 //find the appointed_device
 function detect_device(channel)
 {
-	if(DEBUG){post('select_device \n');}
+	debug('select_device \n');
 	finder.goto('live_set', 'appointed_device');
-	if(DEBUG){post('device id ==', finder.id, '\n');}
+	debug('device id ==', finder.id, '\n');
 	if(check_device_id(parseInt(finder.id), channel)>0)
 	{
 		_select_chain(selected.num);
@@ -3451,7 +3484,7 @@ function detect_device(channel)
 function check_device_id(id, channel)
 {
 	var found = 0;
-	if(DEBUG){post('device_id', id, '\n')};
+	debug('device_id', id, '\n');
 	if(id>0)
 	{
 		if(channel == 0)
@@ -3482,7 +3515,7 @@ function check_device_id(id, channel)
 //send the current chain assignment to mod.js
 function _select_chain(chain_num)
 {
-	if(DEBUG){post('select_chain', chain_num, selected.channel, devices[selected.channel], '\n');}
+	debug('select_chain', chain_num, selected.channel, devices[selected.channel], '\n');
 	if((selected.channel==0)&&(drumgroup_is_present))
 	{
 		//outlet(0, 'set_device_parent', devices[selected.channel]);
@@ -3535,7 +3568,7 @@ function _lcd(obj, type, val)
 //distribute gui knobs to their destinations
 function _encoder(num, val)
 {
-	if(DEBUG){post('encoder in', num, val, '\n');}
+	debug('encoder in', num, val, '\n');
 	if(num<12)
 	{
 		outlet(0, 'receive_device', 'set_mod_parameter_value', num, val);
@@ -3602,7 +3635,7 @@ function _encoder(num, val)
 //called from invisible ui controls that the MonoDeviceComponent latches to in 2nd/3rd bank indexes
 function _speed(num, val)
 {
-	if(DEBUG){post('speed', num, val, '\n');}
+	debug('speed', num, val, '\n');
 	var new_time = 8, Part = part[num];
 	if(TIMES[val])
 	{
@@ -3623,7 +3656,7 @@ function _speed(num, val)
 //called from visible ui elements and distributed to MonoDeviceComponent in 2nd/3rd bank indexes
 function set_speed(num, val)
 {
-	if(DEBUG){post('set_speed', num, val, '\n');}
+	debug('set_speed', num, val, '\n');
 	script['Speed'+(num+1)].message('set', val);
 	_speed(num, val);
 }

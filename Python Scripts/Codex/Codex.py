@@ -30,7 +30,7 @@ from _Mono_Framework.MonoEncoderElement import MonoEncoderElement
 from _Mono_Framework.DeviceSelectorComponent import DeviceSelectorComponent, NewDeviceSelectorComponent
 from _Mono_Framework.ResetSendsComponent import ResetSendsComponent
 
-from Codec_b996.Codec import *
+from Codec.Codec import *
 
 from _Tools.re import *
 

@@ -1177,11 +1177,10 @@ class ModClient(NotifyingControlElement):
 	
 
 	def set_color_map(self, color_type, color_map):
-		#new_map = color_map.split('*')
-		#for index in xrange(len(new_map)):
-		#	new_map[index] = int(new_map[index])
-		#self._color_maps[color_type] = new_map
-		pass
+		new_map = color_map.split('*')
+		for index in xrange(len(new_map)):
+			new_map[index] = int(new_map[index])
+		self._color_maps[color_type] = new_map
 	
 
 
