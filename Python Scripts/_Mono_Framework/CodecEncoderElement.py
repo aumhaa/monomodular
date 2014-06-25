@@ -44,8 +44,6 @@ class CodecEncoderElement(EncoderElement):
 		self._ring_custom = [[0, 0]]
 		self._ring_green = 0
 		self._is_enabled = True
-		#self._report_input = True
-		#self._report_output = True
 		self._paramter_lcd_name = ' '
 		self._parameter_last_value = None
 		self._parameter_last_num_value = 0
@@ -139,9 +137,7 @@ class CodecEncoderElement(EncoderElement):
 		if(self._parameter_to_map_to != None):
 			if(self._parameter_to_map_to.is_enabled):
 				newval = float(float(float(value)/127) * (self._parameter_to_map_to.max - self._parameter_to_map_to.min)) + self._parameter_to_map_to.min
-				self._script.log_message('value ' + str(value) + ' = ' + str(newval))
 				self._parameter_to_map_to.value = newval
-				#return [value, str(self.mapped_parameter())]
 		else:
 			self.receive_value(int(value))
 	
@@ -187,14 +183,12 @@ class CodecEncoderElement(EncoderElement):
 
 	def forward_parameter_value(self):
 		if(not (type(self._parameter) is type(None))):
-			#new_value=int(((self._parameter.value - self._parameter.min) / (self._parameter.max - self._parameter.min))  * 127)
 			self._parameter_last_num_value = (self._parameter.value - self._parameter.min) / (self._parameter.max - self._parameter.min)
 			try:
 				parameter = str(self.mapped_parameter())
 			except:
 				parameter = ' '
 			if(parameter!=self._parameter_last_value):
-				#self._parameter_last_value = str(self.mapped_parameter())
 				try:
 					self._parameter_last_value = str(self.mapped_parameter())
 				except:
@@ -212,8 +206,6 @@ class CodecEncoderElement(EncoderElement):
 					self._parameter_lcd_name = 'Pan'
 				else:
 					self._parameter_lcd_name = str(parameter.name)
-			#self._last_value(int(((self._parameter.value - self._parameter.min) / (self._parameter.max - self._parameter.min))  * 127))
-			#self._parameter_last_value = str(self.mapped_parameter())
 			try:
 				self._parameter_last_value = str(self.mapped_parameter())
 			except:
@@ -239,5 +231,4 @@ class CodecEncoderElement(EncoderElement):
 		val = str(self.mapped_parameter)
 		return val
 	
-# local variables:
-# tab-width: 4
+

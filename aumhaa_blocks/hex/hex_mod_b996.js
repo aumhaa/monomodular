@@ -629,7 +629,7 @@ function setup_translations()
 
 function setup_colors()
 {
-	outlet(0, 'fill_color_map', 'Monochrome', 0, 0, 0, 0, 0, 8);
+	outlet(0, 'fill_color_map', 'Monochrome', 0, 1, 1, 1, 8, 1);
 }
 
 function refresh_pads()

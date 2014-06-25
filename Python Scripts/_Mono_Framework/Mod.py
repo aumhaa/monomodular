@@ -980,6 +980,7 @@ class ModClient(NotifyingControlElement):
 		self.legacy = False
 		for handler in self._parent._handlers:
 			handler._register_addresses(self)
+			self.send('register_handler', handler.name)
 		self._param_component = MonoDeviceComponent(self, MOD_BANK_DICT, MOD_TYPES)
 	
 
@@ -1178,12 +1179,12 @@ class ModClient(NotifyingControlElement):
 
 	def fill_color_map(self, color_type = None, *color_map):
 		#self.log_message('fill color map: ' + str(color_type) + ' ' + str(color_map))
-		if color_type:
-			color_map[:0] = 0
-			self._color_maps[color_type] = [color_map[index%(len(color_map)-1)] for index in xrange(128)]
+		if not color_type is None:
+			self._color_maps[color_type] = [color_map[index%(len(color_map))] for index in range(128)]
+			self._color_maps[color_type][0:0] = [0]
 			for handler in self.active_handlers():
 				if handler._color_type is color_type:
-					handler._colors= self._color_maps[color_type]
+					handler._colors = self._color_maps[color_type]
 				handler.update()
 	
 
@@ -1275,7 +1276,7 @@ class ModRouter(CompoundComponent):
 			with self._host.component_guard():
 				self._mods.append( ModClient(self, device, 'modClient'+str(len(self._mods))) )
 		ret = self.get_mod(device)
-		self.log_message('add mod device: ' + str(device.name) + ' ' + str(ret))
+		#self.log_message('add mod device: ' + str(device.name) + ' ' + str(ret))
 		return ret
 	
 
