@@ -1476,10 +1476,13 @@ class CodecModHandler(ModHandler):
 
 	def _receive_code_encoder_grid(self, x, y, *a, **k):
 		#self.log_message('_receive_code_encoder_grid: %(x)s %(y)s %(k)s' % {'x':x, 'y':y, 'k':k})
-		if self.is_enabled() and self._active_mod and not self._active_mod.legacy and not self._code_encoder_grid_value.subject is None and x < 8 and y < 4:
+		if self.is_enabled() and self._active_mod and not self._code_encoder_grid_value.subject is None and x < 8 and y < 4:
 			keys = k.keys()
 			if 'value' in keys:
-				self._code_encoder_grid_value.subject.send_value(x, y, k['value'], True)
+				if self._local:
+					self._code_encoder_grid_value.subject.send_value(x, y, k['value'], True)
+				else:
+					self._code_encoder_grid_value.subject.get_button(x, y)._ring_value = k['value']
 			if 'mode' in keys:
 				self._code_encoder_grid_value.subject.get_button(x, y).set_mode(k['mode'])
 				self.log_message('mode:' + str(k['mode']))

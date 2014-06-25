@@ -895,6 +895,24 @@ class Cntrlr(ControlSurface):
 			cell.set_channel(chan)
 			cell.set_enabled(chan is 0)
 			cell.force_next_send()
+		if FADER_BANKING:
+			for fader in self._fader:
+				fader.release_parameter()
+				fader.set_channel(chan)
+				fader.set_enabled(chan is 0)
+				fader.force_next_send()
+		if DIAL_BANKING:
+			for dial in self._dial_right:
+				dial.release_parameter()
+				dial.set_channel(chan)
+				dial.set_enabled(chan is 0)
+				dial.force_next_send()
+			for dial in self._dial_left:
+				dial.release_parameter()
+				dial.set_channel(chan)
+				dial.set_enabled(chan is 0)
+				dial.force_next_send()
+
 		self.request_rebuild_midi_map()
 			
 	
@@ -1163,10 +1181,13 @@ class CntrlrModHandler(ModHandler):
 
 	def _receive_cntrlr_encoder_grid(self, x, y, *a, **k):
 		#self.log_message('_receive_cntrlr_encoder_grid: %(x)s %(y)s %(k)s' % {'x':x, 'y':y, 'k':k})
-		if self.is_enabled() and self._active_mod and not self._active_mod.legacy and not self._cntrlr_encoder_grid is None and x < 8 and y < 4:
+		if self.is_enabled() and self._active_mod and not self._cntrlr_encoder_grid is None and x < 4 and y < 3:
 			keys = k.keys()
 			if 'value' in keys:
-				self._cntrlr_encoder_grid.send_value(x, y, k['value'], True)
+				if self._local:
+					self._cntrlr_encoder_grid.send_value(x, y, k['value'], True)
+				else:
+					self._cntrlr_encoder_grid.get_button(x, y)._ring_value = k['value']
 			if 'mode' in keys:
 				self._cntrlr_encoder_grid.get_button(x, y).set_mode(k['mode'])
 			if 'green' in keys:
@@ -1302,7 +1323,7 @@ class CntrlrModHandler(ModHandler):
 	def send_ring_leds(self):
 		if self.is_enabled() and self._active_mod and not self._local and self._cntrlr_encoder_grid:
 			leds = [240, 0, 1, 97, 8, 31]
-			for encoder, coords in self._cntrlr_encoder_grid.xiterbuttons():
+			for encoder, coords in self._cntrlr_encoder_grid.iterbuttons():
 				bytes = encoder._get_ring()
 				leds.append(bytes[0])
 				leds.append(int(bytes[1]) + int(bytes[2]))
