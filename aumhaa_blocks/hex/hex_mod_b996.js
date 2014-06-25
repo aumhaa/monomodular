@@ -247,6 +247,7 @@ function initialize(val)
 	{
 		debug('hex init\n');
 		setup_translations();
+		setup_colors();
 		for(var i in Vars)
 		{
 			script[Vars[i]] = this.patcher.getnamed(Vars[i]);
@@ -624,6 +625,11 @@ function setup_translations()
 	}
 	outlet(0, 'add_translation', 'buttons_batch', 'cntrlr_encoder_button_grid', 'cntrlr_buttons');
 	outlet(0, 'add_translation', 'extras_batch', 'cntrlr_encoder_button_grid', 'cntrlr_extras');
+}
+
+function setup_colors()
+{
+	outlet(0, 'fill_color_map', 'Monochrome', 0, 0, 0, 0, 0, 8);
 }
 
 function refresh_pads()

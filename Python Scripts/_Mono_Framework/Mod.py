@@ -1176,11 +1176,26 @@ class ModClient(NotifyingControlElement):
 			self._parent.song().view.select_device(preset)
 	
 
-	def set_color_map(self, color_type, color_map):
-		new_map = color_map.split('*')
-		for index in xrange(len(new_map)):
-			new_map[index] = int(new_map[index])
-		self._color_maps[color_type] = new_map
+	def fill_color_map(self, color_type = None, *color_map):
+		#self.log_message('fill color map: ' + str(color_type) + ' ' + str(color_map))
+		if color_type:
+			color_map[:0] = 0
+			self._color_maps[color_type] = [color_map[index%(len(color_map)-1)] for index in xrange(128)]
+			for handler in self.active_handlers():
+				if handler._color_type is color_type:
+					handler._colors= self._color_maps[color_type]
+				handler.update()
+	
+
+	def set_color_map(self, color_type, *color_map):
+		#self.log_message('set color map: ' + str(color_type) + ' ' + str(color_map))
+		if color_type:
+			for index in xrange(color_map):
+				self._color_maps[color_type][index] = color_map[index]
+			for handler in self.active_handlers():
+				if handler._color_type is color_type:
+					handler._colors = self._color_maps[color_type]
+				handler.update()
 	
 
 

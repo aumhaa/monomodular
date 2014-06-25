@@ -1512,7 +1512,6 @@ class CodecModHandler(ModHandler):
 
 	def __init__(self, *a, **k):
 		#super(CodecModHandler, self).__init__(*a, **k)
-		self._color_type = 'Monochrome'
 		self._local = True
 		self._last_sent_leds = 1
 		self._code_grid = None
@@ -1526,6 +1525,7 @@ class CodecModHandler(ModHandler):
 					'code_key': {'obj':  Array('code_key', 8), 'method': self._receive_code_key},
 					'code_button': {'obj':  Array('code_button', 4), 'method': self._receive_code_button}}
 		super(CodecModHandler, self).__init__(addresses = addresses, *a, **k)
+		self._color_type = 'Monochrome'
 		self._colors = range(128)
 	
 
@@ -1533,6 +1533,7 @@ class CodecModHandler(ModHandler):
 		#self.log_message('_receive_code_grid: %(x)s %(y)s %(value)s ' % {'x':x, 'y':y, 'value':value})
 		if self.is_enabled() and self._active_mod and not self._active_mod.legacy and not self._code_grid_value.subject is None and x < 8 and y < 4:
 			self._code_grid_value.subject.send_value(x, y, self._colors[value], True)
+			self.log_message('code_grid: ' + str(self._colors[value]))
 	
 
 	def _receive_code_encoder_grid(self, x, y, *a, **k):
@@ -1581,6 +1582,7 @@ class CodecModHandler(ModHandler):
 			if not self._code_grid_value.subject is None:
 				if (x - self.x_offset) in range(8) and (y - self.y_offset) in range(4):
 					self._code_grid_value.subject.send_value(x - self.x_offset, y - self.y_offset, self._colors[value], True)
+					self.log_message('grid: ' + str(self._colors[value]))
 	
 
 	def set_code_grid(self, grid):
