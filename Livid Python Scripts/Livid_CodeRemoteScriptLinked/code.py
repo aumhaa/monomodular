@@ -17,10 +17,10 @@ from _Framework.ControlElement import ControlElement # Base class for all classe
 from _Framework.ControlSurface import ControlSurface # Central base class for scripts based on the new Framework
 from _Framework.ControlSurfaceComponent import ControlSurfaceComponent # Base class for all classes encapsulating functions in Live
 from _Framework.InputControlElement import * # Base class for all classes representing control elements on a controller
-from _Framework.MixerComponent import MixerComponent # Class encompassing several channel strips to form a mixer
+from VCM600.MixerComponent import MixerComponent # Class encompassing several channel strips to form a mixer
 from _Framework.SceneComponent import SceneComponent # Class representing a scene in Live
 from _Framework.SessionComponent import SessionComponent # Class encompassing several scene to cover a defined section of Live's session
-from _Framework.SessionZoomingComponent import SessionZoomingComponent
+from _Framework.SessionZoomingComponent import DeprecatedSessionZoomingComponent as SessionZoomingComponent
 from _Framework.SliderElement import SliderElement # Class representing a slider on the controller
 #from _Framework.TransportComponent import TransportComponent # Class encapsulating all functions in Live's transport section
 from _Framework.EncoderElement import EncoderElement
@@ -233,7 +233,7 @@ class code(ControlSurface):
 		#stop_all_button.name = 'Stop_All_Clips_Button'
 		#self._session.set_stop_all_clips_button(stop_all_button)
 		#self._session.set_stop_track_clip_buttons(tuple(track_stop_buttons))
-		#self._session.set_stop_track_clip_value(2)
+		#self._session.set_stop_clip_value(2)
 		button_notes = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32]
 		for scene_index in range(4):
 			scene = session.scene(scene_index)

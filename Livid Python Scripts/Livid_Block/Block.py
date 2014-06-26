@@ -19,12 +19,12 @@ from _Framework.InputControlElement import * # Base class for all classes repres
 from _Framework.MixerComponent import MixerComponent # Class encompassing several channel strips to form a mixer
 from _Framework.SceneComponent import SceneComponent # Class representing a scene in Live
 from _Framework.SessionComponent import SessionComponent # Class encompassing several scene to cover a defined section of Live's session
-from _Framework.SessionZoomingComponent import SessionZoomingComponent
+from _Framework.SessionZoomingComponent import DeprecatedSessionZoomingComponent as SessionZoomingComponent
 from _Framework.SliderElement import SliderElement # Class representing a slider on the controller
 from _Framework.TransportComponent import TransportComponent # Class encapsulating all functions in Live's transport section
 from _Framework.EncoderElement import EncoderElement
 from _Framework.DeviceComponent import DeviceComponent 
-from _Framework.M4LInterfaceComponent import M4LInterfaceComponent
+
 
 
 """ Here we define some global variables """
@@ -45,7 +45,6 @@ class Block(ControlSurface):
 			self._setup_transport_control()
 			self._setup_mixer_control() # Setup the mixer object
 			self._setup_session_control()  # Setup the session object
-			self._setup_m4l_interface()
 		
 
 	def handle_sysex(self, midi_bytes):
@@ -53,15 +52,6 @@ class Block(ControlSurface):
 		response = [long(0),long(0)]
 		self.log_message(response)
 		
-
-
-	def _setup_m4l_interface(self):
-		self._m4l_interface = M4LInterfaceComponent(controls=self.controls, component_guard=self.component_guard)
-		self.get_control_names = self._m4l_interface.get_control_names
-		self.get_control = self._m4l_interface.get_control
-		self.grab_control = self._m4l_interface.grab_control
-		self.release_control = self._m4l_interface.release_control
-	
 
 	def _setup_transport_control(self):
 		is_momentary = True # We'll only be using momentary buttons here
@@ -94,7 +84,7 @@ class Block(ControlSurface):
 		is_momentary = True # We use non-latching buttons (keys) throughout, so we'll set this as a constant
 		num_tracks = 7 # Here we define the mixer width in tracks (a mixer has only one dimension)
 		global mixer # We want to instantiate the global mixer as a MixerComponent object (it was a global "None" type up until now...)
-		mixer = MixerComponent(num_tracks, 0, with_eqs=False, with_filters=False) #(num_tracks, num_returns, with_eqs, with_filters)
+		mixer = MixerComponent(num_tracks, 0) #(num_tracks, num_returns, with_eqs, with_filters)
 		mixer.set_track_offset(0) #Sets start point for mixer strip (offset from left)
 		"""set up the mixer buttons"""		  
 		self.song().view.selected_track = mixer.channel_strip(0)._track

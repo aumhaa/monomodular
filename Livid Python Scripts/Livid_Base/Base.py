@@ -27,10 +27,10 @@ from _Framework.ModeSelectorComponent import ModeSelectorComponent # Class for s
 from _Framework.NotifyingControlElement import NotifyingControlElement # Class representing control elements that can send values
 from _Framework.SceneComponent import SceneComponent # Class representing a scene in Live
 from _Framework.SessionComponent import SessionComponent # Class encompassing several scene to cover a defined section of Live's session
-from _Framework.SessionZoomingComponent import SessionZoomingComponent # Class using a matrix of buttons to choose blocks of clips in the session
+from _Framework.SessionZoomingComponent import DeprecatedSessionZoomingComponent as SessionZoomingComponent # Class using a matrix of buttons to choose blocks of clips in the session
 from _Framework.SliderElement import SliderElement # Class representing a slider on the controller
-from _Framework.TrackEQComponent import TrackEQComponent # Class representing a track's EQ, it attaches to the last EQ device in the track
-from _Framework.TrackFilterComponent import TrackFilterComponent # Class representing a track's filter, attaches to the last filter in the track
+from VCM600.TrackEQComponent import TrackEQComponent # Class representing a track's EQ, it attaches to the last EQ device in the track
+from VCM600.TrackFilterComponent import TrackFilterComponent # Class representing a track's filter, attaches to the last filter in the track
 from _Framework.TransportComponent import TransportComponent # Class encapsulating all functions in Live's transport section
 from _Framework.PhysicalDisplayElement import PhysicalDisplayElement
 from _Framework.SubjectSlot import subject_slot, subject_slot_group
@@ -209,11 +209,6 @@ def is_device(device):
 
 def make_pad_translations(chan):
 	return tuple((x%4, int(x/4), x+16, chan) for x in range(16))
-
-
-def return_empty():
-	return []
-
 
 
 class BaseSessionRecordingComponent(SessionRecordingComponent):
@@ -1166,7 +1161,7 @@ class ScrollingOffsetComponent(ControlSurfaceComponent):
 class BaseFaderArray(Array):
 
 
-	def __init__(self, name, size, active_handlers = return_empty):
+	def __init__(self, active_handlers, name, size):
 		self._active_handlers = active_handlers
 		self._name = name
 		self._cell = [StoredElement(self._name + '_' + str(num), _num = num, _mode = 1, _value = 7) for num in range(size)]
@@ -1193,7 +1188,7 @@ class BaseFaderArray(Array):
 class BaseGrid(Grid):
 
 
-	def __init__(self, name, width, height,  active_handlers = return_empty):
+	def __init__(self, active_handlers, name, width, height):
 		self._active_handlers = active_handlers
 		self._name = name
 		self._cell = [[StoredElement(active_handlers, _name = self._name + '_' + str(x) + '_' + str(y), _x = x, _y = y, _id = -1, _channel = -1 ) for y in range(height)] for x in range(width)]
@@ -1226,21 +1221,41 @@ class BaseModHandler(ModHandler):
 
 
 	def __init__(self, *a, **k):
+		super(BaseModHandler, self).__init__(*a, **k)
 		self._base_grid = None
 		self._base_grid_CC = None
+		self._keys = None
+		self._shift = None
+		self._alt = None
 		self._fader_color_override = False
-		addresses = {'base_grid': {'obj': BaseGrid('base_grid', 8, 4), 'method':self._receive_base_grid},
-					'base_fader': {'obj': BaseFaderArray('base_fader', 8), 'method':self._receive_base_fader}}
-		super(BaseModHandler, self).__init__(addresses = addresses, *a, **k)
+		self._receive_methods = {'grid': self._receive_grid, 
+								'base_grid': self._receive_base_grid, 
+								'key': self._receive_key, 
+								'base_fader': self._receive_base_fader, 
+								'shift': self._receive_shift, 
+								'alt': self._receive_alt}
 		self._shifted = False
 	
 
+	def _register_addresses(self, client):
+		if not 'base_grid' in client._addresses:
+			client._addresses['base_grid'] = BaseGrid(client.active_handlers, 'base_grid', 8, 4)
+		if not 'key' in client._addresses:
+			client._addresses['key'] = Array(client.active_handlers, 'key', 8)
+		if not 'base_fader' in client._addresses:
+			client._addresses['base_fader'] = BaseFaderArray(client.active_handlers, 'base_fader', 8)
+		if not 'shift' in client._addresses:
+			client._addresses['shift'] = StoredElement(client.active_handlers, _name = 'shift')
+		if not 'alt' in client._addresses:
+			client._addresses['alt'] = StoredElement(client.active_handlers, _name = 'alt')
+	
+
 	def _receive_base_grid(self, x, y, value, is_id = False):
-		#self.log_message('_receive_base_grid: %s %s %s %s' % (x, y, value, is_id))
+		self.log_message('_receive_base_grid: %s %s %s %s' % (x, y, value, is_id))
 		if self._active_mod and not self._active_mod.legacy:
-			if not self._base_grid_value.subject is None:
+			if not self._base_grid is None:
 				if is_id:
-					button = self._base_grid_value.subject.get_button(x, y)
+					button = self._base_grid.get_button(x, y)
 					if value._id is -1 and value._channel is -1:
 						button.use_default_message()
 						button.set_enabled(True)
@@ -1255,7 +1270,13 @@ class BaseModHandler(ModHandler):
 						button.set_channel(channel)
 						button.set_enabled(False)
 				else:
-					self._base_grid_value.subject.send_value(x, y, value, True)
+					self._base_grid.send_value(x, y, value, True)
+	
+
+	def _receive_key(self, x, value):
+		#self.log_message('_receive_key: %s %s' % (x, value))
+		if not self._keys is None:
+			self._keys.send_value(x, 0, value, True)
 	
 
 	def _receive_base_fader(self, num, value):
@@ -1265,25 +1286,47 @@ class BaseModHandler(ModHandler):
 	
 
 	def _receive_shift(self, value):
+		#if not self._shift is None:
+		#	self._shift.send_value(value)
 		pass
+	
+
+	def _receive_alt(self, value):
+		if not self._alt is None:
+			self._alt.send_value(value)
 	
 
 	def _receive_grid(self, x, y, value, is_id = False):
 		#self.log_message('receive grid')
 		if self._active_mod and self._active_mod.legacy:
-			if not self._base_grid_value.subject is None:
+			if not self._base_grid is None:
 				if (x - self.x_offset) in range(8) and (y - self.y_offset) in range(4):
-					self._base_grid_value.subject.send_value(x - self.x_offset, y - self.y_offset, value, True)
+					self._base_grid.send_value(x - self.x_offset, y - self.y_offset, value, True)
 	
 
-	def set_base_grid(self, grid):
+	def _assign_base_grid(self, grid):
 		self._base_grid = grid
 		self._base_grid_value.subject = self._base_grid
 	
 
-	def set_base_grid_CC(self, grid):
+	def _assign_base_grid_CC(self, grid):
 		self._base_grid_CC = grid
 		self._base_grid_CC_value.subject = self._base_grid_CC
+	
+
+	def _assign_keys(self, keys):
+		self._keys = keys
+		self._keys_value.subject = self._keys
+	
+
+	def set_shift_button(self, button):
+		self._shift = button
+		self._shift_value.subject = self._shift
+	
+
+	def set_alt_button(self, button):
+		self._alt = button
+		self._alt_value.subject = self._alt
 	
 
 	@subject_slot('value')
@@ -1316,6 +1359,19 @@ class BaseModHandler(ModHandler):
 				self._active_mod.send('grid_CC', x + self.x_offset , y + self.y_offset, value)
 			else:
 				self._active_mod.send('base_grid_CC', x, y, value)
+	
+
+	@subject_slot('value')
+	def _shift_value(self, value, *a, **k):
+		if self._active_mod:
+			self._active_mod.send('shift', value)
+			self.update()
+	
+
+	@subject_slot('value')
+	def _alt_value(self, value, *a, **k):
+		if self._active_mod:
+			self._active_mod.send('alt', value)
 	
 
 	def _display_nav_box(self):
@@ -1470,7 +1526,7 @@ class Base(ControlSurface):
 	def _setup_mixer_control(self):
 		is_momentary = True
 		self._num_tracks = (8) #A mixer is one-dimensional; 
-		self._mixer = BaseMixerComponent(self, 8, 4, False, False)
+		self._mixer = BaseMixerComponent(self, 8, 4)
 		self._mixer.name = 'Mixer'
 		self._mixer.set_track_offset(0) #Sets start point for mixer strip (offset from left)
 		for index in range(8):
@@ -1778,10 +1834,12 @@ class Base(ControlSurface):
 	
 
 	def _check_mode_shift(self, held_key = None):
-		if held_key is self._mode_selector._held:
-			self._shift_update(self._mode_selector._mode_index, True)
-			#self.schedule_message(1, self._shift_update, [self._mode_selector._mode_index, True])
+		if not self.modhandler.is_enabled():
+			if held_key is self._mode_selector._held:
+				self._shift_update(self._mode_selector._mode_index, True)
+				#self.schedule_message(1, self._shift_update, [self._mode_selector._mode_index, True])
 	
+   	
 
 	def _select_update(self, held_strip = None):
 		#self.log_message('_select_update ' + str(held_strip))
@@ -2076,15 +2134,15 @@ class Base(ControlSurface):
 			self._note_sequencer.set_playhead(None)
 
 			self._drumgroup.set_drum_matrix(None)
-			self.modhandler.set_key_buttons(None)
-			self.modhandler.set_base_grid(None)
-			self.modhandler.set_base_grid_CC(None)
+			self.modhandler._assign_keys(None)
+			self.modhandler._assign_base_grid(None)
+			self.modhandler._assign_base_grid_CC(None)
 			self.modhandler.set_shift_button(None)
 			self.modhandler.set_device_component(None)
 			self._transport.set_overdub_button(None)
 			self._recorder.set_new_button(None)
 			self._recorder.set_record_button(None)
-			#self._recorder.set_length_button(None)
+			self._recorder.set_length_button(None)
 			self._recorder.set_length_buttons(None)
 			self._offset_component.deassign_all()
 			self._vertical_offset_component.deassign_all()
@@ -2238,7 +2296,7 @@ class Base(ControlSurface):
 					self._transport.set_overdub_button(self._button[4])
 					self._recorder.set_new_button(self._button[5])
 					self._recorder.set_record_button(self._button[6])
-					#self._recorder.set_length_button(self._button[7])
+					self._recorder.set_length_button(self._button[7])
 			else:
 				is_midi = self._assign_midi_shift_layer()
 				if not is_midi:
@@ -2894,14 +2952,14 @@ class Base(ControlSurface):
 		mod = self._is_mod(self._device._device)
 		if not mod is None:
 			self._send_midi(MIDIBUTTONMODE)
-			self.modhandler.set_base_grid(self._base_grid)
-			self.modhandler.set_base_grid_CC(self._base_grid_CC)
+			self.modhandler._assign_base_grid(self._base_grid)
+			self.modhandler._assign_base_grid_CC(self._base_grid_CC)
 			self.modhandler.set_shift_button(self._button[self._layer])
 			self.modhandler.set_device_component(self._device)
 			if self.shift_pressed():
-				self.modhandler.set_key_buttons(self._keys)
+				self.modhandler._assign_keys(self._keys)
 			else:
-				self.modhandler.set_key_buttons(self._keys_display)
+				self.modhandler._assign_keys(self._keys_display)
 				if self._layer == 2:
 					self.modhandler._fader_color_override = True
 		self.modhandler.select_mod(mod)

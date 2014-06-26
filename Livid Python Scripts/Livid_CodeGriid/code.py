@@ -16,10 +16,10 @@ from _Framework.ControlElement import ControlElement # Base class for all classe
 from _Framework.ControlSurface import ControlSurface # Central base class for scripts based on the new Framework
 from _Framework.ControlSurfaceComponent import ControlSurfaceComponent # Base class for all classes encapsulating functions in Live
 from _Framework.InputControlElement import * # Base class for all classes representing control elements on a controller
-from _Framework.MixerComponent import MixerComponent # Class encompassing several channel strips to form a mixer
+from VCM600.MixerComponent import MixerComponent # Class encompassing several channel strips to form a mixer
 from _Framework.SceneComponent import SceneComponent # Class representing a scene in Live
 from _Framework.SessionComponent import SessionComponent # Class encompassing several scene to cover a defined section of Live's session
-from _Framework.SessionZoomingComponent import SessionZoomingComponent
+from _Framework.SessionZoomingComponent import DeprecatedSessionZoomingComponent as SessionZoomingComponent
 from _Framework.SliderElement import SliderElement # Class representing a slider on the controller
 from _Framework.TransportComponent import TransportComponent # Class encapsulating all functions in Live's transport section
 from _Framework.EncoderElement import EncoderElement
