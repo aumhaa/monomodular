@@ -694,6 +694,26 @@ class NewMonoDeviceComponent(DeviceComponent):
 									control.reset()
 	
 
+	def _select_drum_pad(self, pad, force = False):
+		if self._device_parent != None:
+			if isinstance(self._device_parent, Live.Device.Device):
+				if self._device_parent.can_have_drum_pads and self._device_parent.has_drum_pads:
+					pad = self._device_parent.drum_pads[pad]
+					self._parent.log_message('pad is: ' + str(pad))
+					#for item in dir(pad):
+					#	self._parent.log_message(str(item))
+					if pad.chains and pad.chains[0] and pad.chains[0].devices and isinstance(pad.chains[0].devices[0], Live.Device.Device):
+						self.set_device(pad.chains[0].devices[0], force)
+					elif 'NoDevice' in self._device_banks.keys():
+						self.set_device(self._nodevice, True)
+					else:
+						self.set_device(None)
+						if self.is_enabled():
+							for host in self._parent._active_handlers:
+								for control in host._parameter_controls:
+									control.reset()
+	
+
 	def _parent_device_changed(self):
 		#self.log_message('parent_device_changed')
 		self._set_device_parent(None)
@@ -1090,6 +1110,12 @@ class NewMonoDeviceComponent(DeviceComponent):
 	def set_mod_device_chain(self, chain, *a):
 		#self.log_message('set_chain ' + str(chain))
 		self._select_parent_chain(chain, True)
+		for host in self._parent._active_handlers:
+			host.update()
+	
+
+	def set_mod_drum_pad(self, pad, *a):
+		self._select_drum_pad(pad, True)
 		for host in self._parent._active_handlers:
 			host.update()
 	

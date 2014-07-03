@@ -47,6 +47,8 @@ from _Mono_Framework.MonoBridgeElement import MonoBridgeElement
 from _Mono_Framework.MonoDeviceComponent import MonoDeviceComponent
 from _Mono_Framework.ModDevices import *
 from _Mono_Framework.Mod import *
+from _Mono_Framework.Debug import *
+
 import _Mono_Framework.modRemixNet as RemixNet
 import _Mono_Framework.modOSC
 
@@ -3173,6 +3175,7 @@ class Base(ControlSurface):
 		self.oscServer = None
 		self.log_message("--------------= Base log closed =--------------")
 		super(Base, self).disconnect()
+		rebuild_sys()
 	
 
 	def _on_new_device_set(self):

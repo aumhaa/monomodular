@@ -47,6 +47,7 @@ from _Mono_Framework.MonoBridgeElement import MonoBridgeElement
 from _Mono_Framework.MonoButtonElement import MonoButtonElement
 from _Mono_Framework.MonoEncoderElement import MonoEncoderElement
 from _Mono_Framework.MonomodComponent import MonomodComponent
+from _Mono_Framework.Debug import *
 from _Mono_Framework.Mod import *
 
 from MonoRingedEncoderElement import MonoRingedEncoderElement
@@ -129,6 +130,11 @@ class AumPC20(APC20):
 		super(AumPC20, self).__init__(c_instance, *a, **k)
 		with self.component_guard():
 			self._setup_mod()
+	
+
+	def disconnect(self):
+		super(AumPC20, self).disconnect()
+		rebuild_sys()
 	
 
 	def _create_controls(self):

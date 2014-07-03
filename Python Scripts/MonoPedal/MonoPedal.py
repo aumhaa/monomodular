@@ -49,6 +49,7 @@ from _Mono_Framework.DetailViewControllerComponent import DetailViewControllerCo
 from _Mono_Framework.MonomodComponent import MonomodComponent
 from _Mono_Framework.MonoDeviceComponent import MonoDeviceComponent
 from _Mono_Framework.LiveUtils import *
+from _Mono_Framework.Debug import *
 
 PEDAL_DEFS = [64, 65, 66, 67, 68, 69, 70]
 LED_DEFS = [4, 3, 2, 1, 8, 7, 6, 5, 12, 11, 10, 9]
@@ -566,6 +567,10 @@ class Monoloop(ControlSurfaceComponent):
 			#self._script.set_appointed_device(self._device)
 	
 
+	def disconnect(self):
+		super(Monoloop, self).disconnect()
+		rebuild_sys()
+	
 
 
 class LauncherSlot(ControlSurfaceComponent):

@@ -16,6 +16,7 @@ from Launchpad.DefChannelStripComponent import DefChannelStripComponent as Launc
 from _Mono_Framework.MonoBridgeElement import MonoBridgeElement
 from _Mono_Framework.MonoButtonElement import MonoButtonElement
 from _Mono_Framework.Mod import *
+from _Mono_Framework.Debug import *
 
 SIDE_NOTES = (8, 24, 40, 56, 72, 88, 104, 120)
 DRUM_NOTES = (41, 42, 43, 44, 45, 46, 47, 57, 58, 59, 60, 61, 62, 63, 73, 74, 75, 76, 77, 78, 79, 89, 90, 91, 92, 93, 94, 95, 105, 106, 107)
@@ -111,6 +112,11 @@ class LaunchMod(Launchpad):
 			for control in self.controls:
 				if isinstance(control, MonoButtonElement):
 					control.flash(self._timer)
+	
+
+	def disconnect(self):
+		super(LaunchMod, self).disconnect()
+		rebuild_sys()
 	
 
 

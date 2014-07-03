@@ -88,6 +88,7 @@ from _Mono_Framework.MonoEncoderElement import MonoEncoderElement
 from _Mono_Framework.ModDevices import *
 from _Mono_Framework.DeviceSelectorComponent import NewDeviceSelectorComponent as DeviceSelectorComponent
 from _Mono_Framework.ResetSendsComponent import ResetSendsComponent
+from _Mono_Framework.Debug import *
 from _Mono_Framework.Mod import *
 
 from MonoScaleComponent import MonoScaleComponent
@@ -934,6 +935,7 @@ class AumPush(Push):
 	def disconnect(self):
 		self.log_message('<<<<<<<<<<<<<<<<<<<<<<<< AumPush ' + str(self._monomod_version) + ' log closed >>>>>>>>>>>>>>>>>>>>>>>>') 
 		super(AumPush, self).disconnect()
+		rebuild_sys()
 	
 
 	def _make_current_bank_details(self, device_component):

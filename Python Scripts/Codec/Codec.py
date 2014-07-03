@@ -43,7 +43,7 @@ from _Mono_Framework.MonomodComponent import MonomodComponent
 from _Mono_Framework.Live8DeviceComponent import Live8DeviceComponent as DeviceComponent
 from _Mono_Framework.LiveUtils import *
 from _Mono_Framework.Mod import *
-
+from _Mono_Framework.Debug import *
 
 from Map import *
 
@@ -1237,6 +1237,7 @@ class Codec(ControlSurface):
 			self._session._unlink()
 		self.log_message('<<<<<<<<<<<<<<<<<<<<<<<<< Codec log closed >>>>>>>>>>>>>>>>>>>>>>>>>')
 		super(Codec, self).disconnect()
+		rebuild_sys()
 	
 
 	def update_display(self):

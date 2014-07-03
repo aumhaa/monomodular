@@ -48,6 +48,7 @@ from _Mono_Framework.DetailViewControllerComponent import DetailViewControllerCo
 from _Mono_Framework.DeviceSelectorComponent import NewDeviceSelectorComponent as DeviceSelectorComponent
 from _Mono_Framework.MonoDeviceComponent import MonoDeviceComponent
 from _Mono_Framework.LiveUtils import *
+from _Mono_Framework.Debug import *
 from _Mono_Framework.Mod import *
 
 """Custom files, overrides, and files from other scripts"""
@@ -1034,13 +1035,11 @@ class Cntrlr(ControlSurface):
 
 
 	"""midi functionality"""
-	
 
 	"""this method needs to be here so that Live knows what to do (nothing, in this case) when it receives sysex from the CNTRLR"""
 	def handle_sysex(self, midi_bytes):
 		pass
 	
-
 
 	"""general functionality"""
 	

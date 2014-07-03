@@ -12,7 +12,8 @@ setinletassist(0,"to pattrstorage");
 var DEBUG = false;
 var DEBUG_UPDT = false;
 var DEBUG_LCD = false;
-var FORCELOAD = true;
+var DEBUG_NEW = true;
+var FORCELOAD = false;
 
 var unique = jsarguments[1];
 
@@ -192,6 +193,29 @@ function base_grid(x, y, val)
 			}
 		}
 	}	
+}
+
+function cntrlr_grid(x, y, val)
+{
+	ctl('pads_'+(x + (y*4)), val);
+}
+
+function cntrlr_key(x, y, val)
+{
+	switch(y)
+	{
+		case 0:
+			ctl('keys_'+x, val);
+			break;
+		case 1:
+			ctl('keys2_'+x, val);
+			break;
+	}
+}
+
+function cntrlr_encoder_button_grid(x, y, val)
+{
+	ctl('buttons_'+(x + (y*4)), val);
 }
 
 function shift(val)
@@ -858,7 +882,7 @@ function detect_devices()
 		finder.goto('devices', i);
 		if(finder.get('class_name')=='DrumGroupDevice')
 		{
-			if(DEBUG){post("\nDrumRack found");}
+			debug("\nDrumRack found", finder.get('name'));
 			found_device = parseInt(finder.id);
 			break;
 		}
@@ -870,7 +894,7 @@ function detect_devices()
 	else
 	{
 		finder.id = found_device;
-		post('chains:', finder.getcount('chains'), '\n');
+		debug('chains:', finder.getcount('chains'));
 		if(finder.getcount('chains')<16)
 		{
 			showCountError();
@@ -1006,15 +1030,17 @@ function report_drumrack_id()
 //send the current chain assignment to mod.js
 function select_chain(chain_num)
 {
+	debug('select_chain', chain_num);
 	var a = this.patcher.getnamed('GRID').getvalueof();
 	seq = ChainNumbers[a[0] + (a[1]*4)];
-	if(DEBUG){post('new seq =', seq, '\n');}
+	debug('new seq =', seq);
 	if(live>0)
 	{
 		//outlet(0, 'set_device_chain', Math.max(0, Math.min(chain_num + global_offset, 127)));
 		//outlet(0, 'send_explicit', 'receive_device', 'set_mod_device_parent', 'id', devices[selected.channel]);
 		if(!SYNTH){
-			outlet(0, 'receive_device', 'set_mod_device_chain', Math.max(0, Math.min(chain_num + global_offset, 127)));
+			outlet(0, 'receive_device', 'set_mod_drum_pad', chain_num + 36);
+			//outlet(0, 'receive_device', 'set_mod_device_chain', Math.max(0, Math.min(chain_num + global_offset, 127)));
 		}
 		dials.Encoder_8.message('set', repeats[seq].getvalueof());
 		dials.Encoder_9.message('set', grooves[seq].getvalueof());
@@ -1066,7 +1092,7 @@ function anything(){}
 
 function api_links(num)
 {
-	if(DEBUG){post('chain num', num, '\n');}
+	debug('chain num', num);
 	if(num != chain){
 		chain = num;
 		select_chain(num);
@@ -1108,5 +1134,5 @@ function forceload()
 forceload();
 
 
-
+//notelock
 

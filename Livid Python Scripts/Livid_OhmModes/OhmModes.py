@@ -39,6 +39,7 @@ from _Mono_Framework.CodecEncoderElement import CodecEncoderElement
 from _Mono_Framework.EncoderMatrixElement import EncoderMatrixElement
 from _Mono_Framework.LiveUtils import *
 from _Mono_Framework.ModDevices import *
+from _Mono_Framework.Debug import *
 
 from MonoDeviceComponent import MonoDeviceComponent
 
@@ -1125,7 +1126,8 @@ class OhmModes(ControlSurface):
 		"""clean things up on disconnect"""
 		self.song().view.remove_selected_track_listener(self._update_selected_device)
 		self.log_message(time.strftime('%d.%m.%Y %H:%M:%S', time.localtime()) + '--------------= OhmModes log closed =--------------')
-		ControlSurface.disconnect(self)
+		super(OhmModes, self).disconnect()
+		rebuild_sys()
 	
 
 	def _get_num_tracks(self):

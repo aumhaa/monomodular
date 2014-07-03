@@ -44,6 +44,7 @@ from _Mono_Framework.MonomodComponent import MonomodComponent
 from _Mono_Framework.MonoDeviceComponent import MonoDeviceComponent
 from _Mono_Framework.SwitchboardElement import SwitchboardElement
 from _Mono_Framework.MonoClient import MonoClient
+from _Mono_Framework.Debug import *
 from _Mono_Framework.LiveUtils import *
 
 """Custom files, overrides, and files from other scripts"""
@@ -53,7 +54,7 @@ from MonoDeviceComponent import MonoDeviceComponent
 from ModDevices import *
 from Map import *
 
-from Debug.Debug import *
+
 
 """ Here we define some global variables """
 switchxfader = (240, 00, 01, 97, 02, 15, 01, 247)

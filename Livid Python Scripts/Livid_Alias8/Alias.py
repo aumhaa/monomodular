@@ -33,6 +33,7 @@ from _Framework.M4LInterfaceComponent import M4LInterfaceComponent
 from _Mono_Framework.MonoButtonElement import MonoButtonElement
 from _Mono_Framework.MonoEncoderElement import MonoEncoderElement
 from _Mono_Framework.MonoBridgeElement import MonoBridgeElement
+from _Mono_Framework.Debug import *
 from Map import *
 
 
@@ -219,8 +220,8 @@ class Alias(ControlSurface):
 		if self._encoder.value_has_listener(self._nav_change):
 			self._encoder.remove_value_listener(self._nav_change)
 		self.log_message("--------------= Alias log closed =--------------")
-		ControlSurface.disconnect(self)
-		return None
+		super(Alias, self).disconnect()
+		rebuild_sys()
 	
 
 	def handle_sysex(self, midi_bytes):

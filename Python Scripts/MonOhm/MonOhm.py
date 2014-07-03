@@ -45,6 +45,7 @@ from _Mono_Framework.MonomodComponent import MonomodComponent
 from _Mono_Framework.LiveUtils import *
 from _Mono_Framework.ModDevices import *
 from _Mono_Framework.Mod import *
+from _Mono_Framework.Debug import *
 
 """Custom files, overrides, and files from other scripts"""
 from _Generic.Devices import *
@@ -1580,11 +1581,6 @@ class MonOhm(ControlSurface):
 
 	def disconnect(self):
 		"""clean things up on disconnect"""
-		"""for s in self._control_surfaces():
-			self.log_message('monohm disconnect finds ' + str(s))
-			if '_version_check' in dir(s):
-				if s._version_check == 'b994':
-					s.disconnect()"""
 		self._update_linked_device_selection = None
 		if self._session._is_linked():
 			self._session._unlink()
@@ -1595,10 +1591,9 @@ class MonOhm(ControlSurface):
 			self.song().view.remove_selected_track_listener(self._update_selected_device)
 		if self._session2.offset_has_listener(self._on_session_offset_changes):
 			self._session2.remove_offset_listener(self._on_session_offset_changes)
-		#self._disconnect_notifier.set_mode(0)
 		self.log_message("--------------=  " + str(self._host_name) + " " + str(self._monomod_version) + " log closed =--------------") #Create entry in log file
 		super(MonOhm, self).disconnect()
-		return None
+		rebuild_sys()
 		
 	
 

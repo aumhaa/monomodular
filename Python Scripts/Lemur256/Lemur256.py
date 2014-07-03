@@ -47,6 +47,7 @@ from _Mono_Framework.DeviceSelectorComponent import NewDeviceSelectorComponent a
 from _Mono_Framework.LiveUtils import *
 from _Mono_Framework.ModDevices import *
 from _Mono_Framework.Mod import *
+from _Mono_Framework.Debug import *
 
 """Custom files, overrides, and files from other scripts"""
 from Map import *
@@ -479,6 +480,7 @@ class Lemur256(ControlSurface):
 	def disconnect(self):
 		self.log_message("<<<<<<<<<<<<<<<<<<<<  "+ str(self._host_name) + " log closed   >>>>>>>>>>>>>>>>>>>>") 
 		super(Lemur256, self).disconnect()
+		rebuild_sys()
 	
 
 	def clear_grid_names(self):

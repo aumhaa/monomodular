@@ -46,6 +46,7 @@ from _Mono_Framework.MonoBridgeElement import MonoBridgeElement
 from _Mono_Framework.MonoButtonElement import MonoButtonElement
 from _Mono_Framework.MonoEncoderElement import MonoEncoderElement
 from _Mono_Framework.MonomodComponent import MonomodComponent
+from _Mono_Framework.Debug import *
 from _Mono_Framework.Mod import *
 
 from MonoRingedEncoderElement import MonoRingedEncoderElement
@@ -138,6 +139,11 @@ class AumPC40(APC40):
 			self._setup_monobridge()
 			self._setup_mod()
 			self._device_component._current_bank_details = self._make_current_bank_details(self._device_component)
+	
+
+	def disconnect(self):
+		super(AumPC40, self).disconnect()
+		rebuild_sys()
 	
 
 	def _create_controls(self):
@@ -262,7 +268,6 @@ class AumPC40(APC40):
 		self._on_shift_value.subject = self._shift_button
 	
 
-
 	@subject_slot('value')
 	def _on_shift_value(self, value):
 		#self._monomod_mode.set_enabled(value>0)
@@ -273,7 +278,6 @@ class AumPC40(APC40):
 		else:
 			self.modhandler.set_lock_button(None)
 	
-
 
 	def _monomod_mode_update(self):
 		#self.log_message('mode update: ' + str(self._monomod_mode._mode_index))
