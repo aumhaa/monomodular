@@ -12,7 +12,7 @@ setinletassist(0,"to pattrstorage");
 var DEBUG = false;
 var DEBUG_UPDT = false;
 var DEBUG_LCD = false;
-var FORCELOAD = false;
+var FORCELOAD = true;
 
 var unique = jsarguments[1];
 
@@ -36,6 +36,22 @@ ctlr.ctls = new Object; //the control names, like "key 0" or "ring 2 2 0"
 ctlr.msgs = new Object; //messages 
 
 var Ctl_to_Trans= {};
+
+function debug()
+{
+	if(DEBUG_NEW)
+	{
+		var args = arrayfromargs(arguments);
+		for(var i in args)
+		{
+			if(args[i] instanceof Array)
+			{
+				args[i] = args[i].join(' ');
+			}
+		}
+		post('debug->', args, '\n');
+	}
+}
 
 function init()
 {
@@ -71,6 +87,24 @@ function setup_translations()
 	}
 	outlet(0, 'enable_translation_group', 'base_buttons', 0);
 	outlet(0, 'enable_translation_group', 'base_extras',  0);
+
+	//CNTRLR stuff:
+	for(var i = 0;i < 16;i++)
+	{
+		outlet(0, 'add_translation', 'pads_'+i, 'cntrlr_grid', 'cntrlr_pads', i%4, Math.floor(i/4));
+		outlet(0, 'add_translation', 'keys_'+i, 'cntrlr_key', 'cntrlr_keys', i, 0);
+		outlet(0, 'add_translation', 'keys2_'+i, 'cntrlr_key', 'cntrlr_keys2', i, 1);
+	}
+	outlet(0, 'add_translation', 'pads_batch', 'cntrlr_grid', 'cntrlr_pads', 0);
+	outlet(0, 'add_translation', 'keys_batch', 'cntrlr_key', 'cntrlr_keys', 0);
+	outlet(0, 'add_translation', 'keys2_batch', 'cntrlr_key', 'cntrlr_keys2', 1); 
+	for(var i=0;i<8;i++)
+	{
+		outlet(0, 'add_translation', 'buttons_'+i, 'cntrlr_encoder_button_grid', 'cntrlr_buttons', i);
+		outlet(0, 'add_translation', 'extras_'+i, 'cntrlr_encoder_button_grid', 'cntrlr_extras', i);
+	}
+	outlet(0, 'add_translation', 'buttons_batch', 'cntrlr_encoder_button_grid', 'cntrlr_buttons');
+	outlet(0, 'add_translation', 'extras_batch', 'cntrlr_encoder_button_grid', 'cntrlr_extras');
 
 }
 
@@ -755,8 +789,8 @@ function callback(){};
 
 function init_device()
 {
-	outlet(0, 'receive_device', 'mod_set_device_type', SYNTH ? 'DrumSteppr' : 'SynthSteppr');
-	outlet(0, 'receive_device', 'mod_set_number_params', 12);
+	outlet(0, 'receive_device', 'set_mod_device_type', SYNTH ? 'DrumSteppr' : 'SynthSteppr');
+	outlet(0, 'receive_device', 'set_number_params', 12);
 	found_device = 0;
 	stepseq = this.patcher.getnamed('stepseq');
 	finder = new LiveAPI(callback, 'this_device');
@@ -931,7 +965,7 @@ function encoder(num, val)
 	{
 		if(num<8)
 		{
-			outlet(0, 'receive_device', 'mod_set_parameter_value', num, val);
+			outlet(0, 'receive_device', 'set_mod_parameter_value', num, val);
 		}				 
 		else
 		{
@@ -959,12 +993,12 @@ function report_drumrack_id()
 	if(SYNTH==0)
 	{
 		//outlet(0, 'set_device_parent', found_device);
-		outlet(0, 'send_explicit', 'receive_device', 'mod_set_device_parent', 'id', found_device);
+		outlet(0, 'send_explicit', 'receive_device', 'set_mod_device_parent', 'id', found_device);
 		select_chain(chain);
 	}
 	else
 	{
-		outlet(0, 'send_explicit', 'receive_device', 'mod_set_device', 'id', found_device);
+		outlet(0, 'send_explicit', 'receive_device', 'set_mod_device', 'id', found_device);
 		//outlet(0, 'set_device', found_device);
 	}
 }
@@ -978,9 +1012,9 @@ function select_chain(chain_num)
 	if(live>0)
 	{
 		//outlet(0, 'set_device_chain', Math.max(0, Math.min(chain_num + global_offset, 127)));
-		//outlet(0, 'send_explicit', 'receive_device', 'mod_set_device_parent', 'id', devices[selected.channel]);
+		//outlet(0, 'send_explicit', 'receive_device', 'set_mod_device_parent', 'id', devices[selected.channel]);
 		if(!SYNTH){
-			outlet(0, 'receive_device', 'mod_set_device_chain', Math.max(0, Math.min(chain_num + global_offset, 127)));
+			outlet(0, 'receive_device', 'set_mod_device_chain', Math.max(0, Math.min(chain_num + global_offset, 127)));
 		}
 		dials.Encoder_8.message('set', repeats[seq].getvalueof());
 		dials.Encoder_9.message('set', grooves[seq].getvalueof());
