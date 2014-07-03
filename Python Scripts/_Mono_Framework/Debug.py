@@ -9,24 +9,80 @@ DIRS_TO_REBUILD = ['Debug', 'AumPC20_b995_9', 'AumPC40_b995_9', 'AumPush_b995', 
 
 MODS_TO_REBUILD = ['Debug', 'AumPC20', 'AumPC40', 'AumPush', 'AumTroll', 'AumTroll_G', 'Base', 'BlockMod', 'Codec', 'LaunchMod', 'Lemur256', 'LemurPad', 'Alias8', 'Block', 'CNTRLR', 'CodeGriid', 'Ohm64', 'MonOhm', 'Monomodular']
 
-from _Framework.ControlSurface import ControlSurface 
+from _Tools.re import *
+
+from _Framework.ControlSurface import * 
 from _Framework.ControlSurfaceComponent import ControlSurfaceComponent
 
-if not ("/Users/amounra/monomodular_git/L9 Python Scripts/") in sys.path:
-	sys.path.append("/Users/amounra/monomodular_git/L9 Python Scripts/")
+#if not ("/Users/amounra/monomodular_git/L9 Python Scripts/") in sys.path:
+#	sys.path.append("/Users/amounra/monomodular_git/L9 Python Scripts/")
+
+def rebuild_sys():
+	modnames = []
+	for module in get_control_surfaces():
+		if isinstance(module, Debug):
+			#modnames.append['debug found:']
+			modnames = module.rebuild_sys()
+			break
+	return modnames
+
+
+def list_new_modules():
+	modnames = []
+	for module in get_control_surfaces():
+		if isinstance(module, Debug):
+			#modnames.append['debug found:']
+			modnames = module.rollbackImporter.newModules
+			break
+	return modnames
+
+
+def rollback_is_enabled():
+	control_surfaces = get_control_surfaces()
+	if 'Debug' in control_surfaces:
+		debug = control_surfaces['Debug']
+		modnames = debug.rollbackImporter.newModules.keys()
+	return modnames
+
+
+def log_sys_modules():
+	modnames = []
+	for module in get_control_surfaces():
+		if isinstance(module, Debug):
+			#modnames.append['debug found:']
+			module._log_sys_modules()
+			break
+
 
 class Debug(ControlSurface):
 
 
 	def __init__(self, *a, **k):
 		super(Debug, self).__init__(*a, **k)
+		self.rollbackImporter = None
 		#self._log_version_data()
 		#self._log_sys_modules()
+		#self._log_paths()
+		self._start_importer()
 		#self._log_dirs()
 		self.log_message('_^_^_^_^_^_^_^_^_^_^_^_^_^_^_^_^_ DEBUG ON _^_^_^_^_^_^_^_^_^_^_^_^_^_^_^_^_')
 		self._scripts = []
-		#self._log_dirs()
+	
 
+	def _log_paths(self):
+		for path in sys.path:
+			if 'MIDI Remote Scripts' in path:
+				self.log_message('path: ' + str(path) + ' is: ' + str(os.listdir(path)))
+	
+
+	def _start_importer(self):
+		if not self.rollbackImporter is None:
+			self.rollbackImporter.uninstall()
+		self.rollbackImporter = RollbackImporter()
+	
+
+	def reimport_module(self, name, new_name = None):
+		pass
 	
 
 	def _log_dirs(self):
@@ -63,8 +119,10 @@ class Debug(ControlSurface):
 	
 
 	def disconnect(self):
+		if self.rollbackImporter:
+			self.rollbackImporter.uninstall()
 		super(Debug, self).disconnect()
-		self._clean_sys()
+		#self._clean_sys()
 	
 
 	def _clean_sys(self):
@@ -80,9 +138,6 @@ class Debug(ControlSurface):
 							if name == key[:len(name)]:
 								del sys.modules[key]
 								#self.log_message('deleting key---' + str(key))
-						"""if sys.modules.has_key(name):
-							del sys.modules[name]
-							self.log_message('deleting key---' + str(name))"""
 		#self._log_sys_modules()
 	
 
@@ -97,10 +152,11 @@ class Debug(ControlSurface):
 			self.log_message('---   %s' %(item.__doc__))
 	
 
-	def _reimport(self):
+	def rebuild_sys(self):
 		if self.rollbackImporter:
-			self.rollbackImporter.uninstall()
-		self.rollbackImporter = RollbackImporter()
+			return self.rollbackImporter._rebuild()
+		else:
+			return ['no rollbackImporter installed']
 	
 
 	def connect_script_instances(self, instanciated_scripts):
@@ -144,18 +200,47 @@ class RollbackImporter:
 		self.newModules = {}
 	
 
-	def _import(self, name, globals=None, locals=None, fromlist=[]):
+	def _import(self, name, globals=None, locals=None, fromlist=[], *a):
 		result = apply(self.realImport, (name, globals, locals, fromlist))
 		self.newModules[name] = 1
 		return result
 	
 
-	def uninstall(self):
+	def _rebuild(self):
+		modnames = []
+		nonames = []
+		for key, value in sys.modules.items():
+			if value == None:
+				del sys.modules[key]
 		for modname in self.newModules.keys():
 			if not self.previousModules.has_key(modname):
-				# Force reload when modname next imported
-				del(sys.modules[modname])
+				if modname in sys.modules.keys():
+					# Force reload when modname next imported
+					del(sys.modules[modname])
+					modnames.append(modname)
+				else:
+					found = False
+					for path in sys.path:
+						if 'MIDI Remote Scripts' in path:
+							name_list = os.listdir(path)
+							for name in name_list:
+								if name[0] != '_' or '_Mono_Framework' == name[:15]:
+									#if name == key[:len(name)] and not match(modname, name) == None:
+									fullname = name + '.' + modname
+									if fullname in sys.modules.keys():
+										del sys.modules[fullname]
+										found = True
+										modnames.append(fullname)
+					if not found:
+						nonames.append(modname)
+		self.previousModules = sys.modules.copy()
+		return [modnames, nonames]
+	
+
+	def uninstall(self):
+		modnames = self._rebuild()
 		__builtin__.__import__ = self.realImport
+		return modnames
 	
 
 

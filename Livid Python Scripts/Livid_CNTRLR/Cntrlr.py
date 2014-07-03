@@ -53,6 +53,7 @@ from MonoDeviceComponent import MonoDeviceComponent
 from ModDevices import *
 from Map import *
 
+from Debug.Debug import *
 
 """ Here we define some global variables """
 switchxfader = (240, 00, 01, 97, 02, 15, 01, 247)
@@ -1217,6 +1218,23 @@ class Cntrlr(ControlSurface):
 			cell.set_channel(chan)
 			cell.set_enabled(chan is 0)
 			cell.force_next_send()
+		if FADER_BANKING:
+			for fader in self._fader:
+				fader.release_parameter()
+				fader.set_channel(chan)
+				fader.set_enabled(chan is 0)
+				fader.force_next_send()
+		if DIAL_BANKING:
+			for dial in self._dial_right:
+				dial.release_parameter()
+				dial.set_channel(chan)
+				dial.set_enabled(chan is 0)
+				dial.force_next_send()
+			for dial in self._dial_left:
+				dial.release_parameter()
+				dial.set_channel(chan)
+				dial.set_enabled(chan is 0)
+				dial.force_next_send()
 		self.request_rebuild_midi_map()
 			
 	
@@ -1239,6 +1257,20 @@ class Cntrlr(ControlSurface):
 			cell.set_channel(cell._original_channel)
 			cell.set_enabled(True)
 			cell.force_next_send()	
+		if FADER_BANKING:
+			for fader in self._fader:
+				fader.set_channel(fader._original_channel)
+				fader.set_enabled(True)
+				fader.force_next_send()
+		if DIAL_BANKING:
+			for dial in self._dial_right:
+				dial.set_channel(dial._original_channel)
+				dial.set_enabled(True)
+				dial.force_next_send()
+			for dial in self._dial_left:
+				dial.set_channel(dial._original_channel)
+				dial.set_enabled(True)
+				dial.force_next_send()
 		self.request_rebuild_midi_map()
 	
 
@@ -1413,6 +1445,7 @@ class Cntrlr(ControlSurface):
 		self._hosts = []
 		self.log_message("<<<<<<<<<<<<<<<<<<<<<<<<< " + str(self._host_name) + " log closed >>>>>>>>>>>>>>>>>>>>>>>>>") #Create entry in log file
 		super(Cntrlr, self).disconnect()
+		rebuild_sys()
 	
 
 	"""this provides a hook that can be called from m4l to change the DeviceComponent's behavior"""
