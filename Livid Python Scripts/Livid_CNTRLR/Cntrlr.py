@@ -955,6 +955,8 @@ class Cntrlr(ControlSurface):
 		self._device.set_lock_button(None)									#remove the assignment of the lock button from the device component	
 		self._device.set_bank_nav_buttons(None, None) 						#remove the assignment of the navigation buttons from the device component
 		self._device.set_enabled(False)										#turn off the device component
+		self._session.set_track_bank_buttons(None, None)					#set the track bank buttons for the Session navigation controls
+		self._session.set_scene_bank_buttons(None, None)					#set the scnee bank buttons for the Session navigation controls
 		self._session.set_enabled(False)									#turn off the session component
 		self._session_zoom.set_enabled(False)								#turn off the zoom component
 		for index in range(16):

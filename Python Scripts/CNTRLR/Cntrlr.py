@@ -18,15 +18,15 @@ from _Framework.ControlSurfaceComponent import ControlSurfaceComponent # Base cl
 from _Framework.DeviceComponent import DeviceComponent # Class representing a device in Live
 from _Framework.EncoderElement import EncoderElement # Class representing a continuous control on the controller
 from _Framework.InputControlElement import * # Base class for all classes representing control elements on a controller
-from _Framework.MixerComponent import MixerComponent # Class encompassing several channel strips to form a mixer
+from VCM600.MixerComponent import MixerComponent # Class encompassing several channel strips to form a mixer
 from _Framework.ModeSelectorComponent import ModeSelectorComponent # Class for switching between modes, handle several functions with few controls
 from _Framework.NotifyingControlElement import NotifyingControlElement # Class representing control elements that can send values
 from _Framework.SceneComponent import SceneComponent # Class representing a scene in Live
 from _Framework.SessionComponent import SessionComponent # Class encompassing several scene to cover a defined section of Live's session
-from _Framework.SessionZoomingComponent import SessionZoomingComponent # Class using a matrix of buttons to choose blocks of clips in the session
+from _Framework.SessionZoomingComponent import DeprecatedSessionZoomingComponent as SessionZoomingComponent # Class using a matrix of buttons to choose blocks of clips in the session
 from _Framework.SliderElement import SliderElement # Class representing a slider on the controller
-from _Framework.TrackEQComponent import TrackEQComponent # Class representing a track's EQ, it attaches to the last EQ device in the track
-from _Framework.TrackFilterComponent import TrackFilterComponent # Class representing a track's filter, attaches to the last filter in the track
+from VCM600.TrackEQComponent import TrackEQComponent # Class representing a track's EQ, it attaches to the last EQ device in the track
+from VCM600.TrackFilterComponent import TrackFilterComponent # Class representing a track's filter, attaches to the last filter in the track
 from _Framework.TransportComponent import TransportComponent # Class encapsulating all functions in Live's transport section
 from _Framework.ModesComponent import AddLayerMode, LayerMode, MultiEntryMode, ModesComponent, SetAttributeMode, ModeButtonBehaviour, CancellableBehaviour, AlternativeBehaviour, ReenterBehaviour, DynamicBehaviourMixin, ExcludingBehaviourMixin, ImmediateBehaviour, LatchingBehaviour, ModeButtonBehaviour
 from _Framework.Layer import Layer
@@ -438,8 +438,6 @@ class Cntrlr(ControlSurface):
 		self._version_check = 'b996'
 		self._host_name = 'Cntrlr'
 		self._color_type = 'OhmRGB'
-		self._hosts = []
-		self.hosts = []
 		self._client = [None for index in range(4)]
 		self._active_client = None
 		self._rgb = 0									##will change which color scheme is used, 0 is Livid 1 is AumHaa 2 is Monochrome(deprecated)
@@ -726,6 +724,8 @@ class Cntrlr(ControlSurface):
 		self._device.set_lock_button(None)									#remove the assignment of the lock button from the device component 
 		self._device.set_bank_nav_buttons(None, None)						#remove the assignment of the navigation buttons from the device component
 		self._device.set_enabled(False)										#turn off the device component
+		self._session.set_track_bank_buttons(None, None)					#set the track bank buttons for the Session navigation controls
+		self._session.set_scene_bank_buttons(None, None)					#set the scnee bank buttons for the Session navigation controls
 		self._session.set_enabled(False)									#turn off the session component
 		self._session_zoom.set_enabled(False)								#turn off the zoom component
 		for index in range(16):
@@ -1035,9 +1035,20 @@ class Cntrlr(ControlSurface):
 		"""clean things up on disconnect"""
 		if self.song().view.selected_track_has_listener(self._update_selected_device):
 			self.song().view.remove_selected_track_listener(self._update_selected_device)
-		self._hosts = []
 		self.log_message("<<<<<<<<<<<<<<<<<<<<<<<<< " + str(self._host_name) + " log closed >>>>>>>>>>>>>>>>>>>>>>>>>") #Create entry in log file
 		super(Cntrlr, self).disconnect()
+	
+
+	def restart_monomodular(self):
+		#self.log_message('restart monomodular')
+		self.modhandler.disconnect()
+		with self.component_guard():
+			self._setup_mod()
+	
+
+	def connect_script_instances(self, instanciated_scripts):
+		#self.log_message('connect script instances')
+		pass
 	
 
 	"""this provides a hook that can be called from m4l to change the DeviceComponent's behavior"""
@@ -1167,7 +1178,7 @@ class CntrlrModHandler(ModHandler):
 					'cntrlr_encoder_button_grid': {'obj':Grid('cntrlr_encoder_button_grid', 4, 2), 'method':self._receive_cntrlr_encoder_button_grid},
 					'cntrlr_key': {'obj':  Grid('cntrlr_key', 16, 2), 'method': self._receive_cntrlr_key}}
 		super(CntrlrModHandler, self).__init__(addresses = addresses, *a, **k)
-		self._color_type = 'Monochrome'
+		self._color_type = 'RGB'
 	
 
 		#'cntrlr_encoder_grid_relative': {'obj':StoredElement(_name = 'cntrlr_encoder_grid_relative'), 'method':self._receive_cntrlr_encoder_grid_relative},

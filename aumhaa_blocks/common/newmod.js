@@ -8,8 +8,8 @@ var patch_type = jsarguments[1];
 var unique = jsarguments[2];
 var wiki_addy = 'http://www.aumhaa.com/wiki/index.php?title='+patch_type;
 var script = this;
-var DEBUG = false;
-var DEBUG_CB = false;
+var DEBUG = true;
+var DEBUG_CB = true;
 var MONOMODULAR=new RegExp(/(monomodular)/);
 var FUNCTION = new RegExp(/(function)/);
 var PROPERTY = new RegExp(/(property)/);
@@ -20,7 +20,7 @@ var this_device_id = 0;
 var stored_messages = [];
 var legacy = false;
 var alive = false;
-
+var restart = new Task(init, this);
 
 function init()
 {
@@ -177,6 +177,10 @@ function callback(args)
 	{
 		if(DEBUG_CB){post('from client:', args, '\n');}
 		outlet(0, args.slice(1));
+		if(args[1]=='disconnect')
+		{
+			restart.schedule(3000);
+		}
 	}
 }
 

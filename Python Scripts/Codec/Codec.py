@@ -852,15 +852,7 @@ class Codec(ControlSurface):
 	
 
 	def _setup_mod(self):
-		if isinstance(__builtins__, dict):
-			if not 'monomodular' in __builtins__.keys() or not isinstance(__builtins__['monomodular'], ModRouter):
-				__builtins__['monomodular'] = ModRouter()
-		else:
-			if not hasattr(__builtins__, 'monomodular') or not isinstance(__builtins__['monomodular'], ModRouter):
-				setattr(__builtins__, 'monomodular', ModRouter())
-		self.monomodular = __builtins__['monomodular']
-		if not self.monomodular.has_host():
-			self.monomodular.set_host(self)
+		self.monomodular = get_monomodular(self)
 		self.monomodular.name = 'monomodular_switcher'
 		self.modhandler = CodecModHandler(self)
 		self.modhandler.name = 'ModHandler'
@@ -1192,7 +1184,7 @@ class Codec(ControlSurface):
 		if not self.modhandler.active_mod() is None:
 			self.modhandler.set_enabled(True)
 			self.update_modhandler_controls()
-			self.log_message('enabled mod')
+			#self.log_message('enabled mod')
 		else:
 			self.set_device_component(self._special_device)
 
@@ -1207,7 +1199,7 @@ class Codec(ControlSurface):
 				for index in range(8):
 					self._mixer.channel_strip(index).set_select_button(self._column_button[index])
 				#self._mixer.channel_strip(index).select_layer.enter_mode()
-			self.log_message('disabled mod')
+			#self.log_message('disabled mod')
 	
 
 	def _assign_alternate_mappings(self, chan):
@@ -1321,6 +1313,18 @@ class Codec(ControlSurface):
 			self.schedule_message(2, self.check_touch)
 	
 
+	def restart_monomodular(self):
+		#self.log_message('restart monomodular')
+		self.modhandler.disconnect()
+		with self.component_guard():
+			self._setup_mod()
+	
+
+	def connect_script_instances(self, instanciated_scripts):
+		#self.log_message('connect script instances')
+		pass
+	
+
 
 	"""overrides"""
 	def allow_updates(self, allow_updates):
@@ -1331,15 +1335,16 @@ class Codec(ControlSurface):
 	def set_device_component(self, device_component):
 		if self._device_component != None:
 			self._device_component._lock_callback = None
-		assert (device_component != None)
-		assert isinstance(device_component, DeviceComponent)
 		self._device_component = device_component
-		self._device_component._lock_callback = self._toggle_lock	#old:  self._device_component.set_lock_callback(self._toggle_lock)
-		if self._device_select_buttons != None:
-			for button in self._device_select_buttons:
-				button.send_value(self._device_select_buttons.index(button) == self._device.index(self._device_component))
-		self._update_device_selection()
-		return None
+		self._c_instance.update_locks()
+		#self._device_component._lock_callback = self._toggle_lock	#old:  self._device_component.set_lock_callback(self._toggle_lock)
+		if device_component is not None:
+			self._device_component._lock_callback = self._toggle_lock
+			if self._device_selection_follows_track_selection:
+				self.schedule_message(1, self._update_device_selection)
+			if self._device_select_buttons != None:
+				for button in self._device_select_buttons:
+					button.send_value(self._device_select_buttons.index(button) == self._device.index(self._device_component))
 	
 
 	def _get_num_tracks(self):
@@ -1485,7 +1490,6 @@ class CodecModHandler(ModHandler):
 					self._code_encoder_grid_value.subject.get_button(x, y)._ring_value = k['value']
 			if 'mode' in keys:
 				self._code_encoder_grid_value.subject.get_button(x, y).set_mode(k['mode'])
-				self.log_message('mode:' + str(k['mode']))
 			if 'green' in keys:
 				self._code_encoder_grid_value.subject.get_button(x, y).set_green(k['green'])
 			if 'custom' in keys:

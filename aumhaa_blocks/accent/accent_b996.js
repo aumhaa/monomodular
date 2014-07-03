@@ -21,7 +21,9 @@ autowatch = 1;
 outlets = 4;
 inlets = 5;
 
-var DEBUG = 0;
+var FORCELOAD = true;
+var DEBUG = false;
+var DEBUG_NEW = true;
 var DEBUG_LCD = 0;
 var DEBUG_PTR = 0;
 var DEBUG_STEP = 0;
@@ -30,7 +32,7 @@ var DEBUG_REC = 0;
 var DEBUG_LOCK = 0;
 var DEBUG_FRWL = 0;
 var SHOW_POLYSELECTOR = 0;
-var FORCELOAD = 0;
+
 
 var unique = jsarguments[1];
 
@@ -167,6 +169,22 @@ var time2 = 4;
 
 var shifted = false;
 
+function debug()
+{
+	if(DEBUG_NEW)
+	{
+		var args = arrayfromargs(arguments);
+		for(var i in args)
+		{
+			if(args[i] instanceof Array)
+			{
+				args[i] = args[i].join(' ');
+			}
+		}
+		post('debug->', args, '\n');
+	}
+}
+
 /*/////////////////////////////////////////
 ///// script initialization routines //////
 /////////////////////////////////////////*/
@@ -190,29 +208,54 @@ _private_function().
 Note:  It is best to only address these private functions by their actual names in the script, since calling aliased 
 names will not be routed to anything()*/
 
+function setup_colors()
+{
+	outlet(0, 'fill_color_map', 'Monochrome', 0, 1, 1, 1, 8, 1);
+}
+
 function setup_translations()
 {
 	for(var i = 0;i < 16;i++)
 	{
-		outlet(0, 'add_translation', 'pads_'+i, 'base_grid', i%8, Math.floor(i/8));
-		outlet(0, 'add_translation', 'keys_'+i, 'base_grid', i%8, Math.floor(i/8));
-		outlet(0, 'add_translation', 'keys2_'+i, 'base_grid', i%8, Math.floor(i/8)+2);
-		outlet(0, 'enable_translation', 'keys_'+i, 'base_grid', 0);
+		outlet(0, 'add_translation', 'pads_'+i, 'cntrlr_grid', 'cntrlr_pads', i%4, Math.floor(i/4));
+		outlet(0, 'add_translation', 'keys_'+i, 'cntrlr_key', 'cntrlr_keys', i, 0);
+		outlet(0, 'add_translation', 'keys2_'+i, 'cntrlr_key', 'cntrlr_keys2', i, 1);
 
-		outlet(0, 'add_translation', 'pads_'+i, 'push_grid', i%8, Math.floor(i/8));
-		outlet(0, 'add_translation', 'keys_'+i, 'push_grid', i%8, Math.floor(i/8)+2);
-		outlet(0, 'add_translation', 'keys2_'+i, 'push_grid', i%8, Math.floor(i/8)+4);
+		outlet(0, 'add_translation', 'pads_'+i, 'base_grid', 'base_pads', i%8, Math.floor(i/8));
+		outlet(0, 'add_translation', 'keys_'+i, 'base_grid', 'base_keys', i%8, Math.floor(i/8));
+		outlet(0, 'add_translation', 'keys2_'+i, 'base_grid', 'base_keys2', i%8, Math.floor(i/8)+2);
+
+
+		outlet(0, 'add_translation', 'pads_'+i, 'code_grid', 'code_pads', i%8, Math.floor(i/8));
+		outlet(0, 'add_translation', 'keys_'+i, 'code_grid', 'code_keys', i%8, Math.floor(i/8));
+		outlet(0, 'add_translation', 'keys2_'+i, 'code_grid', 'code_keys2', i%8, Math.floor(i/8)+2);
+
+
+		outlet(0, 'add_translation', 'pads_'+i, 'push_grid', 'push_pads', i%8, Math.floor(i/8));
+		outlet(0, 'add_translation', 'keys_'+i, 'push_grid', 'push_keys', i%8, Math.floor(i/8)+2);
+		outlet(0, 'add_translation', 'keys2_'+i, 'push_grid', 'push_keys2', i%8, Math.floor(i/8)+4);
 	}
+	outlet(0, 'enable_translation_group', 'base_keys', 0);
+	outlet(0, 'enable_translation_group', 'code_keys', 0);
+
 	for(var i=0;i<8;i++)
 	{
-		outlet(0, 'add_translation', 'buttons_'+i, 'base_grid', i, 2);
-		outlet(0, 'add_translation', 'extras_'+i, 'base_grid', i, 3);
-		outlet(0, 'enable_translation', 'buttons_'+i, 'base_grid', 0);
-		outlet(0, 'enable_translation', 'extras_'+i, 'base_grid', 0);
-		
+		outlet(0, 'add_translation', 'buttons_'+i, 'base_grid', 'base_buttons', i, 2);
+		outlet(0, 'add_translation', 'extras_'+i, 'base_grid', 'base_extras', i, 3);
+
+		outlet(0, 'add_translation', 'buttons_'+i, 'cntrlr_encoder_button_grid', 'cntrlr_buttons', i%4, Math.floor(i/4));
+		//outlet(0, 'add_translation', 'extras_'+i, 'base_grid', i, 3);
+
+
+		outlet(0, 'add_translation', 'buttons_'+i, 'code_grid', 'code_buttons', i, 2);
+		outlet(0, 'add_translation', 'extras_'+i, 'code_grid', 'code_extras', i, 3);
+
+
 		outlet(0, 'add_translation', 'buttons_'+i, 'push_grid', i, 6);
 		outlet(0, 'add_translation', 'extras_'+i, 'push_grid', i, 7);
 	}
+	outlet(0, 'enable_translation_group', 'code_buttons', 0);
+	outlet(0, 'enable_translation_group', 'code_extras', 0);
 }
 
 function init()
@@ -524,6 +567,17 @@ function _base_grid(x, y, val)
 	{
 		key_in(x + 8*(y), val);
 	}
+}
+
+function _cntrlr_grid(x, y, val)
+{
+	grid_in(x, y, val);
+}
+
+function _cntrlr_key (x, y, val)
+{
+	debug('cntrlr_key', x, y, val);
+	key_in(x+(y*16), val);
 }
 
 function _shift(val)
@@ -1888,7 +1942,7 @@ function refresh_keys()
 			var i=15;do{
 				outlet(0, 'receive_translation', 'keys_'+i, 'mask', -1);
 				var v = (i==p)+3;
-				outlet(0, 'receive_translation', 'keys_'+i, value, v);
+				outlet(0, 'receive_translation', 'keys_'+i, 'value', v);
 				keygui.message(i, 0, v);
 				outlet(0, 'receive_translation', 'keys2_'+i,  selected.pattern[i] * StepColors[i]);
 			}while(i--);
@@ -1898,7 +1952,7 @@ function refresh_keys()
 			var i=15;do{
 				outlet(0, 'receive_translation', 'keys_'+i, 'mask', -1);
 				var v = (i==p)+6;
-				outlet(0, 'receive_translation', 'keys_'+i, value, v);
+				outlet(0, 'receive_translation', 'keys_'+i, 'value', v);
 				keygui.message(i, 0, v);
 				outlet(0, 'receive_translation', 'keys2_'+i,  selected.pattern[i] * StepColors[i]);
 			}while(i--);
@@ -2161,8 +2215,8 @@ function _select_chain(chain_num)
 	{
 		//outlet(0, 'set_device_parent', devices[selected.channel]);
 		//outlet(0, 'set_device_chain', Math.max(0, Math.min(chain_num + global_offset, 112)));
-		outlet(0, 'send_explicit', 'receive_device', 'mod_set_device_parent', 'id', devices[selected.channel]);
-		outlet(0, 'receive_device', 'mod_set_device_chain', Math.max(0, Math.min(chain_num + global_offset - global_chain_offset, 112)));
+		outlet(0, 'send_explicit', 'receive_device', 'set_mod_device_parent', 'id', devices[selected.channel]);
+		outlet(0, 'receive_device', 'set_mod_device_chain', Math.max(0, Math.min(chain_num + global_offset - global_chain_offset, 112)));
 
 	}
 	else
@@ -2209,7 +2263,7 @@ function _encoder(num, val)
 	//if(DEBUG){post('encoder in', num, val, '\n');}
 	if(num<8)
 	{				
-		outlet(0, 'receive_device', 'mod_set_parameter_value', num, val);
+		outlet(0, 'receive_device', 'set_mod_parameter_value', num, val);
 	}
 	else
 	{
@@ -2231,7 +2285,7 @@ function _encoder(num, val)
 				selected.obj.set.random(val);
 				break;
 			case 11:
-				outlet(0, 'receive_device', 'mod_set_parameter_value', num, val);
+				outlet(0, 'receive_device', 'set_mod_parameter_value', num, val);
 				break;
 		}
 	}	 

@@ -527,7 +527,7 @@ class ModHandler(CompoundComponent):
 
 	def disconnect(self, *a, **k):
 		self._active_mod = None
-		self._unregister_timer_callback(self._on_timer)
+		#self._unregister_timer_callback(self._on_timer)
 		super(ModHandler, self).disconnect(*a, **k)
 	
 
@@ -972,16 +972,19 @@ class ModClient(NotifyingControlElement):
 		self._parent = parent
 		self.log_message = parent.log_message
 		self._active_handlers = []
-		#self._addresses = {'grid':Grid(self.active_handlers, 'grid', 16, 16)}
 		self._addresses = {}
 		self._translations = {}
 		self._translation_groups = {}
 		self._color_maps = {}
 		self.legacy = False
+		self.register_addresses()
+		self._param_component = MonoDeviceComponent(self, MOD_BANK_DICT, MOD_TYPES)
+	
+
+	def register_addresses(self):
 		for handler in self._parent._handlers:
 			handler._register_addresses(self)
 			self.send('register_handler', handler.name)
-		self._param_component = MonoDeviceComponent(self, MOD_BANK_DICT, MOD_TYPES)
 	
 
 	def addresses(self):
@@ -1062,6 +1065,7 @@ class ModClient(NotifyingControlElement):
 		if self._device_parent != None:
 			if self._device_parent.devices_has_listener(self._device_listener):
 				self._device_parent.remove_devices_listener(self._device_listener)
+		self.send('disconnect')
 		super(ModClient, self).disconnect()
 		self._enabled = True
 	
@@ -1238,6 +1242,30 @@ class ModRouter(CompoundComponent):
 	def register_handler(self, handler):
 		if handler not in self._handlers:
 			self._handlers.append(handler)
+		for mod in self._mods:
+			mod.register_addresses()
+			mod.send('disconnect')
+	
+
+	def unregister_handler(self, cs, handler):
+		self.log_message('unregistering handler ' + str(cs) + ' ' + str(handler))
+		for mod in self._mods:
+			mod.send('disconnect')
+		for index in range(len(self._handlers)):
+			if self._handlers[index] is handler:
+				self._host = None
+				self._task_group = None
+				self.log_message('deleting from handlers: ' + str(self._handlers[index]))
+				del self._handlers[index]
+				for surface in get_control_surfaces():
+					if not surface is cs:
+						if hasattr(surface, 'monomodular'):
+							self.log_message('reconnecting router to ' + str(surface))
+							self.set_host(surface)
+							break
+				self._log_message = self._log_message
+				break
+
 	
 
 	def devices(self):
@@ -1289,22 +1317,26 @@ class ModRouter(CompoundComponent):
 	
 
 	def disconnect(self):
-		super(ModRouter, self).disconnect()
-		self._host = None
-		self._handlers = []
-		for mod in self._mods:
-			mod.disconnect()
-		self._mods = []
 		for surface in get_control_surfaces():
 			if hasattr(surface, 'monomodular'):
 				self.log_message('deleting monomodular for ' + str(surface))
 				del surface.monomodular
+		old_host = self._host
+		self._host = None
+		self._handlers = []
 		if hasattr(__builtins__, 'monomodular') or 'monomodular' in __builtins__.keys():
-			self.log_message('deleting monomodular for from builtins')
+			self.log_message('deleting monomodular from builtins')
 			del __builtins__['monomodular']
+		for surface in get_control_surfaces():
+			if not surface is old_host:
+				if hasattr(surface, 'restart_monomodular'):
+					surface.schedule_message(2, surface.restart_monomodular)
+		for mod in self._mods:
+			mod.disconnect()
+		self._mods = []
 		self.log_message('monomodular is disconnecting....')
 		self.log_message = self._log_message
-
+		super(ModRouter, self).disconnect()
 	
 
 	def is_mod(self, device):

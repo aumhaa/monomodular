@@ -27,10 +27,10 @@ from _Framework.ModeSelectorComponent import ModeSelectorComponent # Class for s
 from _Framework.NotifyingControlElement import NotifyingControlElement # Class representing control elements that can send values
 from _Framework.SceneComponent import SceneComponent # Class representing a scene in Live
 from _Framework.SessionComponent import SessionComponent # Class encompassing several scene to cover a defined section of Live's session
-from _Framework.SessionZoomingComponent import SessionZoomingComponent # Class using a matrix of buttons to choose blocks of clips in the session
+from _Framework.SessionZoomingComponent import DeprecatedSessionZoomingComponent as SessionZoomingComponent # Class using a matrix of buttons to choose blocks of clips in the session
 from _Framework.SliderElement import SliderElement # Class representing a slider on the controller
-from _Framework.TrackEQComponent import TrackEQComponent # Class representing a track's EQ, it attaches to the last EQ device in the track
-from _Framework.TrackFilterComponent import TrackFilterComponent # Class representing a track's filter, attaches to the last filter in the track
+from VCM600.TrackEQComponent import TrackEQComponent # Class representing a track's EQ, it attaches to the last EQ device in the track
+from VCM600.TrackFilterComponent import TrackFilterComponent # Class representing a track's filter, attaches to the last filter in the track
 from _Framework.TransportComponent import TransportComponent # Class encapsulating all functions in Live's transport section
 from _Framework.PhysicalDisplayElement import PhysicalDisplayElement
 from _Framework.SubjectSlot import subject_slot, subject_slot_group
@@ -1397,6 +1397,7 @@ class Base(ControlSurface):
 			self._setup_m4l_interface()
 			self._setup_drumgroup()
 			self._setup_step_sequencer()
+			self._setup_mod()
 			self._device.add_device_listener(self._on_new_device_set)
 			self.set_feedback_channels(range(14, 15))
 			#self.reset_controlled_track()
@@ -1429,6 +1430,7 @@ class Base(ControlSurface):
 		self._fader = [MonoEncoderElement(MIDI_CC_TYPE, CHANNEL, BASE_TOUCHSTRIPS[index], Live.MidiMap.MapMode.absolute, 'Fader_' + str(index), index, self) for index in range(9)]
 		for fader in self._fader:
 			fader._mapping_feedback_delay = -1
+		self._fader_matrix = ButtonMatrixElement(rows = [self._fader[:8]])
 		self._button = [MonoButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, BASE_BUTTONS[index], 'Button_' + str(index), self) for index in range(8)]
 		self._pad = [BlockingMonoButtonElement(is_momentary, MIDI_NOTE_TYPE, CHANNEL, BASE_PADS[index],	 'Pad_' + str(index), self) for index in range(32)]
 		self._pad_doublepress = [DoublePressElement(pad) for pad in self._pad]
@@ -1470,7 +1472,7 @@ class Base(ControlSurface):
 	def _setup_mixer_control(self):
 		is_momentary = True
 		self._num_tracks = (8) #A mixer is one-dimensional; 
-		self._mixer = BaseMixerComponent(self, 8, 4, False, False)
+		self._mixer = BaseMixerComponent(self, 8, 4)
 		self._mixer.name = 'Mixer'
 		self._mixer.set_track_offset(0) #Sets start point for mixer strip (offset from left)
 		for index in range(8):
@@ -1531,7 +1533,7 @@ class Base(ControlSurface):
 		self._device = BaseDeviceComponent(self)  #, MOD_BANK_DICT, MOD_TYPES)
 		self._device.name = 'Device_Component'
 		self._device.update = self._device_update(self._device)
-		self._device._current_bank_details = self._make_current_bank_details(self._device)
+		#self._device._current_bank_details = self._make_current_bank_details(self._device)
 
 		self.set_device_component(self._device)
 		self._device_navigator = DeviceNavigator(self._device, self._mixer, self)
@@ -1627,15 +1629,7 @@ class Base(ControlSurface):
 	
 
 	def _setup_mod(self):
-		if isinstance(__builtins__, dict):
-			if not 'monomodular' in __builtins__.keys() or not isinstance(__builtins__['monomodular'], ModRouter):
-				__builtins__['monomodular'] = ModRouter()
-		else:
-			if not hasattr(__builtins__, 'monomodular') or not isinstance(__builtins__['monomodular'], ModRouter):
-				setattr(__builtins__, 'monomodular', ModRouter())
-		self.monomodular = __builtins__['monomodular']
-		if not self.monomodular.has_host():
-			self.monomodular.set_host(self)
+		self.monomodular = get_monomodular(self)
 		self.monomodular.name = 'monomodular_switcher'
 		self.modhandler = BaseModHandler(script = self, detect_mod = self._on_new_device_set)
 		self.modhandler.name = 'ModHandler'
@@ -2082,7 +2076,8 @@ class Base(ControlSurface):
 			self.modhandler.set_base_grid(None)
 			self.modhandler.set_base_grid_CC(None)
 			self.modhandler.set_shift_button(None)
-			self.modhandler.set_device_component(None)
+			#self.modhandler.set_device_component(None)
+			self.modhandler.set_parameter_controls(None)
 			self.modhandler.set_enabled(False)
 
 			self._transport.set_overdub_button(None)
@@ -2902,7 +2897,8 @@ class Base(ControlSurface):
 			self.modhandler.set_base_grid(self._base_grid)
 			self.modhandler.set_base_grid_CC(self._base_grid_CC)
 			self.modhandler.set_shift_button(self._button[self._layer])
-			self.modhandler.set_device_component(self._device)
+			self.modhandler.set_parameter_controls(self._fader_matrix)
+			#self.modhandler.set_device_component(self._device)
 			if self.shift_pressed():
 				self.modhandler.set_key_buttons(self._keys)
 			else:
@@ -3236,16 +3232,24 @@ class Base(ControlSurface):
 			self._layers[self._layer]()
 	
 
-	def connect_script_instances(self, instanciated_scripts):
+	def restart_monomodular(self):
+		#self.log_message('restart monomodular')
+		self.modhandler.disconnect()
 		with self.component_guard():
 			self._setup_mod()
+	
+
+	def connect_script_instances(self, instanciated_scripts):
+		#self.log_message('connect script instances')
+		pass
 	
 
 	"""some cheap overrides"""
 
 	def set_highlighting_session_component(self, session_component):
 		self._highlighting_session_component = session_component
-		self._highlighting_session_component.set_highlighting_callback(self._set_session_highlight)
+		if not session_component is None:
+			self._highlighting_session_component.set_highlighting_callback(self._set_session_highlight)
 	
 
 	#def receive_midi(self, midi_bytes):
