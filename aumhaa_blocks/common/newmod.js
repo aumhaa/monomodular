@@ -1,15 +1,13 @@
 autowatch = 1;
-
 outlets = 2;
 
 var finder;
 var this_device;
-var patch_type = jsarguments[1];
-var unique = jsarguments[2];
+var patch_type = jsarguments[1]||'info';
+var unique = jsarguments[2]||'';
 var wiki_addy = 'http://www.aumhaa.com/wiki/index.php?title='+patch_type;
 var script = this;
 var DEBUG = true;
-var DEBUG_CB = true;
 var MONOMODULAR=new RegExp(/(monomodular)/);
 var FUNCTION = new RegExp(/(function)/);
 var PROPERTY = new RegExp(/(property)/);
@@ -19,15 +17,31 @@ var modAddresses = [];
 var this_device_id = 0;
 var stored_messages = [];
 var legacy = false;
-var alive = false;
+var control_surface_ids = {0:true};
 var restart = new Task(init, this);
+
+
+function Debug()
+{
+	var args = arrayfromargs(arguments);
+	for(var i in args)
+	{
+		if(args[i] instanceof Array)
+		{
+			args[i] = args[i].join(' ');
+		}
+	}
+	post('debug->', args, '\n');
+}
+
+if(DEBUG){script['debug'] = script['Debug'];}
 
 function init()
 {
 
-	if(DEBUG){post('patch:', patch_type, 'init');}
+	debug('patch:', patch_type, 'init');
 	var found = false;
-	if(DEBUG){post('init_b996\n');}
+	debug('init_b996');
 	assign_attributes();
 	if(!(finder instanceof LiveAPI))
 	{
@@ -35,78 +49,94 @@ function init()
 	}
 	finder.goto('this_device');
 	this_device_id = parseInt(finder.id);
-	if(DEBUG){post('this device id:', this_device_id);}
+	debug('this device id:', this_device_id);
 	finder.goto('control_surfaces');
 	var number_children = parseInt(finder.children[0]);
-	if(DEBUG){post('control_surfaces length:', number_children , '\n');}
+	debug('control_surfaces length:', number_children);
 	for(var i=0;i<number_children;i++)
 	{
-		if(DEBUG){post('Checking control surface #:', i, '\n');}
+		debug('Checking control surface #:', i);
 		finder.goto('control_surfaces', i);
-		var children = finder.info.toString().split(new RegExp("\n"));
-		var functions = [];
-		var properties = [];
-		for(var item in children)
+		if(!control_surface_ids[parseInt(finder.id)])
 		{
-			if(FUNCTION.test(children[item]))
+			debug('Control surface #:', i, 'was NOT in list of excluded surfaces.');
+			var children = finder.info.toString().split(new RegExp("\n"));
+			var functions = [];
+			var properties = [];
+			for(var item in children)
 			{
-				//if(DEBUG){post('adding function:', children[item].replace('function ', ''), '\n');}
-				functions.push(children[item].replace('function ', ''));
-			}
-			if(PROPERTY.test(children[item]))
-			{
-				//if(DEBUG){post('adding property:', children[item].replace('property ', ''), '\n');}
-				properties.push(children[item].replace('property ', ''));
-			}	
-		}
-		for(var item in properties)
-		{
-			//if(DEBUG){post('\nProperty #', item, ':', properties[item]);}
-			if(MONOMODULAR.test(properties[item])>0)
-			{
-				if(DEBUG){post('in there\n');}
-				found = true;
-				var new_id = finder.get('monomodular');
-				if(DEBUG){post('found, focusing on', new_id, '\n');}
-				finder.id = parseInt(new_id[1]);
-				if(DEBUG){post('new object name is', finder.get('name'), '\n');}
-				finder.id = parseInt(finder.call('add_mod', 'id', this_device_id)[1]);
-				if(DEBUG){post('client id returned is: ', finder.id, '\n');}
-				finder.property = 'value';
-				var children = finder.info.toString().split(new RegExp("\n"));	
-				for(var item in children)
+				if(FUNCTION.test(children[item]))
 				{
-					if(FUNCTION.test(children[item]))
+					//debug('adding function:', children[item].replace('function ', ''));
+					functions.push(children[item].replace('function ', ''));
+				}
+				if(PROPERTY.test(children[item]))
+				{
+					//debug('adding property:', children[item].replace('property ', ''));
+					properties.push(children[item].replace('property ', ''));
+				}	
+			}
+			for(var item in properties)
+			{
+				debug('\nProperty #', item, ':', properties[item]);
+				if(MONOMODULAR.test(properties[item])>0)
+				{
+					debug('in there');
+					found = true;
+					var new_id = finder.get('monomodular');
+					debug('found, focusing on', new_id);
+					finder.id = parseInt(new_id[1]);
+					debug('new object name is', finder.get('name'));
+					finder.id = parseInt(finder.call('add_mod', 'id', this_device_id)[1]);
+					debug('client id returned is: ', finder.id);
+					finder.property = 'value';
+					var children = finder.info.toString().split(new RegExp("\n"));	
+					for(var item in children)
 					{
-						if(DEBUG){post('adding function:', children[item].replace('function ', ''), '\n');}
-						modFunctions.push(children[item].replace('function ', ''));
-					}	
+						if(FUNCTION.test(children[item]))
+						{
+							debug('adding function:', children[item].replace('function ', ''));
+							modFunctions.push(children[item].replace('function ', ''));
+						}	
+					}
+					modAddresses = finder.call('addresses');
+					debug('addresses:', modAddresses);
+					for(var address in modAddresses)
+					{
+						debug('address length', modAddresses[address].length);
+						debug('making func:', modAddresses[address]);
+						script[modAddresses[address]] = make_receive_func(modAddresses[address]);
+					}
+					for(var func in modFunctions)
+					{
+						script[modFunctions[func]] = make_func(modFunctions[func]);
+					}
+					if(legacy)
+					{
+						finder.call('set_legacy', 1);
+					}
+					outlet(1, 'init');
+					send_stored_messages();
+					//return;
 				}
-				modAddresses = finder.call('addresses');
-				if(DEBUG){post('addresses:', modAddresses, '\n');}
-				for(var address in modAddresses)
+				else
 				{
-					if(DEBUG){post('address length', modAddresses[address].length);}
-					if(DEBUG){post('making func:', modAddresses[address], '\n');}
-					script[modAddresses[address]] = make_receive_func(modAddresses[address]);
+					control_surface_ids[parseInt(finder.id)] = true;
 				}
-				for(var func in modFunctions)
-				{
-					script[modFunctions[func]] = make_func(modFunctions[func]);
-				}
-				if(legacy)
-				{
-					finder.call('set_legacy', 1);
-				}
-				outlet(1, 'init');
-				send_stored_messages();
-				//return;
 			}
+		}
+		else
+		{
+			debug('Control surface #:', i, 'WAS in list of excluded surfaces.');
 		}
 		if(found)
 		{
 			break;
 		}
+	}
+	if(!found)
+	{
+		restart.schedule(10000);
 	}
 }
 
@@ -126,7 +156,7 @@ function make_receive_func(address)
 {
 	var func = function()
 	{
-		if(DEBUG){post('accessing func', address, '\n');}
+		debug('accessing func', address);
 		var args = arrayfromargs(arguments);
 		finder.call('receive', address, args[0], args.slice(1).join('^'));
 	}
@@ -138,7 +168,7 @@ function make_func(address)
 	var func = function()
 	{
 		var args = arrayfromargs(arguments);
-		if(DEBUG){post('accessing func', address, args.join('^'), '\n');}
+		debug('accessing func', address, args.join('^'));
 		//finder.apply(address, args);
 		finder.call('distribute', address, args.join('^'))
 	}
@@ -148,16 +178,16 @@ function make_func(address)
 function anything()
 {
 	var args = arrayfromargs(arguments);
-	if(DEBUG){post('anything', messagename, args, '\n');}
+	debug('anything', messagename, args);
 	if(finder == null)
 	{
-		if(DEBUG){post('adding to stack:', messagename, args, '\n');}
+		debug('adding to stack:', messagename, args);
 		if(stored_messages.length>500)
 		{
 			stored_messages.shift();
 		}
 		stored_messages.push([messagename, args]);
-		if(DEBUG){post('added:', stored_messages[0], '\n');}
+		debug('added:', stored_messages[0]);
 	}
 }
 
@@ -175,7 +205,7 @@ function callback(args)
 {
 	if((args[0]=='value')&&(args[1]!='bang'))
 	{
-		if(DEBUG_CB){post('from client:', args, '\n');}
+		debug('from client:', args);
 		outlet(0, args.slice(1));
 		if(args[1]=='disconnect')
 		{
@@ -188,13 +218,13 @@ function dummy_callback(){}
 
 function send_stored_messages()
 {
-	if(DEBUG){post('send_stored_messages()');}
+	debug('send_stored_messages()');
 	for(index in stored_messages)
 	{
-		if(DEBUG){post('sending stored message:', stored_messages[index], '\n');}
+		debug('sending stored message:', stored_messages[index]);
 		if(stored_messages[index][0] in script)
 		{
-			if(DEBUG){post('found function in script.\n');}
+			debug('found function in script.');
 			script[stored_messages[index][0]].apply(this, (stored_messages[index][1]));
 		}
 	}
@@ -208,17 +238,6 @@ function send_explicit()
 	finder.call(args[0], args[1], args[2], args[3], args[4], args[5]);
 }
 
-function disconnect()
-{
-	post('received disconnect!');
-}
+function debug(){}
 
-//function send_explicit(){}
 
-//function init(){}
-
-//function send_stored_messages(){}
-
-//function anything(){}
-
-//function callback(){}

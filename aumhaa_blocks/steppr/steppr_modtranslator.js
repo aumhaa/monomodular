@@ -38,21 +38,22 @@ ctlr.msgs = new Object; //messages
 
 var Ctl_to_Trans= {};
 
-function debug()
+function Debug()
 {
-	if(DEBUG_NEW)
+	var args = arrayfromargs(arguments);
+	for(var i in args)
 	{
-		var args = arrayfromargs(arguments);
-		for(var i in args)
+		if(args[i] instanceof Array)
 		{
-			if(args[i] instanceof Array)
-			{
-				args[i] = args[i].join(' ');
-			}
+			args[i] = args[i].join(' ');
 		}
-		post('debug->', args, '\n');
 	}
+	post('debug->', args, '\n');
 }
+
+function debug(){}
+
+if(DEBUG){script['debug'] = script['Debug'];}
 
 function init()
 {
