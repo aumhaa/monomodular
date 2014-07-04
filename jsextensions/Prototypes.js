@@ -1,8 +1,22 @@
-autowatch = 1;
+
 
 function protoarrayfromargs(args)
 {
 	return Array.prototype.slice.call(args, 0);
+}
+
+function flatten1(args)
+{
+	var arr =  Array.prototype.slice.call(args, 0);
+	for(var i=0;i<arr.length;i++)
+	{
+		if(arr[i] instanceof Array)
+		{
+			var a = [i, arr[i].length].concat(arr[i]);
+			arr.splice.apply(arr, a);
+		}
+	}
+	return arr;
 }
 
 //Used to post when DEBUG is true
@@ -21,6 +35,7 @@ function Debug()
 	}
 	post('debug->', args, '\n');
 }
+
 
 //used to reinitialize the script immediately on saving; 
 //can be turned on by changing FORCELOAD to 1
@@ -67,7 +82,7 @@ function ModComponent(parent, type, unique, legacy, attrs)
 	{
 		if((args[0]=='value')&&(args[1]!='bang'))
 		{
-			self.debug('from client:', args);
+			//self.debug('from client:', args);
 			//outlet(0, args.slice(1));
 			try
 			{
@@ -75,6 +90,7 @@ function ModComponent(parent, type, unique, legacy, attrs)
 			}
 			catch(err)
 			{
+				//self.debug('receive error:', args.slice(2));
 				if(args.length > 1)
 				{
 					self._parent[args[1]] = self._parent.anything;
@@ -172,7 +188,7 @@ ModComponent.prototype.init = function()
 						{
 							this._parent.alive(1);
 						}
-						//this.send_stored_messages();
+						this.send_stored_messages();
 					}
 					else
 					{
@@ -212,7 +228,7 @@ ModComponent.prototype.make_receive_func = function(address)
 	{
 		var args = protoarrayfromargs(arguments);
 		this.debug('accessing receive func', address);
-		this.finder.call('receive', address, args[0], args.slice(1).join('^'));
+		this.finder.call('receive', address, args[0], args.slice(1).join('^').replace(',','^'));
 	}
 	return func;
 }
@@ -223,36 +239,36 @@ ModComponent.prototype.make_func = function(address)
 	var func = function()
 	{
 		var args = protoarrayfromargs(arguments);
-		this.debug('accessing func', address, args.join('^'));
-		this.finder.call('distribute', address, args.join('^'))
+		this.debug('accessing func', address, args.join('^').replace(',','^'));
+		this.finder.call('distribute', address, args.join('^').replace(',','^'))
 	}
 	return func;
 }
 
 ModComponent.prototype.anything = function()
 {
-	var args = protoarrayfromargs(arguments);
-	this.debug('anything', messagename, args);
+	var args = flatten1(arguments);
+	this.debug('anything', args[0], args.slice(1));
 	if(this.finder == undefined)
 	{
-		this.debug('adding to stack:', messagename, args);
+		this.debug('adding to stack:', args[0], args.slice(1));
 		if(this.stored_messages.length>500)
 		{
 			this.stored_messages.shift();
 		}
-		this.stored_messages.push([messagename, args]);
+		this.stored_messages.push([args[0], args.slice(1)]);
 		this.debug('added:', stored_messages[0]);
 	}
 }
 
 ModComponent.prototype.list_functions = function()
 {
-	outlet(1, 'available_functions', modFunctions);
+	return modFunctions;
 }
 
 ModComponent.prototype.list_addresses = function()
 {
-	outlet(1, 'available_addresses', modAddresses);
+	return modAddresses;
 }
 
 ModComponent.prototype.send_stored_messages = function()
@@ -278,7 +294,7 @@ ModComponent.prototype.send_explicit = function()
 
 ModComponent.prototype.Send = function()
 {
-	var args = protoarrayfromargs(arguments);
+	var args = flatten1(arguments);
 	try
 	{
 		this[args[0]].apply(this, args.slice(1));
@@ -286,7 +302,7 @@ ModComponent.prototype.Send = function()
 	catch(err)
 	{
 		this.debug('Send error:', err, args);
-		//this.anything(arguments);
+		this.anything(arguments);
 	}
 }
 

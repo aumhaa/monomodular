@@ -19,7 +19,7 @@ autowatch = 1;
 outlets = 4;
 inlets = 5;
 
-var FORCELOAD = true;
+var FORCELOAD = false;
 var NEW_DEBUG = true;
 var DEBUG = false;
 var DEBUG_LCD = false;
@@ -248,7 +248,7 @@ function init()
 {
 	mod = new ModComponent(script, 'hex', unique, false);
 	mod.debug = debug;
-	mod.assign_api(new LiveAPI('this_device'));
+	mod.assign_api(new LiveAPI(mod.callback, 'this_device'));
 }
 
 function alive(val)
