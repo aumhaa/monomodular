@@ -46,7 +46,7 @@ from Push.Push import Push
 from Push.HandshakeComponent import HandshakeComponent, make_dongle_message
 from Push.ValueComponent import ValueComponent, ParameterValueComponent, ValueDisplayComponent, ParameterValueDisplayComponent
 from Push.ConfigurableButtonElement import ConfigurableButtonElement
-from Push.SpecialSessionComponent import SpecialSessionComponent, SpecialSessionZoomingComponent
+#from Push.SpecialSessionComponent import SpecialSessionComponent, SpecialSessionZoomingComponent
 from Push.SpecialMixerComponent import SpecialMixerComponent
 from Push.SpecialPhysicalDisplay import SpecialPhysicalDisplay
 from Push.InstrumentComponent import InstrumentComponent

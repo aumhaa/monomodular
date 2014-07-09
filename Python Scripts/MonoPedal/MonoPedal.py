@@ -20,15 +20,15 @@ from _Framework.ControlSurfaceComponent import ControlSurfaceComponent
 from _Framework.DeviceComponent import DeviceComponent
 from _Framework.EncoderElement import EncoderElement
 from _Framework.InputControlElement import * 
-from _Framework.MixerComponent import MixerComponent
+from VCM600.MixerComponent import MixerComponent
 from _Framework.ModeSelectorComponent import ModeSelectorComponent
 from _Framework.NotifyingControlElement import NotifyingControlElement
 from _Framework.SceneComponent import SceneComponent
 from _Framework.SessionComponent import SessionComponent
-from _Framework.SessionZoomingComponent import SessionZoomingComponent
+from _Framework.SessionZoomingComponent import DeprecatedSessionZoomingComponent as SessionZoomingComponent
 from _Framework.SliderElement import SliderElement
-from _Framework.TrackEQComponent import TrackEQComponent
-from _Framework.TrackFilterComponent import TrackFilterComponent
+from VCM600.TrackEQComponent import TrackEQComponent
+from VCM600.TrackFilterComponent import TrackFilterComponent
 from _Framework.TransportComponent import TransportComponent
 from _Framework.SubjectSlot import subject_slot, subject_slot_group
 from _Framework.Layer import Layer
